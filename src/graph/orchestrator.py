@@ -40,30 +40,6 @@ def classify_intent(state: SwarmState, config: Dict):
         "messages": [{"role": "assistant", "content": f"Classified intent: {intent}"}]
     }
 
-def macro_analyst_node(state: SwarmState, config: Dict):
-    """Placeholder for Macro Analyst (L2)."""
-    # Phase 2 will implement the actual LLM agent here.
-    return {
-        "macro_report": {"status": "pending_implementation"},
-        "messages": [{"role": "assistant", "content": "Macro Analyst: Analyzing global market conditions..."}]
-    }
-
-def quant_modeler_node(state: SwarmState, config: Dict):
-    """Placeholder for Quant Modeler (L2)."""
-    # Phase 2 will implement the actual LLM agent here.
-    return {
-        "quant_proposal": {"status": "pending_implementation"},
-        "messages": [{"role": "assistant", "content": "Quant Modeler: Running technical analysis..."}]
-    }
-
-def debate_synthesizer_node(state: SwarmState, config: Dict):
-    """Placeholder for Debate Synthesizer (L2)."""
-    return {
-        "debate_resolution": {"status": "pending_implementation"},
-        "consensus_score": 0.5,
-        "messages": [{"role": "assistant", "content": "Debate Synthesizer: Resolving analyst debate..."}]
-    }
-
 def risk_manager_node(state: SwarmState) -> dict:
     """RiskManager LangGraph node — final validation before execution.
 
