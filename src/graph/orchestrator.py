@@ -9,6 +9,9 @@ from langgraph.checkpoint.memory import MemorySaver
 
 from .models import GraphDecision
 from .state import SwarmState
+from .agents.analysts import MacroAnalyst, QuantModeler
+from .agents.researchers import BullishResearcher, BearishResearcher
+from .debate import DebateSynthesizer
 
 logger = logging.getLogger(__name__)
 
@@ -96,21 +99,34 @@ def route_by_intent(state: SwarmState) -> Literal["macro_analyst", "quant_modele
 
 def create_orchestrator_graph(config: Dict):
     """Builds the LangGraph orchestration graph."""
-    
+
     workflow = StateGraph(SwarmState)
-    
-    # Add Nodes
+
+    # --- L1 nodes (existing) ---
     workflow.add_node("classify_intent", partial(classify_intent, config=config))
-    workflow.add_node("macro_analyst", partial(macro_analyst_node, config=config))
-    workflow.add_node("quant_modeler", partial(quant_modeler_node, config=config))
-    workflow.add_node("debate_synthesizer", partial(debate_synthesizer_node, config=config))
+
+    # --- L2 Analyst nodes (Phase 2, Plan 02-01) ---
+    # Real ReAct agents — do not accept config param (node functions take state only)
+    workflow.add_node("macro_analyst", MacroAnalyst)
+    workflow.add_node("quant_modeler", QuantModeler)
+
+    # --- L2 Adversarial Researcher nodes (Phase 2, Plan 02-02) ---
+    # Both run in PARALLEL after analysts (fan-out pattern)
+    workflow.add_node("bullish_researcher", BullishResearcher)
+    workflow.add_node("bearish_researcher", BearishResearcher)
+
+    # --- L2 Debate Synthesis node (Phase 2, Plan 02-03) ---
+    # Aggregates researcher outputs into weighted_consensus_score (fan-in)
+    workflow.add_node("debate_synthesizer", DebateSynthesizer)
+
+    # --- Existing downstream nodes (Plans 02-04+) ---
     workflow.add_node("risk_manager", partial(risk_manager_node, config=config))
     workflow.add_node("synthesize", partial(synthesize_consensus, config=config))
-    
+
     # Set Entry Point
     workflow.set_entry_point("classify_intent")
-    
-    # Add Routing
+
+    # --- Routing from intent classifier ---
     workflow.add_conditional_edges(
         "classify_intent",
         route_by_intent,
@@ -120,18 +136,35 @@ def create_orchestrator_graph(config: Dict):
             "end": END
         }
     )
-    
-    # Internal Edges (Phase 1 Sequential Path for PoC)
-    workflow.add_edge("macro_analyst", "debate_synthesizer")
-    workflow.add_edge("quant_modeler", "debate_synthesizer")
+
+    # --- Fan-out: analysts → both researchers run in parallel ---
+    # Each analyst fans out to both researchers; LangGraph executes parallel branches
+    workflow.add_edge("macro_analyst", "bullish_researcher")
+    workflow.add_edge("macro_analyst", "bearish_researcher")
+    workflow.add_edge("quant_modeler", "bullish_researcher")
+    workflow.add_edge("quant_modeler", "bearish_researcher")
+
+    # --- Fan-in: both researchers must complete before debate_synthesizer ---
+    workflow.add_edge(["bullish_researcher", "bearish_researcher"], "debate_synthesizer")
+
+    # --- Downstream (Plans 02-04+: risk gating, final decision) ---
     workflow.add_edge("debate_synthesizer", "risk_manager")
     workflow.add_edge("risk_manager", "synthesize")
     workflow.add_edge("synthesize", END)
-    
+
     # Persistence
     memory = MemorySaver()
-    
+
     return workflow.compile(checkpointer=memory)
+
+
+def build_graph():
+    """Convenience entry point for smoke-testing the compiled graph.
+
+    Returns the compiled LangGraph application using an empty config.
+    Equivalent to create_orchestrator_graph({}).
+    """
+    return create_orchestrator_graph({})
 
 class LangGraphOrchestrator:
     """Wrapper for the LangGraph orchestrator to match existing interface."""
@@ -154,6 +187,8 @@ class LangGraphOrchestrator:
             "bullish_thesis": None,
             "bearish_thesis": None,
             "debate_resolution": None,
+            "weighted_consensus_score": None,
+            "debate_history": [],
             "risk_approval": None,
             "consensus_score": 0.0,
             "compliance_flags": [],
