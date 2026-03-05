@@ -15,7 +15,7 @@ from typing import Dict, Optional
 sys.path.insert(0, str(Path(__file__).parent / "src"))
 
 from src.core.cli_wrapper import OpenClawCLI, FileProtocol
-from src.orchestrator.strategic_l1 import StrategicOrchestrator
+from src.graph.orchestrator import LangGraphOrchestrator
 from src.agents import MacroAnalyst, QuantModeler, RiskManager
 from src.agents.l3_executor import DataFetcher, Backtester, OrderRouter
 from src.skills.crypto_learning import SelfLearningPipeline
@@ -44,11 +44,7 @@ class QuantumSwarm:
             comms_dir=self.config.get("file_protocol", {}).get("comms_dir", "data/inter_agent_comms")
         )
 
-        self.orchestrator = StrategicOrchestrator(
-            cli=self.cli,
-            protocol=self.protocol,
-            config=self.config
-        )
+        self.orchestrator = LangGraphOrchestrator(self.config)
 
         # L2 Agents
         self.macro_analyst = MacroAnalyst(self.config)
