@@ -2,7 +2,7 @@ import logging
 import uuid
 from datetime import datetime, timezone
 from functools import partial
-from typing import Any, Dict, Literal
+from typing import Any, Dict, Literal, Union
 
 from langgraph.graph import StateGraph, END
 from langgraph.checkpoint.memory import MemorySaver
@@ -147,6 +147,29 @@ def route_by_intent(state: SwarmState) -> Literal["macro_analyst", "quant_modele
     else:
         return "end"
 
+def route_after_debate(state: SwarmState) -> str:
+    """Conditional routing function after DebateSynthesizer.
+
+    Routes to 'risk_manager' only if the weighted_consensus_score is STRICTLY
+    greater than 0.6 — the minimum confidence threshold for execution.
+
+    Falls back to 'hold' (END) when:
+      - score is None (synthesizer did not run or output is missing)
+      - score <= 0.6 (insufficient consensus, reject/hold)
+
+    Returns:
+        'risk_manager' or 'hold'
+    """
+    score = state.get("weighted_consensus_score")
+    if score is not None and score > 0.6:
+        logger.info("route_after_debate: score=%.4f → risk_manager", score)
+        return "risk_manager"
+    logger.info(
+        "route_after_debate: score=%s → hold (threshold not met)", score
+    )
+    return "hold"
+
+
 # --- Graph Construction ---
 
 def create_orchestrator_graph(config: Dict):
@@ -200,8 +223,18 @@ def create_orchestrator_graph(config: Dict):
     # --- Fan-in: both researchers must complete before debate_synthesizer ---
     workflow.add_edge(["bullish_researcher", "bearish_researcher"], "debate_synthesizer")
 
-    # --- Downstream (Plans 02-04+: risk gating, final decision) ---
-    workflow.add_edge("debate_synthesizer", "risk_manager")
+    # --- Risk gating: conditional edge from debate_synthesizer (Plan 02-04) ---
+    # Routes to risk_manager only if weighted_consensus_score > 0.6; else hold (END).
+    workflow.add_conditional_edges(
+        "debate_synthesizer",
+        route_after_debate,
+        {
+            "risk_manager": "risk_manager",
+            "hold": END,
+        },
+    )
+
+    # --- Downstream: risk_manager → synthesize → END (Phase 3 will add execute node) ---
     workflow.add_edge("risk_manager", "synthesize")
     workflow.add_edge("synthesize", END)
 
