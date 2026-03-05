@@ -1,0 +1,193 @@
+# OpenClaw Financial Swarm Configuration
+# Main configuration file for the Multi-Agent Trading System
+
+# OpenClaw Gateway Configuration
+openclaw:
+  gateway_url: "http://127.0.0.1:18789"
+  api_token: "${OPENCLAW_API_TOKEN}"
+  timeout: 30
+  retry_attempts: 3
+
+# L1 Orchestrator Configuration
+orchestrator:
+  model: "claude-sonnet-4-20250514"
+  max_tokens: 4000
+  temperature: 0.7
+  thinking_mode: "medium"
+
+  # Intent Classification
+  intent_patterns:
+    trade: ["trade", "buy", "sell", "long", "short", "enter", "exit"]
+    analysis: ["analyze", "look at", "check", "review", "evaluate"]
+    macro: ["macro", "economy", "fed", "cpi", "nfp", "gdp"]
+    risk: ["risk", "exposure", "limit", "drawdown", "volatility"]
+
+  # Consensus Thresholds
+  thresholds:
+    min_consensus: 0.75
+    hard_risk_limit: 0.8
+    min_sample_size: 5
+
+# L2 Agent Configuration
+agents:
+  macro_analyst:
+    id: "l2-macro-analyst"
+    skills:
+      - "market-environment-analysis"
+      - "sentiment-analysis"
+    model: "claude-haiku-3-20250320"
+    max_tokens: 2000
+    reliability_weight: 0.4
+
+  quant_modeler:
+    id: "l2-quant-modeler"
+    skills:
+      - "day-trading-skill"
+      - "technical-analysis"
+    model: "claude-haiku-3-20250320"
+    max_tokens: 2000
+    reliability_weight: 0.6
+
+  risk_manager:
+    id: "l2-risk-manager"
+    skills:
+      - "risk-management"
+      - "position-sizing"
+    model: "claude-haiku-3-20250320"
+    max_tokens: 1500
+    priority: "highest"
+
+# L3 Executor Configuration
+executors:
+  data_fetcher:
+    id: "l3-data-fetcher"
+    timeout: 10
+
+  backtester:
+    id: "l3-backtester"
+    max_duration: 300
+
+  order_router:
+    id: "l3-order-router"
+    timeout: 30
+
+# Risk Management Limits
+risk_limits:
+  max_position_size: 0.1  # 10% of portfolio
+  max_leverage: 10.0
+  max_daily_loss: 0.05  # 5% of portfolio
+  max_drawdown: 0.15  # 15% of portfolio
+  stop_loss_required: true
+  min_risk_reward: 1.5
+
+  # VIX-based risk adjustment
+  vix_thresholds:
+    low: 15
+    elevated: 20
+    high: 30
+    critical: 40
+
+# Trading Configuration
+trading:
+  default_timeframe: "1H"
+  supported_assets:
+    - "BTC/USDT"
+    - "ETH/USDT"
+    - "SOL/USDT"
+    - "EUR/USD"
+    - "GBP/USD"
+    - "USD/JPY"
+
+  execution_modes:
+    - "paper"
+    - "live"
+
+  default_mode: "paper"
+
+# Self-Improvement Framework
+self_improvement:
+  enabled: true
+  min_trades_for_analysis: 10
+  analysis_frequency: "weekly"
+
+  # Rule generation thresholds
+  prefer_threshold: 0.75
+  avoid_threshold: 0.35
+  caution_threshold: 0.50
+
+  # Memory configuration
+  memory_file: "data/MEMORY.md"
+  max_memory_entries: 100
+
+# Logging Configuration
+logging:
+  level: "INFO"
+  format: "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+  file: "data/logs/swarm.log"
+  max_bytes: 10485760  # 10MB
+  backup_count: 5
+
+  # Agent-specific logs
+  agent_logs:
+    macro: "data/logs/macro.log"
+    quant: "data/logs/quant.log"
+    risk: "data/logs/risk.log"
+    executor: "data/logs/executor.log"
+
+# File-Based Communication
+file_protocol:
+  inbox_dir: "data/inbox"
+  outbox_dir: "data/outbox"
+  comms_dir: "data/inter_agent_comms"
+
+  # File naming conventions
+  task_file_pattern: "{task_id}_task.json"
+  proposal_file_pattern: "{task_id}_proposal.json"
+  result_file_pattern: "{task_id}_result.json"
+  status_file: "status.json"
+
+# Cron Jobs
+scheduled_tasks:
+  macro_scan:
+    enabled: true
+    schedule: "0 */4 * * *"  # Every 4 hours
+    description: "Periodic macro environment scan"
+
+  weekly_review:
+    enabled: true
+    schedule: "0 18 * * FRI"  # Friday 6PM
+    description: "Weekly performance review and memory update"
+
+  risk_check:
+    enabled: true
+    schedule: "*/15 * * * *"  # Every 15 minutes
+    description: "Continuous risk monitoring"
+
+# External Integrations
+integrations:
+  data_sources:
+    - name: "yfinance"
+      priority: 1
+    - name: "ccxt"
+      priority: 2
+
+  sentiment:
+    - name: "finbert"
+      endpoint: "https://api-inference.huggingface.co/models/ProsusAI/finbert"
+
+  execution:
+    - name: "freqtrade"
+      api_url: "http://localhost:8080"
+
+# Notifications
+notifications:
+  enabled: true
+  channels:
+    - "telegram"
+    - "discord"
+
+  alerts:
+    trade_execution: true
+    risk_breach: true
+    daily_loss_threshold: true
+    weekly_review_complete: true

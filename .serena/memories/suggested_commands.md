@@ -1,0 +1,12 @@
+# Suggested Commands
+- Install deps: `pip install -r requirements.txt`
+- Run app: `python main.py`
+- One-off task: `python main.py --task "Analyze BTC and recommend a trade"`
+- Smoke tests: `python main.py --mode test`
+- Daemon mode: `python main.py --mode daemon`
+- Targeted unit tests: `python3 -m unittest -q tests/test_cli_wrapper.py`
+- Obsidian tracking update: `python3 scripts/update_project_tracking.py --project quantum-swarm --event progress --input data/tracking_update.json`
+- Install timer automation: `scripts/install_obsidian_tracking_timer.sh --install`
+- Check timer: `scripts/install_obsidian_tracking_timer.sh --status`
+- Manual timer run: `systemctl --user start quantum-swarm-tracking.service`
+- Timer logs: `journalctl --user -u quantum-swarm-tracking.service --no-pager -n 100`

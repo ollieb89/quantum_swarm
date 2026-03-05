@@ -1,0 +1,985 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>OpenClaw Financial Swarm Dashboard</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-deep: #0a0e17;
+            --bg-panel: #111827;
+            --bg-card: #1a2234;
+            --cyan: #06b6d4;
+            --cyan-glow: rgba(6, 182, 212, 0.3);
+            --emerald: #10b981;
+            --emerald-glow: rgba(16, 185, 129, 0.3);
+            --rose: #f43f5e;
+            --rose-glow: rgba(244, 63, 94, 0.3);
+            --purple: #8b5cf6;
+            --purple-glow: rgba(139, 92, 246, 0.3);
+            --amber: #f59e0b;
+        }
+
+        * {
+            scrollbar-width: thin;
+            scrollbar-color: #374151 #111827;
+        }
+
+        *::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+
+        *::-webkit-scrollbar-track {
+            background: #111827;
+        }
+
+        *::-webkit-scrollbar-thumb {
+            background: #374151;
+            border-radius: 3px;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background: var(--bg-deep);
+            color: #e2e8f0;
+            min-height: 100vh;
+        }
+
+        .font-mono {
+            font-family: 'JetBrains Mono', monospace;
+        }
+
+        /* Performance optimizations */
+        .will-change-transform {
+            will-change: transform;
+            transform: translate3d(0, 0, 0);
+            backface-visibility: hidden;
+        }
+
+        .font-tabular-nums {
+            font-variant-numeric: tabular-nums;
+            font-feature-settings: "tnum";
+        }
+
+        .glow-cyan {
+            box-shadow: 0 0 20px var(--cyan-glow), 0 0 40px rgba(6, 182, 212, 0.1);
+        }
+
+        .glow-emerald {
+            box-shadow: 0 0 20px var(--emerald-glow), 0 0 40px rgba(16, 185, 129, 0.1);
+        }
+
+        .glow-rose {
+            box-shadow: 0 0 20px var(--rose-glow), 0 0 40px rgba(244, 63, 94, 0.1);
+        }
+
+        .glow-purple {
+            box-shadow: 0 0 20px var(--purple-glow), 0 0 40px rgba(139, 92, 246, 0.1);
+        }
+
+        .flow-line {
+            position: relative;
+        }
+
+        .flow-line::after {
+            content: '';
+            position: absolute;
+            width: 0;
+            height: 0;
+            border-left: 6px solid transparent;
+            border-right: 6px solid transparent;
+            border-top: 8px solid;
+            top: 50%;
+            transform: translateY(-50%);
+        }
+
+        .flow-line-down::after {
+            border-top-color: var(--cyan);
+            right: -6px;
+        }
+
+        .flow-line-up::after {
+            border-bottom-color: var(--emerald);
+            right: -6px;
+        }
+
+        .pulse-dot {
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; transform: scale(1); }
+            50% { opacity: 0.5; transform: scale(1.2); }
+        }
+
+        .fade-in {
+            animation: fadeIn 0.6s ease-out forwards;
+            opacity: 0;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .agent-card {
+            transition: all 0.3s ease;
+        }
+
+        .agent-card:hover {
+            transform: translateY(-4px);
+        }
+
+        .status-badge {
+            backdrop-filter: blur(8px);
+        }
+
+        /* Focus styles for accessibility */
+        :focus-visible {
+            outline: 2px solid var(--cyan);
+            outline-offset: 2px;
+        }
+
+        .skip-link {
+            position: absolute;
+            top: -40px;
+            left: 0;
+            background: var(--cyan);
+            color: white;
+            padding: 8px;
+            z-index: 100;
+            transition: top 0.3s;
+        }
+
+        .skip-link:focus {
+            top: 0;
+        }
+
+        input[type="range"] {
+            -webkit-appearance: none;
+            background: transparent;
+        }
+
+        input[type="range"]::-webkit-slider-track {
+            height: 8px;
+            background: #1f2937;
+            border-radius: 4px;
+        }
+
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 20px;
+            height: 20px;
+            background: var(--cyan);
+            border-radius: 50%;
+            cursor: pointer;
+            margin-top: -6px;
+            box-shadow: 0 0 10px var(--cyan-glow);
+        }
+
+        input[type="range"]::-webkit-slider-runnable-track {
+            height: 8px;
+            background: linear-gradient(to right, var(--cyan) var(--value, 50%), #1f2937 var(--value, 50%));
+            border-radius: 4px;
+        }
+
+        select {
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%239ca3af'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M19 9l-7 7-7-7'%3E%3C/path%3E%3C/svg%3E");
+            background-repeat: no-repeat;
+            background-position: right 12px center;
+            background-size: 16px;
+            padding-right: 40px;
+        }
+
+        .terminal-output {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 12px;
+            line-height: 1.6;
+        }
+
+        .terminal-line {
+            opacity: 0;
+            animation: terminalFade 0.3s ease-out forwards;
+        }
+
+        @keyframes terminalFade {
+            to { opacity: 1; }
+        }
+
+        /* Mobile optimizations */
+        @media (max-width: 768px) {
+            .mobile-stack {
+                flex-direction: column;
+            }
+
+            .hide-mobile {
+                display: none;
+            }
+
+            .touch-target {
+                min-height: 44px;
+                min-width: 44px;
+            }
+        }
+
+        /* Reduced motion preference */
+        @media (prefers-reduced-motion: reduce) {
+            *,
+            *::before,
+            *::after {
+                animation-duration: 0.01ms !important;
+                animation-iteration-count: 1 !important;
+                transition-duration: 0.01ms !important;
+            }
+        }
+    </style>
+</head>
+<body class="antialiased">
+    <a href="#main-content" class="skip-link">Skip to main content</a>
+
+    <div class="min-h-screen bg-gradient-to-b from-[#0a0e17] via-[#0f172a] to-[#0a0e17]" role="application" aria-label="OpenClaw Financial Swarm Dashboard">
+        <!-- Header -->
+        <header class="border-b border-slate-800 bg-[#0a0e17]/80 backdrop-blur-xl sticky top-0 z-50" role="banner">
+            <div class="max-w-7xl mx-auto px-4 py-4">
+                <div class="flex items-center justify-between">
+                    <div class="flex items-center gap-4">
+                        <div class="flex items-center gap-2">
+                            <div class="w-10 h-10 rounded-lg bg-gradient-to-br from-cyan-500 to-purple-600 flex items-center justify-center" role="img" aria-label="OpenClaw Logo">
+                                <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/>
+                                </svg>
+                            </div>
+                            <div>
+                                <h1 class="text-xl font-bold text-white">OpenClaw</h1>
+                                <p class="text-xs text-slate-400">Financial Swarm Gateway</p>
+                            </div>
+                        </div>
+                        <div class="hidden md:block h-8 w-px bg-slate-700" aria-hidden="true"></div>
+                        <div class="hidden md:flex items-center gap-3" role="status" aria-live="polite">
+                            <span class="text-xs font-mono text-emerald-400 flex items-center gap-2">
+                                <span class="w-2 h-2 rounded-full bg-emerald-500 pulse-dot" aria-hidden="true"></span>
+                                <span>Gateway: ONLINE</span>
+                            </span>
+                        </div>
+                    </div>
+                    <div class="flex items-center gap-3">
+                        <div class="flex items-center gap-2 px-3 py-1.5 bg-slate-800/50 rounded-lg" role="group" aria-label="Communication channels">
+                            <span class="text-lg" aria-hidden="true">💬</span>
+                            <div class="flex gap-1">
+                                <span class="w-6 h-6 rounded bg-green-500/20 text-green-400 flex items-center justify-center text-xs" aria-label="WhatsApp">WA</span>
+                                <span class="w-6 h-6 rounded bg-blue-500/20 text-blue-400 flex items-center justify-center text-xs" aria-label="Telegram">TG</span>
+                                <span class="w-6 h-6 rounded bg-indigo-500/20 text-indigo-400 flex items-center justify-center text-xs" aria-label="Discord">DC</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </header>
+
+        <main id="main-content" class="max-w-7xl mx-auto px-4 py-8 space-y-8" role="main">
+            <!-- Hero Section -->
+            <section class="text-center fade-in" style="animation-delay: 0.1s;" aria-labelledby="hero-title">
+                <div class="inline-flex items-center gap-2 px-4 py-2 bg-cyan-500/10 border border-cyan-500/30 rounded-full mb-6" role="status" aria-live="polite">
+                    <span class="w-2 h-2 rounded-full bg-cyan-400 pulse-dot" aria-hidden="true"></span>
+                    <span class="text-sm font-medium text-cyan-400">Multi-Agent Trading System Active</span>
+                </div>
+                <h2 id="hero-title" class="text-4xl md:text-5xl font-bold mb-4 bg-gradient-to-r from-white via-cyan-100 to-cyan-400 bg-clip-text text-transparent">
+                    Financial Swarm Orchestrator
+                </h2>
+                <p class="text-lg text-slate-400 max-w-3xl mx-auto">
+                    OpenClaw connects chat interfaces to a sophisticated multi-agent trading system.
+                    The L1 Strategic Orchestrator coordinates L2 specialized agents using file-based lifecycle management.
+                </p>
+            </section>
+
+            <!-- Architecture Flow -->
+            <section class="fade-in" style="animation-delay: 0.2s;" aria-labelledby="architecture-title">
+                <div class="grid lg:grid-cols-3 gap-6">
+                    <!-- Chat Input -->
+                    <div class="bg-gradient-to-br from-slate-800/50 to-slate-900/50 rounded-2xl border border-slate-700 p-6 relative overflow-hidden" role="region" aria-labelledby="user-intent-title">
+                        <div class="absolute top-0 right-0 w-32 h-32 bg-cyan-500/5 rounded-full blur-3xl" aria-hidden="true"></div>
+                        <div class="flex items-center gap-3 mb-4">
+                            <div class="w-12 h-12 rounded-xl bg-gradient-to-br from-cyan-500 to-blue-600 flex items-center justify-center" aria-hidden="true">
+                                <span class="text-2xl">💬</span>
+                            </div>
+                            <div>
+                                <h3 id="user-intent-title" class="font-semibold text-white">User Intent</h3>
+                                <p class="text-xs text-slate-400">Chat Input</p>
+                            </div>
+                        </div>
+                        <div class="bg-slate-900/50 rounded-lg p-3 font-mono text-sm text-cyan-300 border border-cyan-500/20" role="textbox" aria-readonly="true" aria-label="Example user intent">
+                            "Day trade BTC with macro hedge"
+                        </div>
+                        <div class="mt-4 flex items-center justify-center" aria-hidden="true">
+                            <div class="w-0.5 h-8 bg-gradient-to-b from-cyan-500 to-transparent"></div>
+                        </div>
+                    </div>
+
+                    <!-- L1 Orchestrator -->
+                    <div class="bg-gradient-to-br from-purple-900/30 to-slate-900/50 rounded-2xl border border-purple-500/30 p-6 relative overflow-hidden glow-purple" role="region" aria-labelledby="orchestrator-title">
+                        <div class="absolute top-0 right-0 w-32 h-32 bg-purple-500/10 rounded-full blur-3xl" aria-hidden="true"></div>
+                        <div class="flex items-center gap-3 mb-4">
+                            <div class="w-12 h-12 rounded-xl bg-gradient-to-br from-purple-500 to-pink-600 flex items-center justify-center" aria-hidden="true">
+                                <span class="text-2xl">🧠</span>
+                            </div>
+                            <div>
+                                <h3 id="orchestrator-title" class="font-semibold text-white">L1 Orchestrator</h3>
+                                <p class="text-xs text-purple-400">Strategic Coordinator</p>
+                            </div>
+                        </div>
+                        <div class="space-y-2 text-xs font-mono" role="list" aria-label="Orchestrator capabilities">
+                            <div class="flex items-center justify-between text-slate-400" role="listitem">
+                                <span>Intent Classification</span>
+                                <span class="text-purple-400" aria-label="Completed">✓</span>
+                            </div>
+                            <div class="flex items-center justify-between text-slate-400" role="listitem">
+                                <span>Skill Injection</span>
+                                <span class="text-purple-400" aria-label="Completed">✓</span>
+                            </div>
+                            <div class="flex items-center justify-between text-slate-400" role="listitem">
+                                <span>Conflict Resolution</span>
+                                <span class="text-purple-400" aria-label="Completed">✓</span>
+                            </div>
+                        </div>
+                        <div class="mt-4 flex items-center justify-center gap-4" aria-hidden="true">
+                            <div class="w-0.5 h-8 bg-gradient-to-b from-purple-500 to-transparent"></div>
+                        </div>
+                    </div>
+
+                    <!-- L2/L3 Agents -->
+                    <div class="bg-gradient-to-br from-slate-800/50 to-slate-900/50 rounded-2xl border border-slate-700 p-6 relative overflow-hidden" role="region" aria-labelledby="swarm-title">
+                        <div class="absolute top-0 right-0 w-32 h-32 bg-emerald-500/5 rounded-full blur-3xl" aria-hidden="true"></div>
+                        <div class="flex items-center gap-3 mb-4">
+                            <div class="w-12 h-12 rounded-xl bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center" aria-hidden="true">
+                                <span class="text-2xl">🐝</span>
+                            </div>
+                            <div>
+                                <h3 id="swarm-title" class="font-semibold text-white">Swarm Agents</h3>
+                                <p class="text-xs text-emerald-400">L2 / L3 Execution</p>
+                            </div>
+                        </div>
+                        <div class="grid grid-cols-3 gap-2 text-center text-xs" role="list" aria-label="Agent types">
+                            <div class="bg-slate-900/50 rounded-lg p-2" role="listitem">
+                                <div class="text-cyan-400 mb-1" aria-hidden="true">📊</div>
+                                <div class="text-slate-400">Macro</div>
+                            </div>
+                            <div class="bg-slate-900/50 rounded-lg p-2" role="listitem">
+                                <div class="text-purple-400 mb-1" aria-hidden="true">📈</div>
+                                <div class="text-slate-400">Quant</div>
+                            </div>
+                            <div class="bg-slate-900/50 rounded-lg p-2" role="listitem">
+                                <div class="text-rose-400 mb-1" aria-hidden="true">🛡️</div>
+                                <div class="text-slate-400">Risk</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Flow Indicators -->
+                <div class="flex items-center justify-center gap-4 mt-4" role="note" aria-label="Flow directions">
+                    <div class="flex items-center gap-2 px-3 py-1.5 bg-cyan-500/10 rounded-full">
+                        <span class="text-cyan-400 text-xs font-mono" aria-label="Top-down delegation">↓ Top-Down Delegation</span>
+                    </div>
+                    <div class="flex items-center gap-2 px-3 py-1.5 bg-emerald-500/10 rounded-full">
+                        <span class="text-emerald-400 text-xs font-mono" aria-label="Bottom-up synthesis">↑ Bottom-Up Synthesis</span>
+                    </div>
+                </div>
+            </section>
+
+            <!-- L2 Agents & Skills -->
+            <section class="fade-in" style="animation-delay: 0.3s;" aria-labelledby="l2-agents-title">
+                <div class="mb-6">
+                    <h3 id="l2-agents-title" class="text-2xl font-bold text-white flex items-center gap-2">
+                        <span aria-hidden="true">⚡</span> Specialized L2 Agents
+                    </h3>
+                    <p class="text-slate-400">Each agent equipped with domain-specific skills for comprehensive market analysis</p>
+                </div>
+
+                <div class="grid md:grid-cols-3 gap-6">
+                    <!-- Macro Analyst -->
+                    <article class="agent-card bg-gradient-to-br from-slate-800/80 to-slate-900/80 rounded-2xl border border-cyan-500/20 p-6 relative overflow-hidden will-change-transform" aria-labelledby="macro-analyst-title" role="region">
+                        <div class="absolute top-0 right-0 w-24 h-24 bg-cyan-500/10 rounded-full blur-2xl" aria-hidden="true"></div>
+                        <div class="flex items-center justify-between mb-4">
+                            <div class="flex items-center gap-3">
+                                <div class="w-10 h-10 rounded-lg bg-cyan-500/20 flex items-center justify-center" aria-hidden="true">
+                                    <span class="text-xl">🌍</span>
+                                </div>
+                                <div>
+                                    <h4 id="macro-analyst-title" class="font-semibold text-white">Macro Analyst</h4>
+                                    <p class="text-xs text-cyan-400">L2 Agent</p>
+                                </div>
+                            </div>
+                            <span class="px-2 py-1 bg-cyan-500/10 text-cyan-400 text-xs rounded-full font-mono" aria-label="Skill: market environment">market-env</span>
+                        </div>
+                        <p class="text-sm text-slate-400 mb-4">Analyzes global market hours, economic indicators, and sentiment using FinBERT models.</p>
+                        <div class="space-y-2" role="list" aria-label="Capabilities">
+                            <div class="flex items-center gap-2 text-xs" role="listitem">
+                                <span class="text-cyan-400" aria-label="Available">✓</span>
+                                <span class="text-slate-300">Tokyo/London/NY market hours check</span>
+                            </div>
+                            <div class="flex items-center gap-2 text-xs" role="listitem">
+                                <span class="text-cyan-400" aria-label="Available">✓</span>
+                                <span class="text-slate-300">Economic calendar integration</span>
+                            </div>
+                            <div class="flex items-center gap-2 text-xs" role="listitem">
+                                <span class="text-cyan-400" aria-label="Available">✓</span>
+                                <span class="text-slate-300">Daily Market Environment Report</span>
+                            </div>
+                        </div>
+                        <div class="mt-4 pt-4 border-t border-slate-700/50">
+                            <div class="flex items-center gap-2">
+                                <span class="text-xs text-slate-500">Powered by:</span>
+                                <span class="text-xs px-2 py-0.5 bg-orange-500/10 text-orange-400 rounded">🤗 FinBERT</span>
+                            </div>
+                        </div>
+                    </article>
+
+                    <!-- Quant Modeler -->
+                    <article class="agent-card bg-gradient-to-br from-slate-800/80 to-slate-900/80 rounded-2xl border border-purple-500/20 p-6 relative overflow-hidden will-change-transform" aria-labelledby="quant-modeler-title" role="region">
+                        <div class="absolute top-0 right-0 w-24 h-24 bg-purple-500/10 rounded-full blur-2xl" aria-hidden="true"></div>
+                        <div class="flex items-center justify-between mb-4">
+                            <div class="flex items-center gap-3">
+                                <div class="w-10 h-10 rounded-lg bg-purple-500/20 flex items-center justify-center" aria-hidden="true">
+                                    <span class="text-xl">📊</span>
+                                </div>
+                                <div>
+                                    <h4 id="quant-modeler-title" class="font-semibold text-white">Quant Modeler</h4>
+                                    <p class="text-xs text-purple-400">L2 Agent</p>
+                                </div>
+                            </div>
+                            <span class="px-2 py-1 bg-purple-500/10 text-purple-400 text-xs rounded-full font-mono" aria-label="Skill: day trading">day-trading</span>
+                        </div>
+                        <p class="text-sm text-slate-400 mb-4">Technical analysis with strict risk management rules. Never suggests trade without stop-loss.</p>
+                        <div class="space-y-2" role="list" aria-label="Capabilities">
+                            <div class="flex items-center gap-2 text-xs" role="listitem">
+                                <span class="text-purple-400" aria-label="Available">✓</span>
+                                <span class="text-slate-300">1H/4H chart pattern recognition</span>
+                            </div>
+                            <div class="flex items-center gap-2 text-xs" role="listitem">
+                                <span class="text-purple-400" aria-label="Available">✓</span>
+                                <span class="text-slate-300">RSI/MACD indicator alignment</span>
+                            </div>
+                            <div class="flex items-center gap-2 text-xs" role="listitem">
+                                <span class="text-purple-400" aria-label="Available">✓</span>
+                                <span class="text-slate-300">Forced stop-loss calculation</span>
+                            </div>
+                        </div>
+                        <div class="mt-4 pt-4 border-t border-slate-700/50">
+                            <div class="flex items-center gap-2">
+                                <span class="text-xs text-slate-500">Powered by:</span>
+                                <span class="text-xs px-2 py-0.5 bg-sky-500/10 text-sky-400 rounded">📊 Kaggle Data</span>
+                            </div>
+                        </div>
+                    </article>
+
+                    <!-- Risk Manager -->
+                    <article class="agent-card bg-gradient-to-br from-slate-800/80 to-slate-900/80 rounded-2xl border border-rose-500/20 p-6 relative overflow-hidden will-change-transform" aria-labelledby="risk-manager-title" role="region">
+                        <div class="absolute top-0 right-0 w-24 h-24 bg-rose-500/10 rounded-full blur-2xl" aria-hidden="true"></div>
+                        <div class="flex items-center justify-between mb-4">
+                            <div class="flex items-center gap-3">
+                                <div class="w-10 h-10 rounded-lg bg-rose-500/20 flex items-center justify-center" aria-hidden="true">
+                                    <span class="text-xl">🛡️</span>
+                                </div>
+                                <div>
+                                    <h4 id="risk-manager-title" class="font-semibold text-white">Risk Manager</h4>
+                                    <p class="text-xs text-rose-400">L2 Agent</p>
+                                </div>
+                            </div>
+                            <span class="px-2 py-1 bg-rose-500/10 text-rose-400 text-xs rounded-full font-mono" aria-label="Skill: risk control">risk-ctrl</span>
+                        </div>
+                        <p class="text-sm text-slate-400 mb-4">Validates position sizing, calculates VaR, and enforces hard stop-loss limits.</p>
+                        <div class="space-y-2" role="list" aria-label="Capabilities">
+                            <div class="flex items-center gap-2 text-xs" role="listitem">
+                                <span class="text-rose-400" aria-label="Available">✓</span>
+                                <span class="text-slate-300">Margin limit validation</span>
+                            </div>
+                            <div class="flex items-center gap-2 text-xs" role="listitem">
+                                <span class="text-rose-400" aria-label="Available">✓</span>
+                                <span class="text-slate-300">VIX severity scoring</span>
+                            </div>
+                            <div class="flex items-center gap-2 text-xs" role="listitem">
+                                <span class="text-rose-400" aria-label="Available">✓</span>
+                                <span class="text-slate-300">Safe position sizing</span>
+                            </div>
+                        </div>
+                        <div class="mt-4 pt-4 border-t border-slate-700/50">
+                            <div class="flex items-center gap-2">
+                                <span class="text-xs text-slate-500">Reference:</span>
+                                <span class="text-xs px-2 py-0.5 bg-emerald-500/10 text-emerald-400 rounded">💻 Freqtrade</span>
+                            </div>
+                        </div>
+                    </article>
+                </div>
+            </section>
+
+            <!-- Self-Improvement Framework -->
+            <section class="fade-in" style="animation-delay: 0.4s;" aria-labelledby="self-improvement-title">
+                <div class="bg-gradient-to-br from-emerald-900/20 to-slate-900/80 rounded-2xl border border-emerald-500/20 p-6 md:p-8">
+                    <div class="flex items-center gap-4 mb-6">
+                        <div class="w-14 h-14 rounded-xl bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center" aria-hidden="true">
+                            <span class="text-2xl">🔄</span>
+                        </div>
+                        <div>
+                            <h3 id="self-improvement-title" class="text-2xl font-bold text-white">Self-Improvement Framework</h3>
+                            <p class="text-emerald-400">Continuous Learning from Trade History</p>
+                        </div>
+                    </div>
+
+                    <div class="grid md:grid-cols-4 gap-4 mb-6">
+                        <div class="bg-slate-900/50 rounded-xl p-4 border border-slate-700/50" role="article" aria-labelledby="log-trades-title">
+                            <div class="text-2xl mb-2" aria-hidden="true">📝</div>
+                            <h4 id="log-trades-title" class="font-semibold text-white mb-1">Log Trades</h4>
+                            <p class="text-xs text-slate-400">Record indicators & market context to JSON</p>
+                        </div>
+                        <div class="bg-slate-900/50 rounded-xl p-4 border border-slate-700/50" role="article" aria-labelledby="analyze-title">
+                            <div class="text-2xl mb-2" aria-hidden="true">📈</div>
+                            <h4 id="analyze-title" class="font-semibold text-white mb-1">Analyze</h4>
+                            <p class="text-xs text-slate-400">Calculate win rates by symbol/day/indicator</p>
+                        </div>
+                        <div class="bg-slate-900/50 rounded-xl p-4 border border-slate-700/50" role="article" aria-labelledby="generate-rules-title">
+                            <div class="text-2xl mb-2" aria-hidden="true">⚙️</div>
+                            <h4 id="generate-rules-title" class="font-semibold text-white mb-1">Generate Rules</h4>
+                            <p class="text-xs text-slate-400">Write PREFER/AVOID rules to MEMORY.md</p>
+                        </div>
+                        <div class="bg-slate-900/50 rounded-xl p-4 border border-slate-700/50" role="article" aria-labelledby="update-memory-title">
+                            <div class="text-2xl mb-2" aria-hidden="true">🧠</div>
+                            <h4 id="update-memory-title" class="font-semibold text-white mb-1">Update Memory</h4>
+                            <p class="text-xs text-slate-400">Force all agents to read MEMORY.md</p>
+                        </div>
+                    </div>
+
+                    <div class="bg-slate-950 rounded-xl p-4 font-mono text-xs text-emerald-400 border border-emerald-500/20" role="status" aria-live="polite">
+                        <div class="flex items-center gap-2 mb-2">
+                            <span class="w-2 h-2 rounded-full bg-emerald-500" aria-hidden="true"></span>
+                            <span>Weekly Review Pipeline Active</span>
+                        </div>
+                        <div class="text-slate-500">$ python weekly_review.py --memory=data/memory.json → MEMORY.md updated</div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Interactive Sandbox & Confidence Chart -->
+            <section class="fade-in" style="animation-delay: 0.5s;" aria-labelledby="sandbox-title">
+                <div class="grid lg:grid-cols-2 gap-6">
+                    <!-- Conflict Resolution Sandbox -->
+                    <div class="bg-gradient-to-br from-slate-800/80 to-slate-900/80 rounded-2xl border border-slate-700 p-6" role="region" aria-labelledby="sandbox-title">
+                        <div class="flex items-center gap-3 mb-6">
+                            <div class="w-10 h-10 rounded-lg bg-gradient-to-br from-rose-500 to-orange-600 flex items-center justify-center" aria-hidden="true">
+                                <span class="text-xl">⚔️</span>
+                            </div>
+                            <div>
+                                <h3 id="sandbox-title" class="text-xl font-bold text-white">Conflict Resolution Sandbox</h3>
+                                <p class="text-xs text-slate-400">Test the orchestrator's decision logic</p>
+                            </div>
+                        </div>
+
+                        <div class="space-y-5" role="form" aria-label="Sandbox controls">
+                            <!-- Quant Input -->
+                            <div>
+                                <label for="quant-slider" class="block text-sm font-medium text-slate-300 mb-2 flex items-center justify-between">
+                                    <span class="flex items-center gap-2">
+                                        <span class="text-purple-400" aria-hidden="true">📈</span> Quant Signal Strength
+                                    </span>
+                                    <span id="quant-value" class="font-mono text-purple-400 font-tabular-nums" aria-live="polite">75</span>
+                                </label>
+                                <input type="range" id="quant-slider" min="0" max="100" value="75" class="w-full touch-target" aria-describedby="quant-description" oninput="throttleUpdate(updateSandbox, 50)">
+                                <div id="quant-description" class="flex justify-between text-xs text-slate-500 mt-1">
+                                    <span>Neutral</span>
+                                    <span>Strong Buy</span>
+                                </div>
+                            </div>
+
+                            <!-- Macro Input -->
+                            <div>
+                                <label for="macro-select" class="block text-sm font-medium text-slate-300 mb-2 flex items-center justify-between">
+                                    <span class="flex items-center gap-2">
+                                        <span class="text-cyan-400" aria-hidden="true">🌍</span> Macro Sentiment
+                                    </span>
+                                </label>
+                                <select id="macro-select" class="w-full bg-slate-900 text-slate-200 border border-slate-700 rounded-lg px-4 py-2.5 focus:border-cyan-500 focus:outline-none touch-target" aria-describedby="macro-description" onchange="updateSandbox()">
+                                    <option value="0.9">🐂 Bullish Trend (0.90)</option>
+                                    <option value="0.5" selected>➡️ Mixed Data (0.50)</option>
+                                    <option value="0.1">🐻 Bearish Trend (0.10)</option>
+                                </select>
+                                <p id="macro-description" class="sr-only">Select market sentiment from dropdown</p>
+                            </div>
+
+                            <!-- Risk Input -->
+                            <div>
+                                <label for="risk-slider" class="block text-sm font-medium text-slate-300 mb-2 flex items-center justify-between">
+                                    <span class="flex items-center gap-2">
+                                        <span class="text-rose-400" aria-hidden="true">🛡️</span> Risk Assessment
+                                    </span>
+                                    <span id="risk-value" class="font-mono text-rose-400 font-tabular-nums" aria-live="polite">25</span>
+                                </label>
+                                <input type="range" id="risk-slider" min="0" max="100" value="25" class="w-full touch-target" aria-describedby="risk-description" oninput="throttleUpdate(updateSandbox, 50)">
+                                <div id="risk-description" class="flex justify-between text-xs text-slate-500 mt-1">
+                                    <span>Clear</span>
+                                    <span>Critical</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Decision Output -->
+                        <div class="mt-6 p-4 bg-slate-950 rounded-xl border border-slate-700" role="status" aria-live="polite" aria-atomic="true">
+                            <div class="text-xs text-slate-500 mb-2">L1 Orchestrator Decision</div>
+                            <div id="decision-output" class="text-lg font-bold text-emerald-400 mb-2" role="text">EXECUTE TRADE</div>
+                            <div id="decision-score" class="text-sm font-mono text-slate-400 font-tabular-nums">Consensus: 0.70</div>
+                            <div id="decision-rationale" class="text-xs text-slate-500 mt-2 pt-2 border-t border-slate-800">
+                                Weighted score meets threshold. Routing to execution.
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Confidence Radar Chart -->
+                    <div class="bg-gradient-to-br from-slate-800/80 to-slate-900/80 rounded-2xl border border-slate-700 p-6" role="region" aria-labelledby="confidence-title">
+                        <div class="flex items-center gap-3 mb-4">
+                            <div class="w-10 h-10 rounded-lg bg-gradient-to-br from-cyan-500 to-blue-600 flex items-center justify-center" aria-hidden="true">
+                                <span class="text-xl">📊</span>
+                            </div>
+                            <div>
+                                <h3 id="confidence-title" class="text-xl font-bold text-white">Confidence Profile</h3>
+                                <p class="text-xs text-slate-400">Multi-dimensional signal aggregation</p>
+                            </div>
+                        </div>
+                        <div class="relative h-64" role="img" aria-label="Confidence radar chart">
+                            <canvas id="confidenceChart" aria-describedby="chart-description"></canvas>
+                            <p id="chart-description" class="sr-only">Radar chart showing confidence scores across five dimensions: Technical, Macro, Win Rate, Risk, and API</p>
+                        </div>
+                        <div class="mt-4 grid grid-cols-5 gap-2 text-center" role="list" aria-label="Chart legend">
+                            <div class="text-xs" role="listitem">
+                                <div class="w-3 h-3 rounded-full bg-purple-400 mx-auto mb-1" aria-hidden="true"></div>
+                                <div class="text-slate-400">Technical</div>
+                            </div>
+                            <div class="text-xs" role="listitem">
+                                <div class="w-3 h-3 rounded-full bg-cyan-400 mx-auto mb-1" aria-hidden="true"></div>
+                                <div class="text-slate-400">Macro</div>
+                            </div>
+                            <div class="text-xs" role="listitem">
+                                <div class="w-3 h-3 rounded-full bg-emerald-400 mx-auto mb-1" aria-hidden="true"></div>
+                                <div class="text-slate-400">Win Rate</div>
+                            </div>
+                            <div class="text-xs" role="listitem">
+                                <div class="w-3 h-3 rounded-full bg-rose-400 mx-auto mb-1" aria-hidden="true"></div>
+                                <div class="text-slate-400">Risk</div>
+                            </div>
+                            <div class="text-xs" role="listitem">
+                                <div class="w-3 h-3 rounded-full bg-amber-400 mx-auto mb-1" aria-hidden="true"></div>
+                                <div class="text-slate-400">API</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Ecosystem Integrations -->
+            <section class="fade-in" style="animation-delay: 0.6s;" aria-labelledby="integrations-title">
+                <div class="text-center mb-6">
+                    <h3 id="integrations-title" class="text-2xl font-bold text-white flex items-center justify-center gap-2">
+                        <span aria-hidden="true">🌐</span> Ecosystem Integrations
+                    </h3>
+                    <p class="text-slate-400">External tools and datasets powering the swarm</p>
+                </div>
+
+                <div class="grid md:grid-cols-3 gap-4">
+                    <a href="https://huggingface.co/ProsusAI/finbert" target="_blank" rel="noopener noreferrer" class="group bg-slate-800/50 rounded-xl p-5 border border-slate-700 hover:border-orange-500/50 transition-all hover:-translate-y-1 touch-target" aria-label="FinBERT on HuggingFace - Opens in new tab">
+                        <div class="flex items-center justify-between mb-3">
+                            <span class="text-2xl" aria-hidden="true">🤗</span>
+                            <span class="text-xs font-mono text-orange-400 group-hover:text-orange-300">HuggingFace ↗</span>
+                        </div>
+                        <h4 class="font-semibold text-white mb-1 group-hover:text-orange-400">FinBERT</h4>
+                        <p class="text-xs text-slate-400">Financial sentiment analysis for L2 Macro Agent news analysis</p>
+                    </a>
+
+                    <a href="https://www.kaggle.com/datasets?search=cryptocurrency+historical+data" target="_blank" rel="noopener noreferrer" class="group bg-slate-800/50 rounded-xl p-5 border border-slate-700 hover:border-sky-500/50 transition-all hover:-translate-y-1 touch-target" aria-label="Kaggle Crypto Datasets - Opens in new tab">
+                        <div class="flex items-center justify-between mb-3">
+                            <span class="text-2xl" aria-hidden="true">📊</span>
+                            <span class="text-xs font-mono text-sky-400 group-hover:text-sky-300">Kaggle ↗</span>
+                        </div>
+                        <h4 class="font-semibold text-white mb-1 group-hover:text-sky-400">Historical Data</h4>
+                        <p class="text-xs text-slate-400">Crypto/stock datasets for L3 backtesters and validation</p>
+                    </a>
+
+                    <a href="https://github.com/freqtrade/freqtrade" target="_blank" rel="noopener noreferrer" class="group bg-slate-800/50 rounded-xl p-5 border border-slate-700 hover:border-emerald-500/50 transition-all hover:-translate-y-1 touch-target" aria-label="Freqtrade on GitHub - Opens in new tab">
+                        <div class="flex items-center justify-between mb-3">
+                            <span class="text-2xl" aria-hidden="true">💻</span>
+                            <span class="text-xs font-mono text-emerald-400 group-hover:text-emerald-300">GitHub ↗</span>
+                        </div>
+                        <h4 class="font-semibold text-white mb-1 group-hover:text-emerald-400">Freqtrade</h4>
+                        <p class="text-xs text-slate-400">Reference architecture for position sizing and exchange routing</p>
+                    </a>
+                </div>
+            </section>
+        </main>
+
+        <!-- Footer -->
+        <footer class="border-t border-slate-800 mt-12 py-8" role="contentinfo">
+            <div class="max-w-7xl mx-auto px-4 text-center">
+                <p class="text-sm text-slate-500">
+                    OpenClaw Financial Swarm Dashboard • Multi-Agent Trading System
+                </p>
+                <p class="text-xs text-slate-600 mt-2">
+                    Built with agent-orchestrator integration • L1 Strategic Orchestrator + File-Based Lifecycle
+                </p>
+            </div>
+        </footer>
+    </div>
+
+    <script>
+        // Performance monitoring
+        const PerformanceMonitor = {
+            marks: new Map(),
+
+            start(label) {
+                if (performance && performance.mark) {
+                    performance.mark(label + '-start');
+                }
+            },
+
+            end(label) {
+                if (performance && performance.mark) {
+                    performance.mark(label + '-end');
+                    performance.measure(label, label + '-start', label + '-end');
+                }
+            }
+        };
+
+        // Throttle function for performance optimization
+        function throttleUpdate(func, delay) {
+            if (window.throttleTimer) return;
+            window.throttleTimer = setTimeout(() => {
+                func();
+                window.throttleTimer = null;
+            }, delay);
+        }
+
+        // Debounce function
+        function debounce(func, wait) {
+            let timeout;
+            return function executedFunction(...args) {
+                const later = () => {
+                    clearTimeout(timeout);
+                    func(...args);
+                };
+                clearTimeout(timeout);
+                timeout = setTimeout(later, wait);
+            };
+        }
+
+        // Error boundary for chart rendering
+        function safeChartRender(chartFunc, fallbackMessage = 'Chart unavailable') {
+            try {
+                return chartFunc();
+            } catch (error) {
+                console.error('Chart rendering error:', error);
+                return fallbackMessage;
+            }
+        }
+
+        // Initialize Chart.js with performance optimizations
+        PerformanceMonitor.start('chart-init');
+
+        Chart.defaults.color = '#94a3b8';
+        Chart.defaults.font.family = "'JetBrains Mono', monospace";
+
+        // Lazy load chart
+        const initChart = debounce(function() {
+            const canvas = document.getElementById('confidenceChart');
+            if (!canvas) return;
+
+            const ctx = canvas.getContext('2d');
+            if (!ctx) return;
+
+            safeChartRender(function() {
+                window.confidenceChart = new Chart(ctx, {
+                    type: 'radar',
+                    data: {
+                        labels: ['Technical', 'Macro', 'Win Rate', 'Safety', 'API'],
+                        datasets: [{
+                            label: 'Current Setup',
+                            data: [0.75, 0.50, 0.78, 0.75, 0.95],
+                            backgroundColor: 'rgba(6, 182, 212, 0.15)',
+                            borderColor: 'rgba(6, 182, 212, 0.8)',
+                            pointBackgroundColor: 'rgba(16, 185, 129, 1)',
+                            pointBorderColor: '#fff',
+                            pointHoverBackgroundColor: '#fff',
+                            pointHoverBorderColor: 'rgba(16, 185, 129, 1)',
+                            borderWidth: 2,
+                            pointRadius: 4
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        animation: {
+                            duration: 300
+                        },
+                        scales: {
+                            r: {
+                                angleLines: { color: 'rgba(51, 65, 85, 0.5)' },
+                                grid: { color: 'rgba(51, 65, 85, 0.5)' },
+                                pointLabels: {
+                                    color: '#cbd5e1',
+                                    font: { size: 11, weight: '600' }
+                                },
+                                ticks: {
+                                    backdropColor: 'transparent',
+                                    color: '#64748b',
+                                    min: 0,
+                                    max: 1,
+                                    stepSize: 0.2
+                                }
+                            }
+                        },
+                        plugins: {
+                            legend: { display: false }
+                        }
+                    }
+                });
+
+                PerformanceMonitor.end('chart-init');
+                updateSandbox();
+            });
+        }, 100);
+
+        // Initialize chart on DOM ready
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', initChart);
+        } else {
+            initChart();
+        }
+
+        // Sandbox Logic with performance optimization
+        function updateSandbox() {
+            const quantValue = parseInt(document.getElementById('quant-slider')?.value || 0);
+            const macroValue = parseFloat(document.getElementById('macro-select')?.value || 0.5);
+            const riskValue = parseInt(document.getElementById('risk-slider')?.value || 0);
+
+            // Update display values
+            const quantDisplay = document.getElementById('quant-value');
+            const riskDisplay = document.getElementById('risk-value');
+
+            if (quantDisplay) quantDisplay.textContent = quantValue;
+            if (riskDisplay) riskDisplay.textContent = riskValue;
+
+            // Calculate consensus (Quant 60%, Macro 40%)
+            const consensusScore = (quantValue / 100 * 0.6) + (macroValue * 0.4);
+
+            // Decision logic elements
+            const decisionOutput = document.getElementById('decision-output');
+            const decisionScore = document.getElementById('decision-score');
+            const decisionRationale = document.getElementById('decision-rationale');
+
+            let riskSeverity = riskValue / 100;
+
+            if (!decisionOutput || !decisionScore || !decisionRationale) return;
+
+            if (riskSeverity > 0.8) {
+                // Hard constraint triggered
+                decisionOutput.textContent = 'HALT / LIQUIDATE';
+                decisionOutput.className = 'text-lg font-bold text-rose-400 mb-2';
+                decisionScore.textContent = `Score: ${consensusScore.toFixed(2)} (Overridden)`;
+                decisionScore.className = 'text-sm font-mono text-rose-400 font-tabular-nums';
+                decisionRationale.textContent = `Hard constraint: Risk severity (${riskSeverity.toFixed(2)}) > 0.8. All trades aborted regardless of signal strength.`;
+
+                // Update chart colors
+                if (window.confidenceChart) {
+                    window.confidenceChart.data.datasets[0].borderColor = 'rgba(244, 63, 94, 0.8)';
+                    window.confidenceChart.data.datasets[0].backgroundColor = 'rgba(244, 63, 94, 0.15)';
+                }
+            } else if (consensusScore > 0.75) {
+                // Consensus threshold met
+                decisionOutput.textContent = 'EXECUTE TRADE';
+                decisionOutput.className = 'text-lg font-bold text-emerald-400 mb-2';
+                decisionScore.textContent = `Consensus: ${consensusScore.toFixed(2)}`;
+                decisionScore.className = 'text-sm font-mono text-emerald-400 font-tabular-nums';
+                decisionRationale.textContent = 'Weighted score > 0.75 threshold. No hard risk constraints. Routing to execution environment.';
+
+                // Update chart colors
+                if (window.confidenceChart) {
+                    window.confidenceChart.data.datasets[0].borderColor = 'rgba(16, 185, 129, 0.8)';
+                    window.confidenceChart.data.datasets[0].backgroundColor = 'rgba(16, 185, 129, 0.15)';
+                }
+            } else {
+                // Insufficient consensus
+                decisionOutput.textContent = 'HOLD';
+                decisionOutput.className = 'text-lg font-bold text-amber-400 mb-2';
+                decisionScore.textContent = `Consensus: ${consensusScore.toFixed(2)}`;
+                decisionScore.className = 'text-sm font-mono text-amber-400 font-tabular-nums';
+                decisionRationale.textContent = 'Weighted score <= 0.75. Signal strength insufficient across L2 agents. Awaiting clearer signals.';
+
+                // Update chart colors
+                if (window.confidenceChart) {
+                    window.confidenceChart.data.datasets[0].borderColor = 'rgba(245, 158, 11, 0.8)';
+                    window.confidenceChart.data.datasets[0].backgroundColor = 'rgba(245, 158, 11, 0.15)';
+                }
+            }
+
+            // Update chart data based on inputs with requestAnimationFrame
+            if (window.confidenceChart) {
+                window.requestAnimationFrame(function() {
+                    window.confidenceChart.data.datasets[0].data = [
+                        quantValue / 100,
+                        macroValue,
+                        0.78,
+                        1 - riskSeverity,
+                        0.95
+                    ];
+                    window.confidenceChart.update('none'); // 'none' mode for performance
+                });
+            }
+        }
+
+        // Keyboard navigation support
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'Escape') {
+                // Close any open dropdowns or modals
+                const activeElement = document.activeElement;
+                if (activeElement && activeElement.tagName === 'SELECT') {
+                    activeElement.blur();
+                }
+            }
+        });
+
+        // Touch optimization for sliders
+        if ('ontouchstart' in window) {
+            document.querySelectorAll('input[type="range"]').forEach(function(slider) {
+                slider.addEventListener('touchstart', function(e) {
+                    e.stopPropagation();
+                }, { passive: true });
+            });
+        }
+
+        // Intersection Observer for lazy loading animations
+        const observerOptions = {
+            threshold: 0.1,
+            rootMargin: '0px 0px -50px 0px'
+        };
+
+        const animationObserver = new IntersectionObserver(function(entries) {
+            entries.forEach(function(entry) {
+                if (entry.isIntersecting) {
+                    entry.target.style.animationPlayState = 'running';
+                    animationObserver.unobserve(entry.target);
+                }
+            });
+        }, observerOptions);
+
+        document.querySelectorAll('.fade-in').forEach(function(element) {
+            element.style.animationPlayState = 'paused';
+            animationObserver.observe(element);
+        });
+
+        // Start animations when page loads
+        window.addEventListener('load', function() {
+            document.querySelectorAll('.fade-in').forEach(function(element) {
+                element.style.animationPlayState = 'running';
+            });
+        });
+    </script>
+</body>
+</html>

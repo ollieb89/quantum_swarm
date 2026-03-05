@@ -1,0 +1,45 @@
+{
+  "date": "2026-03-05",
+  "week": "2026-10",
+  "summary_add": [
+    "Automated tracking update pipeline wired via scripts/update_project_tracking.py."
+  ],
+  "completed_add": [
+    "Implemented script-driven Obsidian tracking updates from JSON payloads."
+  ],
+  "in_progress_add": [
+    "Preparing cron/CI invocation for weekly project status updates."
+  ],
+  "blockers_add": [
+    "None."
+  ],
+  "risks_add": [
+    "Schema drift if payload format changes without script updates."
+  ],
+  "next_week_add": [
+    "Run script from cron to create the next weekly update automatically."
+  ],
+  "task_add": [
+    {
+      "section": "Backlog",
+      "text": "Wire CI job to call `scripts/update_project_tracking.py` after merge | owner: ollie | due: 2026-03-19 | status: Planned"
+    },
+    {
+      "section": "In Progress",
+      "text": "Document update payload schema for team usage | owner: ollie | due: 2026-03-12 | status: In Progress"
+    }
+  ],
+  "task_complete": [
+    "Install `openclaw` CLI in runtime environment for full gateway path validation"
+  ],
+  "decision": {
+    "title": "Use JSON-driven updates for Obsidian project tracking",
+    "context": "Manual updates are error-prone and inconsistent for recurring project tracking events.",
+    "decision": "Adopt a script that applies structured JSON updates idempotently to Tasks, Weekly Status, Decisions, and Overview notes.",
+    "consequence": "Project tracking can be triggered from cron/CI and stays consistent over time."
+  },
+  "overview_next_actions_add": [
+    "Automate weekly status refresh with a scheduled run."
+  ],
+  "overview_state": "In Progress"
+}

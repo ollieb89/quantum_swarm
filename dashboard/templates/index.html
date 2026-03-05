@@ -1,0 +1,685 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>OpenClaw Financial Swarm Dashboard</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-deep: #0a0e17;
+            --bg-panel: #111827;
+            --bg-card: #1a2234;
+            --accent: #58a6ff;
+            --success: #2ea043;
+            --danger: #da3633;
+            --warning: #d29922;
+            --text: #c9d1d9;
+            --text-muted: #8b949e;
+        }
+
+        * { scrollbar-width: thin; scrollbar-color: #374151 #111827; }
+        *::-webkit-scrollbar { width: 6px; height: 6px; }
+        *::-webkit-scrollbar-track { background: #111827; }
+        *::-webkit-scrollbar-thumb { background: #374151; border-radius: 3px; }
+
+        body {
+            font-family: 'JetBrains Mono', monospace;
+            background: var(--bg-deep);
+            color: var(--text);
+        }
+
+        .font-mono { font-family: 'JetBrains Mono', monospace; }
+
+        .glow-success { box-shadow: 0 0 20px rgba(46, 160, 67, 0.3); }
+        .glow-danger { box-shadow: 0 0 20px rgba(218, 54, 51, 0.3); }
+        .glow-accent { box-shadow: 0 0 20px rgba(88, 166, 255, 0.3); }
+
+        .pulse-dot {
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; transform: scale(1); }
+            50% { opacity: 0.5; transform: scale(1.2); }
+        }
+
+        .fade-in { animation: fadeIn 0.5s ease-out forwards; opacity: 0; }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .agent-card {
+            transition: all 0.3s ease;
+            border-left: 3px solid transparent;
+        }
+
+        .agent-card:hover {
+            transform: translateX(4px);
+        }
+
+        .agent-card.macro { border-left-color: #06b6d4; }
+        .agent-card.quant { border-left-color: #8b5cf6; }
+        .agent-card.risk { border-left-color: #f43f5e; }
+
+        .log-entry { border-left: 2px solid transparent; }
+        .log-entry.info { border-left-color: var(--accent); }
+        .log-entry.success { border-left-color: var(--success); }
+        .log-entry.warning { border-left-color: var(--warning); }
+        .log-entry.error { border-left-color: var(--danger); }
+
+        input[type="range"] {
+            -webkit-appearance: none;
+            background: transparent;
+        }
+
+        input[type="range"]::-webkit-slider-track {
+            height: 6px;
+            background: #1f2937;
+            border-radius: 3px;
+        }
+
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 16px;
+            height: 16px;
+            background: var(--accent);
+            border-radius: 50%;
+            cursor: pointer;
+            margin-top: -5px;
+        }
+
+        .status-indicator {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+        }
+
+        .status-indicator.online { background: var(--success); }
+        .status-indicator.offline { background: var(--danger); }
+        .status-indicator.thinking { background: var(--warning); animation: pulse 1s infinite; }
+    </style>
+</head>
+<body class="h-screen overflow-hidden">
+    <div class="flex h-full">
+        <!-- Sidebar -->
+        <aside class="w-64 bg-[#0d1117] border-r border-[#30363d] flex flex-col">
+            <!-- Logo -->
+            <div class="p-4 border-b border-[#30363d]">
+                <div class="flex items-center gap-3">
+                    <div class="w-10 h-10 rounded-lg bg-gradient-to-br from-[#58a6ff] to-[#8b5cf6] flex items-center justify-center">
+                        <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/>
+                        </svg>
+                    </div>
+                    <div>
+                        <h1 class="font-bold text-white">OCFS</h1>
+                        <p class="text-xs text-[#8b949e]">Financial Swarm</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Gateway Status -->
+            <div class="p-4 border-b border-[#30363d]">
+                <div class="flex items-center justify-between">
+                    <span class="text-sm text-[#8b949e]">Gateway</span>
+                    <div class="flex items-center gap-2">
+                        <div id="gateway-status" class="status-indicator online"></div>
+                        <span id="gateway-text" class="text-xs text-[#2ea043]">Online</span>
+                    </div>
+                </div>
+                <div class="mt-2 text-xs text-[#8b949e]">
+                    Port: <span class="text-[#58a6ff]">18789</span>
+                </div>
+            </div>
+
+            <!-- Navigation -->
+            <nav class="flex-1 p-2">
+                <button onclick="switchTab('dashboard')" class="w-full text-left px-3 py-2 rounded-lg bg-[#161b22] text-white text-sm mb-1">
+                    📊 Dashboard
+                </button>
+                <button onclick="switchTab('agents')" class="w-full text-left px-3 py-2 rounded-lg text-[#8b949e] hover:bg-[#161b22] text-sm mb-1">
+                    🐝 Agents
+                </button>
+                <button onclick="switchTab('trades')" class="w-full text-left px-3 py-2 rounded-lg text-[#8b949e] hover:bg-[#161b22] text-sm mb-1">
+                    📈 Trades
+                </button>
+                <button onclick="switchTab('memory')" class="w-full text-left px-3 py-2 rounded-lg text-[#8b949e] hover:bg-[#161b22] text-sm mb-1">
+                    🧠 Memory
+                </button>
+                <button onclick="switchTab('config')" class="w-full text-left px-3 py-2 rounded-lg text-[#8b949e] hover:bg-[#161b22] text-sm">
+                    ⚙️ Config
+                </button>
+            </nav>
+
+            <!-- Quick Actions -->
+            <div class="p-4 border-t border-[#30363d]">
+                <button onclick="openCommandPalette()" class="w-full px-3 py-2 bg-[#238636] hover:bg-[#2ea043] text-white rounded-lg text-sm font-medium transition-colors">
+                    + New Task
+                </button>
+            </div>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="flex-1 flex flex-col overflow-hidden">
+            <!-- Header -->
+            <header class="h-14 bg-[#0d1117] border-b border-[#30363d] flex items-center justify-between px-6">
+                <div class="flex items-center gap-4">
+                    <h2 id="page-title" class="text-lg font-semibold text-white">Dashboard</h2>
+                    <span id="orchestrator-status" class="px-2 py-1 bg-[#238636] text-white text-xs rounded-full">
+                        🟢 Orchestrator Active
+                    </span>
+                </div>
+                <div class="flex items-center gap-4">
+                    <div class="text-xs text-[#8b949e]">
+                        <span id="current-time">--:--:--</span>
+                    </div>
+                </div>
+            </header>
+
+            <!-- Content Area -->
+            <div class="flex-1 overflow-auto p-6">
+                <!-- Dashboard Tab -->
+                <div id="tab-dashboard" class="space-y-6">
+                    <!-- Stats Row -->
+                    <div class="grid grid-cols-4 gap-4">
+                        <div class="bg-[#161b22] rounded-xl p-4 border border-[#30363d]">
+                            <div class="text-xs text-[#8b949e] mb-1">Portfolio Value</div>
+                            <div class="text-2xl font-bold text-white">$10,000</div>
+                            <div class="text-xs text-[#2ea043]">+2.4% today</div>
+                        </div>
+                        <div class="bg-[#161b22] rounded-xl p-4 border border-[#30363d]">
+                            <div class="text-xs text-[#8b949e] mb-1">Open Positions</div>
+                            <div class="text-2xl font-bold text-white">3</div>
+                            <div class="text-xs text-[#8b949e]">BTC, ETH, SOL</div>
+                        </div>
+                        <div class="bg-[#161b22] rounded-xl p-4 border border-[#30363d]">
+                            <div class="text-xs text-[#8b949e] mb-1">Win Rate</div>
+                            <div class="text-2xl font-bold text-white">68%</div>
+                            <div class="text-xs text-[#8b949e]">Last 25 trades</div>
+                        </div>
+                        <div class="bg-[#161b22] rounded-xl p-4 border border-[#30363d]">
+                            <div class="text-xs text-[#8b949e] mb-1">Active Agents</div>
+                            <div class="text-2xl font-bold text-white">4</div>
+                            <div class="text-xs text-[#58a6ff]">L1 + 3 L2</div>
+                        </div>
+                    </div>
+
+                    <!-- Charts Row -->
+                    <div class="grid grid-cols-2 gap-6">
+                        <!-- P&L Chart -->
+                        <div class="bg-[#161b22] rounded-xl p-4 border border-[#30363d]">
+                            <h3 class="text-sm font-semibold text-white mb-4">Portfolio Performance</h3>
+                            <div class="h-48">
+                                <canvas id="pnlChart"></canvas>
+                            </div>
+                        </div>
+
+                        <!-- Agent Activity -->
+                        <div class="bg-[#161b22] rounded-xl p-4 border border-[#30363d]">
+                            <h3 class="text-sm font-semibold text-white mb-4">Agent Activity</h3>
+                            <div class="space-y-3">
+                                <div class="agent-card macro bg-[#0d1117] rounded-lg p-3">
+                                    <div class="flex items-center justify-between">
+                                        <div class="flex items-center gap-2">
+                                            <span class="text-[#06b6d4]">📊</span>
+                                            <span class="text-sm text-white">Macro Analyst</span>
+                                        </div>
+                                        <span class="status-indicator online"></span>
+                                    </div>
+                                    <div class="text-xs text-[#8b949e] mt-1">Monitoring market hours...</div>
+                                </div>
+                                <div class="agent-card quant bg-[#0d1117] rounded-lg p-3">
+                                    <div class="flex items-center justify-between">
+                                        <div class="flex items-center gap-2">
+                                            <span class="text-[#8b5cf6]">📈</span>
+                                            <span class="text-sm text-white">Quant Modeler</span>
+                                        </div>
+                                        <span class="status-indicator online"></span>
+                                    </div>
+                                    <div class="text-xs text-[#8b949e] mt-1">Analyzing BTC/USD 1H</div>
+                                </div>
+                                <div class="agent-card risk bg-[#0d1117] rounded-lg p-3">
+                                    <div class="flex items-center justify-between">
+                                        <div class="flex items-center gap-2">
+                                            <span class="text-[#f43f5e]">🛡️</span>
+                                            <span class="text-sm text-white">Risk Manager</span>
+                                        </div>
+                                        <span class="status-indicator online"></span>
+                                    </div>
+                                    <div class="text-xs text-[#8b949e] mt-1">All limits within range</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Log Stream -->
+                    <div class="bg-[#161b22] rounded-xl border border-[#30363d]">
+                        <div class="p-4 border-b border-[#30363d] flex items-center justify-between">
+                            <h3 class="text-sm font-semibold text-white">Live Log Stream</h3>
+                            <button onclick="clearLogs()" class="text-xs text-[#8b949e] hover:text-white">Clear</button>
+                        </div>
+                        <div id="log-stream" class="h-64 overflow-y-auto p-4 space-y-2 font-mono text-xs">
+                            <div class="log-entry info text-[#58a6ff]">
+                                <span class="text-[#8b949e]">[19:42:00]</span> System initialized
+                            </div>
+                            <div class="log-entry success text-[#2ea043]">
+                                <span class="text-[#8b949e]">[19:42:01]</span> Gateway connected on port 18789
+                            </div>
+                            <div class="log-entry info text-[#58a6ff]">
+                                <span class="text-[#8b949e]">[19:42:02]</span> L1 Orchestrator activated
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Agents Tab -->
+                <div id="tab-agents" class="hidden space-y-6">
+                    <div class="grid grid-cols-3 gap-6">
+                        <!-- Macro Agent -->
+                        <div class="bg-[#161b22] rounded-xl border border-[#30363d] p-6">
+                            <div class="flex items-center gap-3 mb-4">
+                                <div class="w-12 h-12 rounded-xl bg-[#06b6d4]/20 flex items-center justify-center">
+                                    <span class="text-2xl">📊</span>
+                                </div>
+                                <div>
+                                    <h3 class="font-semibold text-white">Macro Analyst</h3>
+                                    <p class="text-xs text-[#06b6d4]">L2 Domain Manager</p>
+                                </div>
+                            </div>
+                            <div class="space-y-2 text-sm">
+                                <div class="flex justify-between">
+                                    <span class="text-[#8b949e]">Status</span>
+                                    <span class="text-[#2ea043]">Active</span>
+                                </div>
+                                <div class="flex justify-between">
+                                    <span class="text-[#8b949e]">Reliability</span>
+                                    <span class="text-white">0.78</span>
+                                </div>
+                                <div class="flex justify-between">
+                                    <span class="text-[#8b949e]">Tasks</span>
+                                    <span class="text-white">12</span>
+                                </div>
+                            </div>
+                            <button class="w-full mt-4 px-3 py-2 bg-[#06b6d4]/10 text-[#06b6d4] rounded-lg text-sm hover:bg-[#06b6d4]/20">
+                                View Details
+                            </button>
+                        </div>
+
+                        <!-- Quant Agent -->
+                        <div class="bg-[#161b22] rounded-xl border border-[#30363d] p-6">
+                            <div class="flex items-center gap-3 mb-4">
+                                <div class="w-12 h-12 rounded-xl bg-[#8b5cf6]/20 flex items-center justify-center">
+                                    <span class="text-2xl">📈</span>
+                                </div>
+                                <div>
+                                    <h3 class="font-semibold text-white">Quant Modeler</h3>
+                                    <p class="text-xs text-[#8b5cf6]">L2 Domain Manager</p>
+                                </div>
+                            </div>
+                            <div class="space-y-2 text-sm">
+                                <div class="flex justify-between">
+                                    <span class="text-[#8b949e]">Status</span>
+                                    <span class="text-[#2ea043]">Active</span>
+                                </div>
+                                <div class="flex justify-between">
+                                    <span class="text-[#8b949e]">Reliability</span>
+                                    <span class="text-white">0.82</span>
+                                </div>
+                                <div class="flex justify-between">
+                                    <span class="text-[#8b949e]">Tasks</span>
+                                    <span class="text-white">8</span>
+                                </div>
+                            </div>
+                            <button class="w-full mt-4 px-3 py-2 bg-[#8b5cf6]/10 text-[#8b5cf6] rounded-lg text-sm hover:bg-[#8b5cf6]/20">
+                                View Details
+                            </button>
+                        </div>
+
+                        <!-- Risk Agent -->
+                        <div class="bg-[#161b22] rounded-xl border border-[#30363d] p-6">
+                            <div class="flex items-center gap-3 mb-4">
+                                <div class="w-12 h-12 rounded-xl bg-[#f43f5e]/20 flex items-center justify-center">
+                                    <span class="text-2xl">🛡️</span>
+                                </div>
+                                <div>
+                                    <h3 class="font-semibold text-white">Risk Manager</h3>
+                                    <p class="text-xs text-[#f43f5e]">L2 Domain Manager</p>
+                                </div>
+                            </div>
+                            <div class="space-y-2 text-sm">
+                                <div class="flex justify-between">
+                                    <span class="text-[#8b949e]">Status</span>
+                                    <span class="text-[#2ea043]">Active</span>
+                                </div>
+                                <div class="flex justify-between">
+                                    <span class="text-[#8b949e]">Priority</span>
+                                    <span class="text-white">Highest</span>
+                                </div>
+                                <div class="flex justify-between">
+                                    <span class="text-[#8b949e]">Veto Power</span>
+                                    <span class="text-white">Enabled</span>
+                                </div>
+                            </div>
+                            <button class="w-full mt-4 px-3 py-2 bg-[#f43f5e]/10 text-[#f43f5e] rounded-lg text-sm hover:bg-[#f43f5e]/20">
+                                View Details
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Sandbox -->
+                    <div class="bg-[#161b22] rounded-xl border border-[#30363d] p-6">
+                        <h3 class="text-lg font-semibold text-white mb-4">⚔️ Conflict Resolution Sandbox</h3>
+                        <div class="grid grid-cols-3 gap-6">
+                            <div>
+                                <label class="block text-sm text-[#8b949e] mb-2">📈 Quant Signal</label>
+                                <input type="range" id="sandbox-quant" min="0" max="100" value="75" class="w-full" oninput="updateSandbox()">
+                                <div class="text-center text-xs text-white mt-1" id="sandbox-quant-val">75</div>
+                            </div>
+                            <div>
+                                <label class="block text-sm text-[#8b949e] mb-2">🌍 Macro Sentiment</label>
+                                <select id="sandbox-macro" class="w-full bg-[#0d1117] border border-[#30363d] rounded px-3 py-2 text-white" onchange="updateSandbox()">
+                                    <option value="0.9">Bullish (0.9)</option>
+                                    <option value="0.5" selected>Neutral (0.5)</option>
+                                    <option value="0.1">Bearish (0.1)</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="block text-sm text-[#8b949e] mb-2">🛡️ Risk Assessment</label>
+                                <input type="range" id="sandbox-risk" min="0" max="100" value="25" class="w-full" oninput="updateSandbox()">
+                                <div class="text-center text-xs text-white mt-1" id="sandbox-risk-val">25</div>
+                            </div>
+                        </div>
+                        <div class="mt-6 p-4 bg-[#0d1117] rounded-lg border border-[#30363d]">
+                            <div class="flex items-center justify-between mb-2">
+                                <span class="text-sm text-[#8b949e]">Consensus Score:</span>
+                                <span id="sandbox-score" class="text-lg font-bold text-[#2ea043]">0.70</span>
+                            </div>
+                            <div class="flex items-center justify-between">
+                                <span class="text-sm text-[#8b949e]">Decision:</span>
+                                <span id="sandbox-decision" class="px-3 py-1 bg-[#238636] text-white text-sm rounded">EXECUTE</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Trades Tab -->
+                <div id="tab-trades" class="hidden">
+                    <div class="bg-[#161b22] rounded-xl border border-[#30363d] overflow-hidden">
+                        <div class="p-4 border-b border-[#30363d]">
+                            <h3 class="font-semibold text-white">Recent Trades</h3>
+                        </div>
+                        <table class="w-full text-sm">
+                            <thead class="bg-[#0d1117]">
+                                <tr class="text-[#8b949e]">
+                                    <th class="px-4 py-2 text-left">Time</th>
+                                    <th class="px-4 py-2 text-left">Symbol</th>
+                                    <th class="px-4 py-2 text-left">Direction</th>
+                                    <th class="px-4 py-2 text-right">Entry</th>
+                                    <th class="px-4 py-2 text-right">Exit</th>
+                                    <th class="px-4 py-2 text-right">P&L</th>
+                                    <th class="px-4 py-2 text-left">Outcome</th>
+                                </tr>
+                            </thead>
+                            <tbody id="trades-table" class="divide-y divide-[#30363d]">
+                                <tr class="text-white">
+                                    <td class="px-4 py-2">19:35</td>
+                                    <td class="px-4 py-2">BTC/USDT</td>
+                                    <td class="px-4 py-2 text-[#2ea043]">LONG</td>
+                                    <td class="px-4 py-2 text-right">67,200</td>
+                                    <td class="px-4 py-2 text-right">67,500</td>
+                                    <td class="px-4 py-2 text-right text-[#2ea043]">+0.45%</td>
+                                    <td class="px-4 py-2"><span class="px-2 py-0.5 bg-[#2ea043]/20 text-[#2ea043] rounded text-xs">WIN</span></td>
+                                </tr>
+                                <tr class="text-white">
+                                    <td class="px-4 py-2">18:22</td>
+                                    <td class="px-4 py-2">ETH/USDT</td>
+                                    <td class="px-4 py-2 text-[#f43f5e]">SHORT</td>
+                                    <td class="px-4 py-2 text-right">3,450</td>
+                                    <td class="px-4 py-2 text-right">3,420</td>
+                                    <td class="px-4 py-2 text-right text-[#2ea043]">+0.87%</td>
+                                    <td class="px-4 py-2"><span class="px-2 py-0.5 bg-[#2ea043]/20 text-[#2ea043] rounded text-xs">WIN</span></td>
+                                </tr>
+                                <tr class="text-white">
+                                    <td class="px-4 py-2">17:15</td>
+                                    <td class="px-4 py-2">SOL/USDT</td>
+                                    <td class="px-4 py-2 text-[#2ea043]">LONG</td>
+                                    <td class="px-4 py-2 text-right">142.50</td>
+                                    <td class="px-4 py-2 text-right">141.80</td>
+                                    <td class="px-4 py-2 text-right text-[#f43f5e]">-0.49%</td>
+                                    <td class="px-4 py-2"><span class="px-2 py-0.5 bg-[#f43f5e]/20 text-[#f43f5e] rounded text-xs">LOSS</span></td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- Memory Tab -->
+                <div id="tab-memory" class="hidden">
+                    <div class="bg-[#161b22] rounded-xl border border-[#30363d] p-6">
+                        <div class="flex items-center justify-between mb-4">
+                            <h3 class="text-lg font-semibold text-white">🧠 Learned Rules (MEMORY.md)</h3>
+                            <button onclick="runWeeklyReview()" class="px-3 py-1 bg-[#8b5cf6] text-white rounded text-sm hover:bg-[#7c3aed]">
+                                Run Weekly Review
+                            </button>
+                        </div>
+                        <div class="space-y-3">
+                            <div class="p-3 bg-[#0d1117] rounded-lg border-l-4 border-[#2ea043]">
+                                <div class="flex items-center gap-2">
+                                    <span class="text-[#2ea043]">✅</span>
+                                    <span class="text-white font-medium">PREFER</span>
+                                </div>
+                                <p class="text-sm text-[#8b949e] mt-1">RSI in oversold range → 78% win rate over 12 trades</p>
+                            </div>
+                            <div class="p-3 bg-[#0d1117] rounded-lg border-l-4 border-[#f43f5e]">
+                                <div class="flex items-center gap-2">
+                                    <span class="text-[#f43f5e]">❌</span>
+                                    <span class="text-white font-medium">AVOID</span>
+                                </div>
+                                <p class="text-sm text-[#8b949e] mt-1">RSI in overbought range → 32% win rate over 8 trades</p>
+                            </div>
+                            <div class="p-3 bg-[#0d1117] rounded-lg border-l-4 border-[#d29922]">
+                                <div class="flex items-center gap-2">
+                                    <span class="text-[#d29922]">⚠️</span>
+                                    <span class="text-white font-medium">CAUTION</span>
+                                </div>
+                                <p class="text-sm text-[#8b949e] mt-1">VIX > 30 → Reduce position sizes by 50%</p>
+                            </div>
+                            <div class="p-3 bg-[#0d1117] rounded-lg border-l-4 border-[#2ea043]">
+                                <div class="flex items-center gap-2">
+                                    <span class="text-[#2ea043]">✅</span>
+                                    <span class="text-white font-medium">PREFER</span>
+                                </div>
+                                <p class="text-sm text-[#8b949e] mt-1">Friday trades → 72% win rate over 15 trades</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Config Tab -->
+                <div id="tab-config" class="hidden">
+                    <div class="grid grid-cols-2 gap-6">
+                        <div class="bg-[#161b22] rounded-xl border border-[#30363d] p-6">
+                            <h3 class="text-lg font-semibold text-white mb-4">Risk Limits</h3>
+                            <div class="space-y-4">
+                                <div>
+                                    <label class="block text-sm text-[#8b949e] mb-1">Max Position Size</label>
+                                    <div class="text-2xl font-bold text-white">10%</div>
+                                </div>
+                                <div>
+                                    <label class="block text-sm text-[#8b949e] mb-1">Max Leverage</label>
+                                    <div class="text-2xl font-bold text-white">10x</div>
+                                </div>
+                                <div>
+                                    <label class="block text-sm text-[#8b949e] mb-1">Daily Loss Limit</label>
+                                    <div class="text-2xl font-bold text-white">5%</div>
+                                </div>
+                                <div>
+                                    <label class="block text-sm text-[#8b949e] mb-1">Min Risk/Reward</label>
+                                    <div class="text-2xl font-bold text-white">1.5</div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="bg-[#161b22] rounded-xl border border-[#30363d] p-6">
+                            <h3 class="text-lg font-semibold text-white mb-4">Consensus Settings</h3>
+                            <div class="space-y-4">
+                                <div>
+                                    <label class="block text-sm text-[#8b949e] mb-1">Min Consensus Threshold</label>
+                                    <div class="text-2xl font-bold text-white">0.75</div>
+                                </div>
+                                <div>
+                                    <label class="block text-sm text-[#8b949e] mb-1">Hard Risk Limit</label>
+                                    <div class="text-2xl font-bold text-white">0.80</div>
+                                </div>
+                                <div>
+                                    <label class="block text-sm text-[#8b949e] mb-1">Quant Weight</label>
+                                    <div class="text-2xl font-bold text-white">60%</div>
+                                </div>
+                                <div>
+                                    <label class="block text-sm text-[#8b949e] mb-1">Macro Weight</label>
+                                    <div class="text-2xl font-bold text-white">40%</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script>
+        // Initialize
+        document.addEventListener('DOMContentLoaded', function() {
+            updateTime();
+            setInterval(updateTime, 1000);
+            initPnlChart();
+            addLog('info', 'Dashboard loaded successfully');
+        });
+
+        function updateTime() {
+            const now = new Date();
+            document.getElementById('current-time').textContent = now.toLocaleTimeString('en-US', { hour12: false });
+        }
+
+        function switchTab(tab) {
+            ['dashboard', 'agents', 'trades', 'memory', 'config'].forEach(t => {
+                document.getElementById('tab-' + t).classList.add('hidden');
+            });
+            document.getElementById('tab-' + tab).classList.remove('hidden');
+
+            const titles = {
+                dashboard: 'Dashboard',
+                agents: 'Agent Management',
+                trades: 'Trade History',
+                memory: 'Memory & Rules',
+                config: 'Configuration'
+            };
+            document.getElementById('page-title').textContent = titles[tab];
+        }
+
+        function addLog(level, message) {
+            const stream = document.getElementById('log-stream');
+            const time = new Date().toLocaleTimeString('en-US', { hour12: false });
+            const entry = document.createElement('div');
+            entry.className = `log-entry ${level} text-[#c9d1d9]`;
+            entry.innerHTML = `<span class="text-[#8b949e]">[${time}]</span> ${message}`;
+            stream.appendChild(entry);
+            stream.scrollTop = stream.scrollHeight;
+        }
+
+        function clearLogs() {
+            document.getElementById('log-stream').innerHTML = '';
+        }
+
+        function initPnlChart() {
+            const ctx = document.getElementById('pnlChart').getContext('2d');
+            new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'],
+                    datasets: [{
+                        label: 'Portfolio Value',
+                        data: [9800, 9920, 10050, 10020, 10100, 10150, 10000],
+                        borderColor: '#58a6ff',
+                        backgroundColor: 'rgba(88, 166, 255, 0.1)',
+                        fill: true,
+                        tension: 0.4
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { display: false }
+                    },
+                    scales: {
+                        x: {
+                            grid: { color: '#30363d' },
+                            ticks: { color: '#8b949e' }
+                        },
+                        y: {
+                            grid: { color: '#30363d' },
+                            ticks: { color: '#8b949e' }
+                        }
+                    }
+                }
+            });
+        }
+
+        function updateSandbox() {
+            const quant = parseInt(document.getElementById('sandbox-quant').value);
+            const macro = parseFloat(document.getElementById('sandbox-macro').value);
+            const risk = parseInt(document.getElementById('sandbox-risk').value);
+
+            document.getElementById('sandbox-quant-val').textContent = quant;
+            document.getElementById('sandbox-risk-val').textContent = risk;
+
+            const consensus = (quant / 100 * 0.6) + (macro * 0.4);
+            const riskSeverity = risk / 100;
+
+            const scoreEl = document.getElementById('sandbox-score');
+            const decisionEl = document.getElementById('sandbox-decision');
+
+            scoreEl.textContent = consensus.toFixed(2);
+
+            if (riskSeverity > 0.8) {
+                scoreEl.className = 'text-lg font-bold text-[#f43f5e]';
+                decisionEl.textContent = 'REJECT';
+                decisionEl.className = 'px-3 py-1 bg-[#f43f5e] text-white text-sm rounded';
+            } else if (consensus > 0.75) {
+                scoreEl.className = 'text-lg font-bold text-[#2ea043]';
+                decisionEl.textContent = 'EXECUTE';
+                decisionEl.className = 'px-3 py-1 bg-[#238636] text-white text-sm rounded';
+            } else {
+                scoreEl.className = 'text-lg font-bold text-[#d29922]';
+                decisionEl.textContent = 'HOLD';
+                decisionEl.className = 'px-3 py-1 bg-[#d29922] text-white text-sm rounded';
+            }
+        }
+
+        function runWeeklyReview() {
+            addLog('info', 'Starting weekly review...');
+            setTimeout(() => {
+                addLog('success', 'Analyzed 25 trades');
+                addLog('success', 'Generated 2 new rules');
+                addLog('info', 'MEMORY.md updated');
+            }, 1000);
+        }
+
+        function openCommandPalette() {
+            const task = prompt('Enter task (e.g., "Analyze BTC, recommend trade"):');
+            if (task) {
+                addLog('info', `New task: ${task}`);
+                addLog('thinking', 'Processing through L1 Orchestrator...');
+                setTimeout(() => {
+                    addLog('info', 'Delegating to L2 agents...');
+                }, 500);
+            }
+        }
+    </script>
+</body>
+</html>

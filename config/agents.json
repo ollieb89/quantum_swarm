@@ -1,0 +1,156 @@
+{
+  "version": "1.0",
+  "description": "Quantum agent bindings for Financial Swarm",
+  "workspace": "data",
+
+  "agents": [
+    {
+      "id": "l1-orchestrator",
+      "name": "Strategic Orchestrator",
+      "type": "orchestrator",
+      "model": "claude-sonnet-4-20250514",
+      "workspace": "data/orchestrator",
+      "skills": [
+        "strategic-planning",
+        "conflict-resolution"
+      ],
+      "bindings": [],
+      "memory": {
+        "type": "persistent",
+        "file": "MEMORY.md"
+      }
+    },
+    {
+      "id": "l2-macro-analyst",
+      "name": "Macro Analyst",
+      "type": "domain-manager",
+      "model": "claude-haiku-3-20250320",
+      "workspace": "data/agents/macro",
+      "skills": [
+        "market-environment-analysis",
+        "economic-indicators"
+      ],
+      "bindings": [
+        "telegram:alerts",
+        "discord:trading"
+      ],
+      "output_schema": "market_report"
+    },
+    {
+      "id": "l2-quant-modeler",
+      "name": "Quant Modeler",
+      "type": "domain-manager",
+      "model": "claude-haiku-3-20250320",
+      "workspace": "data/agents/quant",
+      "skills": [
+        "day-trading-skill",
+        "technical-analysis",
+        "backtesting"
+      ],
+      "bindings": [],
+      "output_schema": "trade_proposal"
+    },
+    {
+      "id": "l2-risk-manager",
+      "name": "Risk Manager",
+      "type": "domain-manager",
+      "model": "claude-haiku-3-20250320",
+      "workspace": "data/agents/risk",
+      "skills": [
+        "risk-management",
+        "position-sizing"
+      ],
+      "priority": "highest",
+      "bindings": [],
+      "output_schema": "risk_approval"
+    },
+    {
+      "id": "l3-data-fetcher",
+      "name": "Data Fetcher",
+      "type": "executor",
+      "model": "claude-haiku-3-20250320",
+      "workspace": "data/agents/fetcher",
+      "skills": [
+        "api-integration",
+        "web-scraping"
+      ],
+      "stateless": true
+    },
+    {
+      "id": "l3-backtester",
+      "name": "Backtester",
+      "type": "executor",
+      "model": "claude-haiku-3-20250320",
+      "workspace": "data/agents/backtester",
+      "skills": [
+        "backtesting",
+        "strategy-validation"
+      ],
+      "stateless": true
+    },
+    {
+      "id": "l3-order-router",
+      "name": "Order Router",
+      "type": "executor",
+      "model": "claude-haiku-3-20250320",
+      "workspace": "data/agents/router",
+      "skills": [
+        "order-execution",
+        "exchange-integration"
+      ],
+      "stateless": true
+    }
+  ],
+
+  "skills": [
+    {
+      "name": "market-environment-analysis",
+      "version": "0.1.0",
+      "description": "Global market hours, economic indicators, sentiment analysis",
+      "files": [
+        "skills/market_environment/market_utils.py",
+        "skills/market_environment/indicators.md",
+        "skills/market_environment/patterns.md"
+      ]
+    },
+    {
+      "name": "day-trading-skill",
+      "version": "1.2.2",
+      "description": "Technical analysis with strict risk management",
+      "files": [
+        "skills/day_trading/analysis.py",
+        "skills/day_trading/risk_rules.md"
+      ]
+    },
+    {
+      "name": "crypto-self-learning",
+      "version": "1.0.0",
+      "description": "Self-improvement framework with trade logging",
+      "files": [
+        "skills/self_learning/log_trade.py",
+        "skills/self_learning/analyze.py",
+        "skills/self_learning/generate_rules.py",
+        "skills/self_learning/update_memory.py"
+      ]
+    }
+  ],
+
+  "routing": {
+    "top_down": {
+      "intent_to_l2": {
+        "trade": ["l2-quant-modeler", "l2-risk-manager"],
+        "macro": ["l2-macro-analyst"],
+        "analysis": ["l2-macro-analyst", "l2-quant-modeler"]
+      }
+    },
+    "bottom_up": {
+      "l2_to_l1": "aggregated_proposal",
+      "l3_to_l2": "executed_result"
+    },
+    "conflict_resolution": {
+      "priority_order": ["l2-risk-manager", "l2-macro-analyst", "l2-quant-modeler"],
+      "consensus_threshold": 0.75,
+      "hard_risk_limit": 0.8
+    }
+  }
+}
