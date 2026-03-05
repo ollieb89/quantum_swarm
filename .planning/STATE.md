@@ -7,11 +7,12 @@ phase:
   status: in_progress
   started: '2026-03-05'
   completed: null
-  current_plan: 02-03
+  current_plan: 02-04
   plans_completed:
     - "02-01: L2 Analyst Agents (MacroAnalyst + QuantModeler ReAct nodes)"
     - "02-02: Adversarial Researcher Nodes (BullishResearcher + BearishResearcher with BudgetedTool)"
     - "02-03: Debate Synthesis (DebateSynthesizer node, fan-out/fan-in wiring, weighted_consensus_score)"
+    - "02-04: Risk Gating (RiskManager node, conditional edge debate_synthesizer->risk_manager, threshold >0.6)"
   blockers: []
 previous_phase:
   number: 1
@@ -55,6 +56,10 @@ active_decisions:
 - DebateSynthesizer uses character length as strength proxy — deterministic, no LLM call, replaceable heuristic
 - Fan-out via 4 edges (both analysts to both researchers); fan-in via add_edge([...], debate_synthesizer)
 - build_graph() added as no-config alias to create_orchestrator_graph({}) for graph verification
+- RiskManager validates debate_history provenance and weighted_consensus_score before gating execution
+- route_after_debate defined at module level for direct import in tests; strict >0.6 threshold
+- Boundary score=0.6 routes to hold — any ambiguity favors caution (exclusive threshold)
+- conftest.py added at repo root to fix pre-existing pytest sys.path issue blocking all test collection
 ---
 
 # Project State
@@ -67,8 +72,8 @@ active_decisions:
 **Phase 2** — L2 Domain Managers & Adversarial Debate Layer
 - Status: In Progress
 - Started: 2026-03-05
-- Current Plan: 02-03 (completed 2026-03-05)
-- Next Plan: 02-04
+- Current Plan: 02-04 (completed 2026-03-05)
+- Next Plan: 02-05 (Phase 3 or next Phase 2 plan)
 - Previous: Phase 1 (Core Orchestration Migration (L1 Orchestrator)) — Completed 2026-03-05
 
 ## Health
