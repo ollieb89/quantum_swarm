@@ -7,10 +7,11 @@ phase:
   status: in_progress
   started: '2026-03-05'
   completed: null
-  current_plan: 02-02
+  current_plan: 02-03
   plans_completed:
     - "02-01: L2 Analyst Agents (MacroAnalyst + QuantModeler ReAct nodes)"
     - "02-02: Adversarial Researcher Nodes (BullishResearcher + BearishResearcher with BudgetedTool)"
+    - "02-03: Debate Synthesis (DebateSynthesizer node, fan-out/fan-in wiring, weighted_consensus_score)"
   blockers: []
 previous_phase:
   number: 1
@@ -51,6 +52,9 @@ active_decisions:
 - Manual ReAct loop for researchers so BudgetedTool instances are dispatched directly
 - BudgetedTool instances created fresh inside node functions to reset call counters per invocation
 - ToolCache keyed by (tool_name, frozenset(args)) for cross-agent deduplication within process
+- DebateSynthesizer uses character length as strength proxy — deterministic, no LLM call, replaceable heuristic
+- Fan-out via 4 edges (both analysts to both researchers); fan-in via add_edge([...], debate_synthesizer)
+- build_graph() added as no-config alias to create_orchestrator_graph({}) for graph verification
 ---
 
 # Project State
@@ -63,8 +67,8 @@ active_decisions:
 **Phase 2** — L2 Domain Managers & Adversarial Debate Layer
 - Status: In Progress
 - Started: 2026-03-05
-- Current Plan: 02-02 (completed 2026-03-05)
-- Next Plan: 02-03
+- Current Plan: 02-03 (completed 2026-03-05)
+- Next Plan: 02-04
 - Previous: Phase 1 (Core Orchestration Migration (L1 Orchestrator)) — Completed 2026-03-05
 
 ## Health
