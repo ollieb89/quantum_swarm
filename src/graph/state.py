@@ -37,6 +37,9 @@ class SwarmState(TypedDict):
     risk_approval: Optional[dict]
     consensus_score: float
     compliance_flags: List[str]
+    # Risk Gating (Plan 02-04)
+    risk_approved: Optional[bool]
+    risk_notes: Optional[str]
 
     # Final Decision
     final_decision: Optional[dict]
