@@ -34,6 +34,7 @@ phases:
   plan_file: PHASES/phase-2.md
   plans_completed:
   - 02-01: L2 Analyst Agents (MacroAnalyst + QuantModeler ReAct nodes, analyst_tools)
+  - 02-02: Adversarial Researcher Nodes (BullishResearcher + BearishResearcher with BudgetedTool and ToolCache)
   deliverables:
   - Migrate MacroAnalyst, QuantModeler, RiskManager to LangGraph subgraphs
   - Implement adversarial debate (bullish/bearish thesis resolution)
@@ -76,7 +77,7 @@ phases:
 ## Phase 2 — L2 Domain Managers & Adversarial Debate Layer [IN PROGRESS]
 - Started: 2026-03-05
 - Plan: [[planning/PHASES/phase-2]]
-- Plans completed: 02-01 (L2 Analyst Agents)
+- Plans completed: 02-01 (L2 Analyst Agents), 02-02 (Adversarial Researcher Nodes)
 - Deliverables:
   - Migrate MacroAnalyst, QuantModeler, RiskManager to LangGraph subgraphs
   - Implement adversarial debate (bullish/bearish thesis resolution)
