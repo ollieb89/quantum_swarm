@@ -28,19 +28,21 @@ phases:
   - Testing & validation
 - number: 2
   name: L2 Domain Managers & Adversarial Debate Layer
-  status: in_progress
+  status: completed
   started: '2026-03-05'
-  completed: null
+  completed: '2026-03-05'
   plan_file: PHASES/phase-2.md
   plans_completed:
   - 02-01: L2 Analyst Agents (MacroAnalyst + QuantModeler ReAct nodes, analyst_tools)
   - 02-02: Adversarial Researcher Nodes (BullishResearcher + BearishResearcher with BudgetedTool and ToolCache)
   - 02-03: Debate Synthesis (DebateSynthesizer node, fan-out/fan-in wiring, weighted_consensus_score)
   - 02-04: Risk Gating (RiskManager node, conditional edge with >0.6 threshold, route_after_debate)
+  - 02-05: Integration Tests (3-scenario adversarial debate test suite, 11/11 tests passing)
   deliverables:
   - Migrate MacroAnalyst, QuantModeler, RiskManager to LangGraph subgraphs
   - Implement adversarial debate (bullish/bearish thesis resolution)
   - Wire consensus scoring into graph state
+  - Full integration test suite for debate pipeline (tests/test_adversarial_debate.py)
 - number: 3
   name: L3 Executors & NautilusTrader Integration
   status: not_started
@@ -76,14 +78,16 @@ phases:
 - Completed: 2026-03-05
 - Plan: [[planning/PHASES/phase-1]]
 
-## Phase 2 — L2 Domain Managers & Adversarial Debate Layer [IN PROGRESS]
+## Phase 2 — L2 Domain Managers & Adversarial Debate Layer [COMPLETED]
 - Started: 2026-03-05
+- Completed: 2026-03-05
 - Plan: [[planning/PHASES/phase-2]]
-- Plans completed: 02-01 (L2 Analyst Agents), 02-02 (Adversarial Researcher Nodes), 02-03 (Debate Synthesis), 02-04 (Risk Gating)
+- Plans completed: 02-01 (L2 Analyst Agents), 02-02 (Adversarial Researcher Nodes), 02-03 (Debate Synthesis), 02-04 (Risk Gating), 02-05 (Integration Tests)
 - Deliverables:
   - Migrate MacroAnalyst, QuantModeler, RiskManager to LangGraph subgraphs
   - Implement adversarial debate (bullish/bearish thesis resolution)
   - Wire consensus scoring into graph state
+  - Full integration test suite for debate pipeline (tests/test_adversarial_debate.py)
 
 ## Phase 3 — L3 Executors & NautilusTrader Integration [NOT STARTED]
 - Deliverables:

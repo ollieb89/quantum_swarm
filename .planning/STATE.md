@@ -4,15 +4,16 @@ updated: '2026-03-05'
 phase:
   current: 2
   name: L2 Domain Managers & Adversarial Debate Layer
-  status: in_progress
+  status: completed
   started: '2026-03-05'
-  completed: null
-  current_plan: 02-04
+  completed: '2026-03-05'
+  current_plan: 02-05
   plans_completed:
     - "02-01: L2 Analyst Agents (MacroAnalyst + QuantModeler ReAct nodes)"
     - "02-02: Adversarial Researcher Nodes (BullishResearcher + BearishResearcher with BudgetedTool)"
     - "02-03: Debate Synthesis (DebateSynthesizer node, fan-out/fan-in wiring, weighted_consensus_score)"
     - "02-04: Risk Gating (RiskManager node, conditional edge debate_synthesizer->risk_manager, threshold >0.6)"
+    - "02-05: Adversarial Debate Integration Tests (3 scenario tests, 11/11 passing)"
   blockers: []
 previous_phase:
   number: 1
@@ -60,6 +61,8 @@ active_decisions:
 - route_after_debate defined at module level for direct import in tests; strict >0.6 threshold
 - Boundary score=0.6 routes to hold — any ambiguity favors caution (exclusive threshold)
 - conftest.py added at repo root to fix pre-existing pytest sys.path issue blocking all test collection
+- DebateSynthesizer pure-function design enables integration tests without LLM mocking
+- Unique args strategy for BudgetedTool budget tests prevents cache hits from masking call count
 ---
 
 # Project State
@@ -70,10 +73,11 @@ active_decisions:
 ## Current Phase
 
 **Phase 2** — L2 Domain Managers & Adversarial Debate Layer
-- Status: In Progress
+- Status: Completed
 - Started: 2026-03-05
-- Current Plan: 02-04 (completed 2026-03-05)
-- Next Plan: 02-05 (Phase 3 or next Phase 2 plan)
+- Completed: 2026-03-05
+- Current Plan: 02-05 (completed 2026-03-05)
+- Next: Phase 3 (L3 Stateless Executors)
 - Previous: Phase 1 (Core Orchestration Migration (L1 Orchestrator)) — Completed 2026-03-05
 
 ## Health
