@@ -89,6 +89,10 @@ risk_limits:
 
 # Trading Configuration
 trading:
+  # Phase 3 execution mode — paper by default (CONTEXT.md decision)
+  # Change to "live" only when IB Gateway / TWS is running
+  execution_mode: paper   # paper | live
+
   default_timeframe: "1H"
   supported_assets:
     - "BTC/USDT"
@@ -103,6 +107,27 @@ trading:
     - "live"
 
   default_mode: "paper"
+
+  # Interactive Brokers (live equities — Alpaca has no official NautilusTrader adapter)
+  # See Phase 3 RESEARCH.md critical finding re: Alpaca RFC #3374
+  interactive_brokers:
+    host: "127.0.0.1"
+    port_paper: 7497   # TWS paper trading port
+    port_live: 7496    # TWS live trading port
+    account_id: "${IB_ACCOUNT_ID}"
+    client_id_data: 1
+    client_id_exec: 2
+
+  # Crypto execution adapter (primary: Binance — official NautilusTrader adapter)
+  crypto_adapter: "binance"   # binance | bybit
+
+  # Dexter fundamental research bridge configuration
+  dexter:
+    timeout_seconds: 90
+    max_iterations: 10
+
+  # Self-improvement trade history window (N=15, within discretion range 10-20)
+  trade_history_window: 15
 
 # Self-Improvement Framework
 self_improvement:
@@ -175,9 +200,10 @@ integrations:
     - name: "finbert"
       endpoint: "https://api-inference.huggingface.co/models/ProsusAI/finbert"
 
-  execution:
-    - name: "freqtrade"
-      api_url: "http://localhost:8080"
+  # DEPRECATED in Phase 3 — replaced by NautilusTrader execution layer
+  # execution:
+  #   - name: "freqtrade"
+  #     api_url: "http://localhost:8080"
 
 # Notifications
 notifications:
