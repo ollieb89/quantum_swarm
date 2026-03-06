@@ -77,8 +77,7 @@ def _make_state(**overrides) -> dict:
 
 def _make_mock_llm(content: str):
     """Return (mock_llm, bound_mock) where bound_mock.invoke returns a terminal AIMessage."""
-    fake_final = AIMessage(content=content)
-    fake_final.tool_calls = []  # no tool calls -> loop terminates immediately
+    fake_final = AIMessage(content=content, tool_calls=[])
     bound_mock = MagicMock()
     bound_mock.invoke.return_value = fake_final
     mock_llm = MagicMock()
@@ -93,7 +92,7 @@ def _make_mock_llm(content: str):
 
 def test_bullish_researcher_returns_messages_dict():
     """BullishResearcher returns a dict with a non-empty 'messages' list."""
-    mock_llm, _ = _make_mock_llm('{"hypothesis": "BTC is bullish", "confidence": 0.75}')
+    mock_llm, bound_mock = _make_mock_llm('{"hypothesis": "BTC is bullish", "confidence": 0.75}')
     researchers_mod._bullish_llm = mock_llm
 
     result = BullishResearcher(_make_state())
@@ -102,6 +101,7 @@ def test_bullish_researcher_returns_messages_dict():
     assert "messages" in result, "Result must contain 'messages' key"
     assert isinstance(result["messages"], list), "'messages' must be a list"
     assert len(result["messages"]) > 0, "'messages' list must be non-empty"
+    bound_mock.invoke.assert_called_once()
 
 
 def test_bullish_researcher_message_name():
@@ -167,7 +167,7 @@ def test_bullish_researcher_empty_messages():
 
 def test_bearish_researcher_returns_messages_dict():
     """BearishResearcher returns a dict with a non-empty 'messages' list."""
-    mock_llm, _ = _make_mock_llm('{"hypothesis": "BTC is bearish", "confidence": 0.65}')
+    mock_llm, bound_mock = _make_mock_llm('{"hypothesis": "BTC is bearish", "confidence": 0.65}')
     researchers_mod._bearish_llm = mock_llm
 
     result = BearishResearcher(_make_state())
@@ -176,6 +176,7 @@ def test_bearish_researcher_returns_messages_dict():
     assert "messages" in result, "Result must contain 'messages' key"
     assert isinstance(result["messages"], list), "'messages' must be a list"
     assert len(result["messages"]) > 0, "'messages' list must be non-empty"
+    bound_mock.invoke.assert_called_once()
 
 
 def test_bearish_researcher_message_name():
@@ -219,3 +220,38 @@ def test_bearish_researcher_with_trade_history():
     assert isinstance(result, dict)
     assert "messages" in result
     assert len(result["messages"]) > 0
+
+
+# ---------------------------------------------------------------------------
+# Fallback-path tests (empty LLM output)
+# ---------------------------------------------------------------------------
+
+
+def test_bullish_researcher_empty_llm_output():
+    """BullishResearcher returns a non-empty fallback message when LLM returns empty content."""
+    mock_llm, _ = _make_mock_llm("")
+    researchers_mod._bullish_llm = mock_llm
+
+    result = BullishResearcher(_make_state())
+
+    assert isinstance(result, dict)
+    assert "messages" in result
+    assert len(result["messages"]) > 0, "messages must be non-empty even with empty LLM output"
+    assert len(result["messages"][0].content) > 0, (
+        "Fallback message content must be non-empty string"
+    )
+
+
+def test_bearish_researcher_empty_llm_output():
+    """BearishResearcher returns a non-empty fallback message when LLM returns empty content."""
+    mock_llm, _ = _make_mock_llm("")
+    researchers_mod._bearish_llm = mock_llm
+
+    result = BearishResearcher(_make_state())
+
+    assert isinstance(result, dict)
+    assert "messages" in result
+    assert len(result["messages"]) > 0, "messages must be non-empty even with empty LLM output"
+    assert len(result["messages"][0].content) > 0, (
+        "Fallback message content must be non-empty string"
+    )
