@@ -3,12 +3,13 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: Yellow
-last_updated: "2026-03-06T00:58:37Z"
+stopped_at: Completed 03-l3-executors-nautilus-trader-integration-03-02-PLAN.md
+last_updated: "2026-03-06T01:06:05.371Z"
 progress:
   total_phases: 2
   completed_phases: 1
   total_plans: 10
-  completed_plans: 7
+  completed_plans: 8
 ---
 
 # Project State
@@ -60,6 +61,8 @@ Status: Yellow
 - Phase 03-l3-executors-nautilus-trader-integration: Pydantic v2 BaseModel as single source of truth for all L3 executor data contracts
 - Phase 03-01: Pinned ccxt==4.4.60 — ccxt 5.x has broken lighter_client static dep that raises ModuleNotFoundError on import
 - Phase 03-01: FRED uses DTWEXBGS (Broad USD Index) not DXY — DXY is not a FRED series identifier
+- [Phase 03-02]: NT 1.223.0 Equity constructor uses raw_symbol (not symbol) and requires ts_event/ts_init — RESEARCH.md documented old API; fixed in implementation and tests
+- [Phase 03-02]: NautilusTrader imports deferred inside _run_nautilus_backtest body — keeps module importable if NT has install issues
 
 ## Performance Metrics
 
@@ -67,8 +70,9 @@ Status: Yellow
 |-------|------|----------|-------|-------|
 | 03-l3-executors-nautilus-trader-integration | 00 | 12min | 2 | 8 |
 | 03-l3-executors-nautilus-trader-integration | 01 | 8min | 2 | 11 |
+| Phase 03-l3-executors-nautilus-trader-integration P02 | 8min | 1 tasks | 2 files |
 
 ## Session
 
-- **Stopped At:** Completed 03-l3-executors-nautilus-trader-integration-03-01-PLAN.md
-- **Last session:** 2026-03-06T00:58:37Z
+- **Stopped At:** Completed 03-l3-executors-nautilus-trader-integration-03-02-PLAN.md
+- **Last session:** 2026-03-06T01:06:05.370Z
