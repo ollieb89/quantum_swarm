@@ -1,56 +1,72 @@
-# Project State: Quantum Swarm
-
-## Project Reference
-
-See: .planning/PROJECT.md (updated 2026-03-06)
-
-**Core value**: To build a robust, hierarchical multi-agent financial analysis swarm using the OpenClaw framework that adapts to market changes, manages institutional risk, and executes trades autonomously with strict regulatory compliance.
-**Current focus**: Phase 1: Foundation & Orchestration (L1)
-
+---
+phase:
+  current: 4
+  name: Memory & Institutional Compliance
+  status: not_started
+  started: null
+  completed: null
+  blockers: []
+previous_phase:
+  number: 3
+  name: Market Execution & Data (L3)
+  status: completed
+  completed: 2026-03-06
+health:
+  status: green
+  risks: []
+  blockers: []
+architecture:
+  runtime: python
+  pattern: langgraph_orchestration
+  layers:
+    l1: strategic_intent_classifier
+    l2: adversarial_debate_analysis
+    l3: risk_gated_execution
+  communication: langgraph_state_plus_blackboard
+  dashboard: html
+paths:
+  main: main.py
+  config: config/
+  agents: src/graph/agents/
+  orchestrator: src/graph/orchestrator.py
+  planning: .planning/
+  data: data/
+updated: '2026-03-06'
 ---
 
-## Current Position
+# Project State
 
-Phase: 1 of 4 (Foundation & Orchestration (L1))
-Plan: 0 of 3 in current phase
-Status: Planning complete, ready to execute
-Last activity: 2026-03-06 — Phase 1 plans created
+> Machine-readable state lives in YAML frontmatter above.
+> This markdown body is auto-generated — do not edit manually.
 
-Progress: [▓░░░░░░░░░] 10%
+## Current Phase
 
----
+**Phase 4** — Memory & Institutional Compliance
+- Status: Not Started
+- Previous: Phase 3 (Market Execution & Data) — Completed 2026-03-06
 
-## Performance Metrics
+## Health
 
-| Metric | Value | Trend |
-|--------|-------|-------|
-| Total plans completed | 0 | - |
-| Average duration | 0 min | - |
-| Total execution time | 0.0 hours | - |
+Status: Green
+- Full suite: 106 tests passing (2026-03-06).
+- Phase 3 smoke run verified with live GOOGLE_API_KEY.
+- Token tracking wired across all L2 agent nodes (analysts + researchers).
+- Blackboard TOCTOU fixed; test regressions from partial() injection resolved.
 
----
+## Architecture
 
-## Accumulated Context
+- Runtime: Python 3.12 (uv managed)
+- Pattern: LangGraph Orchestration (L1 -> L2 Fan-out/Fan-in -> L3 Chain)
+- Communication: LangGraph `SwarmState` with supplementary Filesystem Blackboard for persistent risk logs.
+- Dashboard: Html/Flask
 
-### Decisions
-- Hierarchical L1/L2/L3 architecture selected to manage context and scale.
-- Filesystem-as-context (Blackboard) for agent coordination.
-- 4-phase delivery roadmap established.
-- L1 Orchestrator will use a suspension model and deterministic bypass.
-- ClawGuard sandboxing and programmatic budget ceilings for safety.
+## Key Paths
 
-### Pending Todos
-- [ ] Implement Plan 01-01: Orchestration Consolidation & Blackboard.
-- [ ] Implement Plan 01-02: Security Guardrails (ClawGuard).
-- [ ] Implement Plan 01-03: Skill Discovery & Deterministic Bypass.
-
-### Blockers/Concerns
-- None.
-
----
-
-## Session Continuity
-
-Last session: 2026-03-06
-Stopped at: Phase 1 plans created
-Resume file: .planning/phases/01-foundation-orchestration-l1/01-01-PLAN.md
+| Component | Path |
+|-----------|------|
+| Main | `main.py` |
+| Config | `config/` |
+| Graph | `src/graph/` |
+| Agents | `src/graph/agents/` |
+| Planning | `.planning/` |
+| Data | `data/` |

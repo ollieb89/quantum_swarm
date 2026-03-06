@@ -9,14 +9,14 @@ They use create_react_agent from langgraph.prebuilt to build compiled sub-graphs
 that are invoked synchronously inside each node. Outputs are written back into
 state["messages"] as AIMessage entries.
 
-Model: claude-haiku-4-5-20251001 (fast, cost-efficient for high-frequency analysis)
+Model: gemini-2.0-flash (fast, cost-efficient for high-frequency analysis)
 """
 
 import logging
 import unittest.mock
-from typing import Any
+from typing import Any, Optional
 
-from langchain_anthropic import ChatAnthropic
+from langchain_google_genai import ChatGoogleGenerativeAI
 from langchain_core.messages import AIMessage, HumanMessage
 from langgraph.prebuilt import create_react_agent
 
@@ -30,47 +30,54 @@ from src.tools.analyst_tools import (
 logger = logging.getLogger(__name__)
 
 # ---------------------------------------------------------------------------
-# Shared LLM — claude-haiku-4-5-20251001
+# Shared LLM — gemini-2.0-flash
 # ---------------------------------------------------------------------------
 
-_MODEL_ID = "claude-haiku-4-5-20251001"
+_MODEL_ID = "gemini-2.0-flash"
 
-_macro_llm = ChatAnthropic(model=_MODEL_ID)  # type: ignore[call-arg]
-_quant_llm = ChatAnthropic(model=_MODEL_ID)  # type: ignore[call-arg]
+# Lazy singletons — deferred to first call so import never requires GOOGLE_API_KEY
+_macro_agent = None
+_quant_agent = None
 
-# ---------------------------------------------------------------------------
-# Compiled ReAct sub-graphs (built once at module load time)
-# ---------------------------------------------------------------------------
 
-_macro_agent = create_react_agent(
-    model=_macro_llm,
-    tools=[fetch_market_data, fetch_economic_data],
-    name="MacroAnalyst",
-    prompt=(
-        "You are MacroAnalyst, an expert in global macro-economics and market regime "
-        "identification. Your job is to assess the current macroeconomic environment "
-        "and produce a structured market report. "
-        "Use the fetch_market_data and fetch_economic_data tools to gather evidence "
-        "before forming your conclusion. "
-        "Return your final assessment as a JSON object with keys: "
-        "phase, risk_on, confidence, sentiment, outlook, indicators."
-    ),
-)
+def _get_macro_agent():
+    global _macro_agent
+    if _macro_agent is None:
+        _macro_agent = create_react_agent(
+            model=ChatGoogleGenerativeAI(model=_MODEL_ID),
+            tools=[fetch_market_data, fetch_economic_data],
+            name="MacroAnalyst",
+            prompt=(
+                "You are MacroAnalyst, an expert in global macro-economics and market regime "
+                "identification. Your job is to assess the current macroeconomic environment "
+                "and produce a structured market report. "
+                "Use the fetch_market_data and fetch_economic_data tools to gather evidence "
+                "before forming your conclusion. "
+                "Return your final assessment as a JSON object with keys: "
+                "phase, risk_on, confidence, sentiment, outlook, indicators."
+            ),
+        )
+    return _macro_agent
 
-_quant_agent = create_react_agent(
-    model=_quant_llm,
-    tools=[fetch_market_data, run_backtest],
-    name="QuantModeler",
-    prompt=(
-        "You are QuantModeler, an expert in quantitative finance and technical analysis. "
-        "Your job is to identify precise entry and exit signals for a given symbol. "
-        "Use the fetch_market_data tool to get current price data and run_backtest "
-        "to validate the strategy's historical performance before recommending a trade. "
-        "Return your final recommendation as a JSON object with keys: "
-        "signal, confidence, symbol, entry_price, stop_loss, take_profit, "
-        "position_size, rationale."
-    ),
-)
+
+def _get_quant_agent():
+    global _quant_agent
+    if _quant_agent is None:
+        _quant_agent = create_react_agent(
+            model=ChatGoogleGenerativeAI(model=_MODEL_ID),
+            tools=[fetch_market_data, run_backtest],
+            name="QuantModeler",
+            prompt=(
+                "You are QuantModeler, an expert in quantitative finance and technical analysis. "
+                "Your job is to identify precise entry and exit signals for a given symbol. "
+                "Use the fetch_market_data tool to get current price data and run_backtest "
+                "to validate the strategy's historical performance before recommending a trade. "
+                "Return your final recommendation as a JSON object with keys: "
+                "signal, confidence, symbol, entry_price, stop_loss, take_profit, "
+                "position_size, rationale."
+            ),
+        )
+    return _quant_agent
 
 
 # ---------------------------------------------------------------------------
@@ -78,19 +85,24 @@ _quant_agent = create_react_agent(
 # ---------------------------------------------------------------------------
 
 
-def MacroAnalyst(state: SwarmState) -> dict[str, Any]:
+from src.core.budget_manager import BudgetManager
+
+def MacroAnalyst(state: SwarmState, budget: Optional[BudgetManager] = None) -> dict[str, Any]:
     """LangGraph node: run the MacroAnalyst ReAct agent.
 
     Reads the current user_input and intent from SwarmState, invokes the
     MacroAnalyst sub-graph, and appends the agent's final response as an
     AIMessage to state["messages"].
 
+    If budget is provided, records token usage from the AIMessage.
+
     Args:
         state: Current SwarmState shared across the graph.
+        budget: Shared BudgetManager instance.
 
     Returns:
         Partial state update dict with ``messages`` key containing the agent
-        response as an AIMessage.
+        response as an AIMessage, and ``total_tokens`` increment.
     """
     logger.info("MacroAnalyst node invoked (task_id=%s)", state.get("task_id"))
 
@@ -101,13 +113,23 @@ def MacroAnalyst(state: SwarmState) -> dict[str, Any]:
         f"Perform a macro analysis. User intent: {intent}. Context: {user_input}"
     )
 
-    result = _macro_agent.invoke({"messages": [HumanMessage(content=query)]})
+    result = _get_macro_agent().invoke({"messages": [HumanMessage(content=query)]})
 
     # Extract the final AI message from the sub-graph result
     agent_messages = result.get("messages", [])
+    tokens_to_add = 0
+
     if agent_messages:
         last_msg = agent_messages[-1]
         content = last_msg.content if hasattr(last_msg, "content") else str(last_msg)
+        
+        # Track token usage if available
+        if hasattr(last_msg, "usage_metadata") and last_msg.usage_metadata and budget:
+            usage = last_msg.usage_metadata
+            input_tokens = usage.get("input_tokens", 0)
+            output_tokens = usage.get("output_tokens", 0)
+            budget.record_usage(input_tokens=input_tokens, output_tokens=output_tokens)
+            tokens_to_add = input_tokens + output_tokens
     else:
         content = "MacroAnalyst: no output produced"
 
@@ -117,22 +139,25 @@ def MacroAnalyst(state: SwarmState) -> dict[str, Any]:
     )
 
     logger.info("MacroAnalyst node complete")
-    return {"messages": [response]}
+    return {"messages": [response], "total_tokens": tokens_to_add}
 
 
-def QuantModeler(state: SwarmState) -> dict[str, Any]:
+def QuantModeler(state: SwarmState, budget: Optional[BudgetManager] = None) -> dict[str, Any]:
     """LangGraph node: run the QuantModeler ReAct agent.
 
     Reads user_input, intent, and any available macro_report from SwarmState,
     invokes the QuantModeler sub-graph, and appends the agent's final response
     as an AIMessage to state["messages"].
+    
+    If budget is provided, records token usage from the AIMessage.
 
     Args:
         state: Current SwarmState shared across the graph.
+        budget: Shared BudgetManager instance.
 
     Returns:
         Partial state update dict with ``messages`` key containing the agent
-        response as an AIMessage.
+        response as an AIMessage, and ``total_tokens`` increment.
     """
     logger.info("QuantModeler node invoked (task_id=%s)", state.get("task_id"))
 
@@ -146,12 +171,22 @@ def QuantModeler(state: SwarmState) -> dict[str, Any]:
         f"Macro context: {macro_context}"
     )
 
-    result = _quant_agent.invoke({"messages": [HumanMessage(content=query)]})
+    result = _get_quant_agent().invoke({"messages": [HumanMessage(content=query)]})
 
     agent_messages = result.get("messages", [])
+    tokens_to_add = 0
+
     if agent_messages:
         last_msg = agent_messages[-1]
         content = last_msg.content if hasattr(last_msg, "content") else str(last_msg)
+
+        # Track token usage if available
+        if hasattr(last_msg, "usage_metadata") and last_msg.usage_metadata and budget:
+            usage = last_msg.usage_metadata
+            input_tokens = usage.get("input_tokens", 0)
+            output_tokens = usage.get("output_tokens", 0)
+            budget.record_usage(input_tokens=input_tokens, output_tokens=output_tokens)
+            tokens_to_add = input_tokens + output_tokens
     else:
         content = "QuantModeler: no output produced"
 
@@ -161,7 +196,7 @@ def QuantModeler(state: SwarmState) -> dict[str, Any]:
     )
 
     logger.info("QuantModeler node complete")
-    return {"messages": [response]}
+    return {"messages": [response], "total_tokens": tokens_to_add}
 
 
 # ---------------------------------------------------------------------------
@@ -209,24 +244,19 @@ if __name__ == "__main__":
         )
     )
 
-    with unittest.mock.patch(
-        "langchain_anthropic.ChatAnthropic.invoke",
-        return_value=fake_ai_response,
+    with unittest.mock.patch.object(
+        _get_macro_agent(),
+        "invoke",
+        return_value={"messages": [fake_ai_response]},
     ):
-        # Also patch the compiled agent invocation to avoid actual graph exec
-        with unittest.mock.patch.object(
-            _macro_agent,
-            "invoke",
-            return_value={"messages": [fake_ai_response]},
-        ):
-            macro_result = MacroAnalyst(test_state)
+        macro_result = MacroAnalyst(test_state)
 
-        with unittest.mock.patch.object(
-            _quant_agent,
-            "invoke",
-            return_value={"messages": [fake_ai_response]},
-        ):
-            quant_result = QuantModeler(test_state)
+    with unittest.mock.patch.object(
+        _get_quant_agent(),
+        "invoke",
+        return_value={"messages": [fake_ai_response]},
+    ):
+        quant_result = QuantModeler(test_state)
 
     # Assertions
     assert isinstance(macro_result, dict), "MacroAnalyst must return a dict"

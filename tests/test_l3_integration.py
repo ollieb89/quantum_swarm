@@ -101,10 +101,10 @@ def test_end_to_end_paper_graph():
         return {"execution_result": mock_execution_dict, "messages": []}
 
     # Mock L2 agents (they call external LLM APIs)
-    def mock_bullish(state):
+    def mock_bullish(state, **kwargs):
         return {"messages": []}
 
-    def mock_bearish(state):
+    def mock_bearish(state, **kwargs):
         return {"messages": []}
 
     def mock_debate_synthesizer(state):
@@ -114,10 +114,10 @@ def test_end_to_end_paper_graph():
             "messages": [],
         }
 
-    def mock_macro_analyst(state):
+    def mock_macro_analyst(state, **kwargs):
         return {"macro_report": {"phase": "Bullish"}, "messages": []}
 
-    def mock_quant_modeler(state):
+    def mock_quant_modeler(state, **kwargs):
         return {
             "quant_proposal": {
                 "symbol": "AAPL", "side": "buy", "quantity": 5.0, "asset_class": "equity"
@@ -125,7 +125,7 @@ def test_end_to_end_paper_graph():
             "messages": [],
         }
 
-    def mock_risk_manager(state):
+    def mock_risk_manager(state, **kwargs):
         return {"risk_approved": True, "risk_notes": "All checks passed.", "messages": []}
 
     # Use patch.object on the orchestrator module — ensures the graph captures mocked funcs
@@ -213,11 +213,14 @@ def test_l3_chain_order():
     assert "order_router" in nodes
     assert "trade_logger" in nodes
 
-    # Verify edge ordering via graph structure: risk_manager → data_fetcher
+    # Verify edge ordering via graph structure:
+    # risk_manager → claw_guard → data_fetcher → knowledge_base → backtester → ...
     edges = graph.get_graph().edges
     edge_pairs = [(e[0], e[1]) for e in edges]
-    assert ("risk_manager", "data_fetcher") in edge_pairs
-    assert ("data_fetcher", "backtester") in edge_pairs
+    assert ("risk_manager", "claw_guard") in edge_pairs
+    assert ("claw_guard", "data_fetcher") in edge_pairs
+    assert ("data_fetcher", "knowledge_base") in edge_pairs
+    assert ("knowledge_base", "backtester") in edge_pairs
     assert ("backtester", "order_router") in edge_pairs
     assert ("order_router", "trade_logger") in edge_pairs
     assert ("trade_logger", "synthesize") in edge_pairs

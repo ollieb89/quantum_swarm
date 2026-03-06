@@ -13,6 +13,9 @@ from .models import GraphDecision
 from .state import SwarmState
 from .agents.analysts import MacroAnalyst, QuantModeler
 from src.blackboard.board import Blackboard
+from src.core.blackboard import InterAgentBlackboard
+from src.core.budget_manager import BudgetManager
+from src.tools.verification_wrapper import SafetyShutdown
 from .agents.researchers import BullishResearcher, BearishResearcher
 from .debate import DebateSynthesizer
 from .agents.l3.data_fetcher import data_fetcher_node
@@ -24,31 +27,6 @@ from .agents.l3.order_router import order_router_node
 from .agents.l3.trade_logger import trade_logger_node
 
 logger = logging.getLogger(__name__)
-
-# --- Node Implementations ---
-
-def classify_intent(state: SwarmState, config: Dict):
-    """
-    Classifies the user intent using configured patterns or an LLM.
-    """
-    user_input = state["user_input"].lower()
-    intent_patterns = config.get("orchestrator", {}).get("intent_patterns", {})
-
-    intent = "unknown"
-    for intent_name, patterns in intent_patterns.items():
-        for pattern in patterns:
-            if pattern in user_input:
-                intent = intent_name
-                break
-        if intent != "unknown":
-            break
-
-    logger.info(f"Classified intent: {intent}")
-
-    return {
-        "intent": intent,
-        "messages": [{"role": "assistant", "content": f"Classified intent: {intent}"}]
-    }
 
 # risk_manager_node and synthesize_consensus imported from .nodes.l1
 
@@ -95,19 +73,23 @@ def create_orchestrator_graph(config: Dict):
 
     workflow = StateGraph(SwarmState)
     board = Blackboard()
+    inter_agent_board = InterAgentBlackboard()
+    budget = BudgetManager(config=config)
 
     # --- L1 nodes ---
-    workflow.add_node("classify_intent", partial(classify_intent_with_registry, config=config))
+    workflow.add_node(
+        "classify_intent",
+        partial(classify_intent_with_registry, config=config, board=inter_agent_board, budget=budget),
+    )
 
     # --- L2 Analyst nodes (Phase 2, Plan 02-01) ---
-    # Real ReAct agents — do not accept config param (node functions take state only)
-    workflow.add_node("macro_analyst", MacroAnalyst)
-    workflow.add_node("quant_modeler", QuantModeler)
+    workflow.add_node("macro_analyst", partial(MacroAnalyst, budget=budget))
+    workflow.add_node("quant_modeler", partial(QuantModeler, budget=budget))
 
     # --- L2 Adversarial Researcher nodes (Phase 2, Plan 02-02) ---
     # Both run in PARALLEL after analysts (fan-out pattern)
-    workflow.add_node("bullish_researcher", BullishResearcher)
-    workflow.add_node("bearish_researcher", BearishResearcher)
+    workflow.add_node("bullish_researcher", partial(BullishResearcher, budget=budget))
+    workflow.add_node("bearish_researcher", partial(BearishResearcher, budget=budget))
 
     # --- L2 Debate Synthesis node (Phase 2, Plan 02-03) ---
     # Aggregates researcher outputs into weighted_consensus_score (fan-in)
@@ -237,10 +219,15 @@ class LangGraphOrchestrator:
             "risk_notes": None,
             "final_decision": None,
             "metadata": {"created_at": datetime.now(timezone.utc).isoformat()},
+            # Phase 1: Blackboard session (task_id is the session key)
+            "blackboard_session": task_id,
+            # Phase 1: Token budget tracking
+            "total_tokens": 0,
             # Phase 3: L3 executor fields
             "trade_history": [],
             "execution_mode": execution_mode,
             "data_fetcher_result": None,
+            "knowledge_base_result": None,
             "backtest_result": None,
             "execution_result": None,
         }
@@ -248,7 +235,16 @@ class LangGraphOrchestrator:
         # Configure the thread (required for checkpointing)
         config = {"configurable": {"thread_id": task_id}}
 
-        final_state = self.app.invoke(initial_state, config=config)
+        try:
+            final_state = self.app.invoke(initial_state, config=config)
+        except SafetyShutdown as e:
+            logger.warning("run_task: SafetyShutdown triggered: %s", e)
+            return GraphDecision(
+                task_id=task_id,
+                decision="HOLD",
+                consensus_score=0.0,
+                rationale=f"Safety Shutdown: {e}",
+            )
 
         # Handle early exit if intent is unknown or nodes skipped
         final_decision_data = final_state.get("final_decision")
