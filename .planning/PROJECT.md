@@ -1,54 +1,94 @@
 # Project: Quantum Swarm
 
-## Vision
-To build a robust, hierarchical multi-agent financial analysis swarm using the OpenClaw framework that adapts to market changes, manages institutional risk, and executes trades autonomously with strict regulatory compliance.
+## What This Is
+
+A production-grade hierarchical multi-agent financial analysis swarm built on LangGraph. Specialized cognitive agents (Macro Analyst, Quant Modeler, adversarial Bull/Bear researchers) synthesize market intelligence through structured debate, apply institutional risk gating, and execute trades via a multi-venue order router with full MiFID II audit provenance.
 
 ## Core Value
-The primary objective is the synthesis of specialized cognitive agents (Macro Analysis, Quant Modeling, Risk Management) into a unified, self-improving system for institutional capital deployment.
 
-## Context
-- **Framework:** OpenClaw (Self-hosted AI agent runtime).
-- **Architecture:** 3-tier hierarchy:
-  - **Level 1 (Strategic Orchestrator):** High-level intent, task delegation, global risk arbiter.
-  - **Level 2 (Domain Managers):** Specialized analysis (Macro, Quant, Risk).
-  - **Level 3 (Stateless Executors):** Data fetching, backtesting, order routing.
-- **Key Features:** Filesystem-as-context, deterministic bypass for procedural tasks, self-improvement loop (weekly reviews), and ClawGuard security.
+Institutional-quality trade signal generation through adversarial AI debate, with immutable audit trails and hard compliance guardrails — from market data ingestion to PostgreSQL-persisted execution records.
+
+## Current State (v1.0)
+
+- **Runtime:** Python 3.12, LangGraph StateGraph, uv-managed
+- **Infrastructure:** PostgreSQL 17 (AsyncPostgresSaver + Trade Warehouse, port 5433)
+- **LLM:** Google Gemini (`gemini-2.0-flash`) via `langchain-google-genai`
+- **Tests:** 155 passing, 0 failures
+- **LOC:** ~14,600 Python
+
+### Architecture
+
+```
+L1 Strategic Orchestrator (intent classifier, ClawGuard, skill registry)
+    ↓ fan-out
+L2 Domain Managers (MacroAnalyst, QuantModeler, BullishResearcher, BearishResearcher)
+    ↓ fan-in → DebateSynthesizer → RiskManager gate (>0.6 threshold)
+    ↓ if approved
+L3 Executors (DataFetcher → Backtester → OrderRouter → TradeLogger)
+    ↓
+PostgreSQL (LangGraph checkpoints + audit_logs + trades)
+```
 
 ## Constraints
-- **Regulatory:** Compliance with Finanstilsynet (Norway), MiFID II, and MAR.
-- **Risk:** Absolute limits on position sizing and leverage (max 10x). Mandatory stop-losses.
-- **Computational:** Budget ceilings on token expenditure.
 
-## Success Criteria
-- [ ] Swarm successfully ingests market data and generates a consensus recommendation.
-- [ ] Trades are executed within risk parameters and regulatory limits.
-- [ ] Self-improvement loop correctly identifies and implements performance-enhancing rules.
-- [ ] System handles API failures and conflicting signals through deterministic circuit breakers.
+- **Regulatory:** Finanstilsynet (Norway), MiFID II, MAR compliance
+- **Risk:** Max 10x leverage, mandatory position size caps, institutional asset blocklist
+- **Computational:** Budget ceilings on token expenditure (BudgetedTool wrapper)
 
 ## Requirements
 
-### Validated
-- ✓ Hierarchy Design (L1/L2/L3) defined.
-- ✓ OpenClaw integration strategy established.
+### Validated (v1.0)
 
-### Active
-- [ ] Implement Level 1 Strategic Orchestrator with progressive disclosure.
-- [ ] Implement Level 2 Domain Managers (Macro, Quant, Risk).
-- [ ] Implement Level 3 Stateless Executors (Data Fetcher, Backtester, Order Router).
-- [ ] Implement `quant-alpha-intelligence` skill.
-- [ ] Implement self-improvement loop (logging, evaluation, rule generation).
-- [ ] Implement regulatory and safety guardrails (Finanstilsynet/ClawGuard).
+- ✓ ORCH-01: L1 Strategic Orchestrator with LangGraph StateGraph — v1.0
+- ✓ ORCH-02: Filesystem blackboard for inter-agent communication — v1.0
+- ✓ ORCH-03: Deterministic bypass for sub-ms procedural task execution — v1.0
+- ✓ ORCH-04: Progressive skill disclosure via YAML metadata — v1.0
+- ✓ ORCH-05: Council-as-Judge consensus with weighted confidence scoring — v1.0
+- ✓ ANALY-01: L2 MacroAnalyst ReAct agent — v1.0
+- ✓ ANALY-02: L2 QuantModeler ReAct agent — v1.0
+- ✓ ANALY-04: Adversarial debate layer (BullishResearcher vs BearishResearcher) — v1.0
+- ✓ EXEC-01: L3 DataFetcher (yfinance, ccxt, news, economic calendar) — v1.0
+- ✓ EXEC-02: L3 Backtester (NautilusTrader BacktestEngine) — v1.0
+- ✓ EXEC-03: L3 OrderRouter (paper, IB equities, Binance crypto) — v1.0
+- ✓ RISK-01: RiskManager mandatory gate (consensus_score > 0.6) — v1.0
+- ✓ RISK-02: Hard leverage limits (max 10x) and restricted asset blocklist — v1.0
+- ✓ MEM-01: Exhaustive execution logging to PostgreSQL trade warehouse — v1.0
+- ✓ SEC-01: ClawGuard verifiable guardrails for agent shell execution — v1.0
+- ✓ SEC-02: Budget ceilings via BudgetedTool wrapper — v1.0
+- ✓ SEC-04: Immutable hash-chained audit trail (SHA-256, MiFID II) — v1.0
+
+### Active (v1.1 targets)
+
+- [ ] ANALY-03: `quant-alpha-intelligence` skill (centralized RSI, MACD, financial math)
+- [ ] RISK-03: Mandatory stop-loss calculation and verification per execution
+- [ ] MEM-02: Weekly review loop evaluating live vs backtested performance
+- [ ] MEM-03: Automated rule generator updating MEMORY.md with PREFER/AVOID/CAUTION
 
 ### Out of Scope
-- Direct human-in-the-loop for every trade (Swarm is autonomous).
-- High-frequency trading (Latency focus is on sub-millisecond procedural tasks, but overall swarm is cognitive/strategic).
+
+- High-frequency trading / sub-second reasoning loops (swarm is cognitive, not latency-optimized)
+- Direct management of non-institutional retail accounts
+- Multi-modal input (chart image analysis) — deferred to v2.0
+- RL optimization for order flow — deferred to v2.0
 
 ## Key Decisions
+
 | Decision | Rationale | Outcome |
 |----------|-----------|---------|
-| OpenClaw Framework | Deterministic routing and hierarchy support. | — Pending |
-| Hierarchical Stratification | Prevents context overflow and optimizes token spend. | — Pending |
-| Filesystem-as-Context | Atomic commits and mutex-based coordination. | — Pending |
+| LangGraph StateGraph (migrated from custom) | Native fan-out/fan-in, checkpointing, graph visualization | ✓ Good — simplified orchestration significantly |
+| Adversarial debate (Bull vs Bear) before consensus | Forces stress-testing of every trade thesis | ✓ Good — catches overconfident signals |
+| Weighted consensus score (>0.6 threshold) | Quantifiable risk gate, tunable | ✓ Good — clean conditional routing |
+| PostgreSQL AsyncPostgresSaver | Distributed checkpointing, crash recovery | ✓ Good — enables async orchestrator |
+| Hash-chained audit logs (SHA-256 + prev_hash) | Tamper-evident MiFID II compliance | ✓ Good — verified by test suite |
+| Google Gemini (gemini-2.0-flash) | Cost-effective, strong reasoning | ✓ Good — lazy init pattern required |
+| Lazy LLM init (getter functions) | Allows import without GOOGLE_API_KEY | ✓ Good — essential for test suite |
+| psycopg3 async (not psycopg2) | Native asyncio, no greenlets | ✓ Good — no compatibility shims needed |
+| BudgetedTool + ToolCache wrapper | Budget ceilings + dedup tool calls | ✓ Good — SEC-02 compliance, cost control |
+
+## Context
+
+Shipped v1.0 in 2 days (2026-03-05 → 2026-03-06), 67 commits, 155 tests.
+Next: v1.1 focuses on self-improvement loop (MEM-02/03) and stop-loss enforcement (RISK-03).
 
 ---
-*Last updated: March 6, 2026 after initialization via gsd:new-project --auto*
+*Last updated: 2026-03-06 after v1.0 milestone*
