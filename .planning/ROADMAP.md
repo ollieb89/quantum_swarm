@@ -18,7 +18,10 @@
   2. System executes shell commands within ClawGuard sandboxed environment.
   3. Sub-millisecond commands bypass LLM reasoning via deterministic dispatch.
   4. System automatically shuts down if token expenditure exceeds budget ceilings.
-**Plans**: TBD
+**Plans**:
+- [ ] 01-01-PLAN.md — Orchestration Consolidation & Blackboard Implementation
+- [ ] 01-02-PLAN.md — Security Guardrails (ClawGuard)
+- [ ] 01-03-PLAN.md — Skill Discovery & Deterministic Bypass
 
 ### Phase 2: Cognitive Analysis & Risk Gating (L2)
 **Goal**: Implement the reasoning core of the swarm with specialized domain managers and bias reduction.
@@ -56,7 +59,7 @@
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1: Foundation & Orchestration (L1) | 0/0 | Not started | - |
+| 1: Foundation & Orchestration (L1) | 0/3 | In Progress | - |
 | 2: Cognitive Analysis & Risk (L2) | 0/0 | Not started | - |
 | 3: Market Execution & Data (L3) | 0/0 | Not started | - |
 | 4: Memory & Institutional Compliance | 0/0 | Not started | - |
