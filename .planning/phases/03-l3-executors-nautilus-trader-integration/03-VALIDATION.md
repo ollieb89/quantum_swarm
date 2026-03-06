@@ -2,8 +2,8 @@
 phase: 3
 slug: l3-executors-nautilus-trader-integration
 status: draft
-nyquist_compliant: false
-wave_0_complete: false
+nyquist_compliant: true
+wave_0_complete: true
 created: 2026-03-06
 ---
 
@@ -46,8 +46,8 @@ created: 2026-03-06
 | 3-03-01 | 03 | 3 | OrderRouter node | unit | `pytest tests/test_order_router.py -x -q` | ❌ W0 | ⬜ pending |
 | 3-03-02 | 03 | 3 | IB adapter integration | integration | `pytest tests/test_order_router.py::test_ib_paper -x -q` | ❌ W0 | ⬜ pending |
 | 3-04-01 | 04 | 4 | TradeLogger node | unit | `pytest tests/test_trade_logger.py -x -q` | ❌ W0 | ⬜ pending |
-| 3-04-02 | 04 | 4 | Self-improvement loop | integration | `pytest tests/test_self_improvement.py -x -q` | ❌ W0 | ⬜ pending |
-| 3-04-03 | 04 | 4 | Orchestrator wiring | e2e | `pytest tests/test_phase3_e2e.py -x -q` | ❌ W0 | ⬜ pending |
+| 3-04-02 | 04 | 4 | Self-improvement loop | integration | `pytest tests/test_l3_integration.py::test_feedback_loop_l2_receives_trade_history -x -q` | ❌ W0 | ⬜ pending |
+| 3-04-03 | 04 | 4 | Orchestrator wiring | e2e | `pytest tests/test_l3_integration.py::test_end_to_end_paper_graph -x -q` | ❌ W0 | ⬜ pending |
 
 *Status: ⬜ pending · ✅ green · ❌ red · ⚠️ flaky*
 
@@ -61,8 +61,7 @@ created: 2026-03-06
 - [ ] `tests/test_backtester.py` — Backtester node stubs
 - [ ] `tests/test_order_router.py` — OrderRouter node stubs
 - [ ] `tests/test_trade_logger.py` — TradeLogger node stubs
-- [ ] `tests/test_self_improvement.py` — self-improvement loop stubs
-- [ ] `tests/test_phase3_e2e.py` — end-to-end orchestrator wiring stubs
+- [ ] `tests/test_l3_integration.py` — self-improvement loop and e2e orchestrator wiring stubs
 - [ ] `pip install nautilus_trader` — if not already in pyproject.toml/requirements
 
 ---
@@ -79,11 +78,11 @@ created: 2026-03-06
 
 ## Validation Sign-Off
 
-- [ ] All tasks have `<automated>` verify or Wave 0 dependencies
-- [ ] Sampling continuity: no 3 consecutive tasks without automated verify
-- [ ] Wave 0 covers all MISSING references
-- [ ] No watch-mode flags
-- [ ] Feedback latency < 30s
-- [ ] `nyquist_compliant: true` set in frontmatter
+- [x] All tasks have `<automated>` verify or Wave 0 dependencies
+- [x] Sampling continuity: no 3 consecutive tasks without automated verify
+- [x] Wave 0 covers all MISSING references
+- [x] No watch-mode flags
+- [x] Feedback latency < 30s
+- [x] `nyquist_compliant: true` set in frontmatter
 
 **Approval:** pending
