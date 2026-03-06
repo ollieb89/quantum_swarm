@@ -162,9 +162,9 @@ def test_quant_modeler_empty_agent_output():
 
     msg = result["messages"][0]
     assert isinstance(msg, AIMessage)
-    # Fallback content should be non-empty and mention no output
-    assert "no output" in msg.content or len(msg.content) > 0, (
-        f"Fallback content should be non-empty, got: '{msg.content}'"
+    # Fallback string is "QuantModeler: no output produced"
+    assert "QuantModeler" in msg.content, (
+        f"Fallback content should reference 'QuantModeler', got: '{msg.content}'"
     )
 
 
