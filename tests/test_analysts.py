@@ -148,6 +148,26 @@ def test_quant_modeler_message_name():
     )
 
 
+def test_quant_modeler_empty_agent_output():
+    """When mock agent returns empty messages list, node still returns a fallback message."""
+    mock = MagicMock()
+    mock.invoke.return_value = {"messages": []}
+    analysts_mod._quant_agent = mock
+
+    result = QuantModeler(_make_state())
+
+    assert isinstance(result, dict), "QuantModeler must return a dict even on empty output"
+    assert "messages" in result
+    assert len(result["messages"]) > 0, "Node must produce a fallback message"
+
+    msg = result["messages"][0]
+    assert isinstance(msg, AIMessage)
+    # Fallback content should be non-empty and mention no output
+    assert "no output" in msg.content or len(msg.content) > 0, (
+        f"Fallback content should be non-empty, got: '{msg.content}'"
+    )
+
+
 def test_quant_modeler_uses_macro_context():
     """QuantModeler called with macro_report in state doesn't crash; agent invoked once."""
     macro_context = {
