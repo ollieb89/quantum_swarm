@@ -48,11 +48,14 @@ phases:
   status: not_started
   started: null
   completed: null
-  plan_file: null
+  plan_file: PHASES/03-l3-executors-nautilus-trader-integration
+  plans_count: 5
   deliverables:
-  - Migrate DataFetcher, Backtester, OrderRouter
-  - Integrate NautilusTrader for live execution
-  - Implement trade logging and self-improvement loop
+  - Migrate DataFetcher, Backtester, OrderRouter to real LangGraph async nodes
+  - Integrate NautilusTrader BacktestEngine (paper + live execution)
+  - IB adapter for live equities, Binance adapter for live crypto
+  - Dexter fundamentals bridge (async subprocess)
+  - Implement trade logging and self-improvement loop via trade_history in SwarmState
 - number: 4
   name: Dashboard & Observability
   status: not_started
@@ -90,10 +93,19 @@ phases:
   - Full integration test suite for debate pipeline (tests/test_adversarial_debate.py)
 
 ## Phase 3 — L3 Executors & NautilusTrader Integration [NOT STARTED]
+- Plans: 5 plans
+- Plans:
+  - [ ] 03-00-PLAN.md — Environment setup: NautilusTrader install, Pydantic data models, test stubs
+  - [ ] 03-01-PLAN.md — DataFetcher node: yfinance, ccxt, news sentiment, economic calendar, Dexter bridge
+  - [ ] 03-02-PLAN.md — Backtester node: NautilusTrader BacktestEngine wrapped in asyncio.to_thread
+  - [ ] 03-03-PLAN.md — OrderRouter node: paper simulation + IB live equities + Binance live crypto
+  - [ ] 03-04-PLAN.md — TradeLogger + self-improvement loop + orchestrator wiring (has human checkpoint)
 - Deliverables:
-  - Migrate DataFetcher, Backtester, OrderRouter
-  - Integrate NautilusTrader for live execution
-  - Implement trade logging and self-improvement loop
+  - Migrate DataFetcher, Backtester, OrderRouter to real LangGraph async nodes
+  - Integrate NautilusTrader BacktestEngine (paper + live execution)
+  - IB adapter for live equities, Binance for crypto (Alpaca has no NT adapter)
+  - Dexter fundamentals bridge (async subprocess, 90s timeout)
+  - Implement trade logging and self-improvement loop via trade_history in SwarmState
 
 ## Phase 4 — Dashboard & Observability [NOT STARTED]
 - Deliverables:
