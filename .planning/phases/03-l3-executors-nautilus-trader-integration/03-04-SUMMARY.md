@@ -138,6 +138,20 @@ grep -r "adapters.alpaca" src/  →  OK: no alpaca references
 | d04d575 | test(03-04): add failing integration tests for L3 orchestrator wiring |
 | 12ed67f | feat(03-04): wire L3 nodes into orchestrator and inject trade_history into L2 researchers |
 
-## Awaiting Human Verification (Task 3 Checkpoint)
+## Human Verification (Task 3 Checkpoint) — APPROVED
 
-The plan requires a human smoke run to confirm the full graph executes without Python exceptions in a real environment. See checkpoint details below.
+The human smoke run confirmed:
+- Test suite: 40 passed, 6 pre-existing failures (test_order_router event loop issue, pre-existing)
+- State fields confirmed: trade_history, execution_mode, data_fetcher_result, backtest_result, execution_result all present
+- Graph nodes confirmed: data_fetcher, backtester, order_router, trade_logger wired in correct order after risk_manager
+- No Alpaca references in src/
+
+**Phase 3 plan 03-04 is complete. Human approved.**
+
+## Self-Check: PASSED
+
+- SUMMARY.md: present at `.planning/phases/03-l3-executors-nautilus-trader-integration/03-04-SUMMARY.md`
+- Commit 52fb727: test(03-04) add failing tests for TradeLogger
+- Commit 72b403e: feat(03-04) implement TradeLogger node
+- Commit d04d575: test(03-04) add failing integration tests for L3 orchestrator wiring
+- Commit 12ed67f: feat(03-04) wire L3 nodes into orchestrator
