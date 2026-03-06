@@ -1,10 +1,10 @@
 ---
 phase:
-  current: not_started
-  name: ""
-  status: pending
-  started: ""
-  completed: ""
+  current: 5
+  name: Quant Alpha Intelligence
+  status: not_started
+  started: ''
+  completed: ''
   blockers: []
 milestone:
   current: v1.1
@@ -50,10 +50,19 @@ Previous: v1.0 MVP — SHIPPED 2026-03-06 (155 tests, 4 phases, ~14,600 LOC)
 
 ## Current Phase
 
-Phase: Not started (defining requirements)
-Plan: —
-Status: Defining requirements
-Last activity: 2026-03-06 — Milestone v1.1 started
+Phase: 5 — Quant Alpha Intelligence
+Plan: TBD
+Status: Not started
+Last activity: 2026-03-06 — v1.1 roadmap defined (phases 5-7)
+
+## Progress
+
+```
+v1.1: [          ] 0/3 phases complete
+Phase 5: Quant Alpha Intelligence  — Not started
+Phase 6: Stop-Loss Enforcement     — Not started
+Phase 7: Self-Improvement Loop     — Not started
+```
 
 ## Health
 
@@ -61,13 +70,14 @@ Status: Green
 - v1.0 shipped: 155 tests passing, all 4 phases complete
 - PostgreSQL infrastructure operational (Port 5433)
 - Architecture stable: LangGraph + Gemini + psycopg3
+- v1.1 roadmap defined: 3 phases, 6 requirements, 100% coverage
 
 ## Project Reference
 
 See: `.planning/PROJECT.md` (updated 2026-03-06 — Milestone v1.1 started)
 
 **Core value:** Institutional-quality trade signal generation through adversarial AI debate, with immutable audit trails and hard compliance guardrails
-**Current focus:** v1.1 — Self-improvement loop, stop-loss enforcement, quant alpha skill
+**Current focus:** v1.1 — Phase 5: Quant Alpha Intelligence (ANALY-03)
 
 ## Architecture
 
@@ -95,3 +105,13 @@ See: `.planning/PROJECT.md` (updated 2026-03-06 — Milestone v1.1 started)
 - Python 3.12: use `asyncio.run()` not `asyncio.get_event_loop().run_until_complete()`
 - ccxt package broken in env; chromadb and pytest-asyncio missing — known env issues, not regressions
 - psycopg3 async throughout (not psycopg2)
+
+## v1.1 Phase Dependency Chain
+
+Phase 5 (ANALY-03) -> Phase 6 (RISK-03, RISK-05, RISK-06) -> Phase 7 (MEM-02, MEM-03)
+
+Phase 6 depends on Phase 5: ATR is a technical indicator; the quant-alpha-intelligence skill provides the
+calculation infrastructure that Phase 6's stop-loss logic calls into.
+
+Phase 7 depends on Phase 6: meaningful weekly review requires real execution records that include
+stop-loss data written to the trade warehouse by Phase 6.

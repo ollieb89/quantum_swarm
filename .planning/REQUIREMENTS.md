@@ -89,22 +89,26 @@ Explicit exclusions. Documented to prevent scope creep.
 
 Which phases cover which requirements. Updated during roadmap creation.
 
+### v1.0 Requirements
+
+All v1.0 requirements covered by Phases 1-4 (shipped 2026-03-06).
+
 ### v1.1 Requirements
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| ANALY-03 | — | Pending |
-| RISK-03 | — | Pending |
-| RISK-05 | — | Pending |
-| RISK-06 | — | Pending |
-| MEM-02 | — | Pending |
-| MEM-03 | — | Pending |
+| ANALY-03 | Phase 5 | Pending |
+| RISK-03 | Phase 6 | Pending |
+| RISK-05 | Phase 6 | Pending |
+| RISK-06 | Phase 6 | Pending |
+| MEM-02 | Phase 7 | Pending |
+| MEM-03 | Phase 7 | Pending |
 
 **Coverage:**
 - v1.1 requirements: 6 total
-- Mapped to phases: 0
-- Unmapped: 6 ⚠️
+- Mapped to phases: 6
+- Unmapped: 0 ✓
 
 ---
 *Requirements defined: 2026-03-06 (v1.0)*
-*Last updated: 2026-03-06 — v1.1 requirements added*
+*Last updated: 2026-03-06 — v1.1 traceability mapped (phases 5-7)*
