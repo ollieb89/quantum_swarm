@@ -60,7 +60,7 @@ def test_backtester_node_returns_sharpe():
 def test_bar_data_wrangler_processes_dataframe():
     """BarDataWrangler.process(df) returns non-empty bar list after column lowercasing."""
     import numpy as np
-    from nautilus_trader.model import BarType, Venue
+    from nautilus_trader.model import BarType
     from nautilus_trader.model.currencies import USD
     from nautilus_trader.model.data import BarSpecification
     from nautilus_trader.model.enums import BarAggregation, PriceType
@@ -85,19 +85,18 @@ def test_bar_data_wrangler_processes_dataframe():
     # CRITICAL: lowercase before BarDataWrangler (Pitfall 3 from RESEARCH.md)
     df.columns = [c.lower() for c in df.columns]
 
-    # Build instrument
+    # Build instrument using NT 1.223.0 API (raw_symbol, ts_event, ts_init required)
     symbol = "AAPL"
     venue_name = "SIM"
     instrument = Equity(
         instrument_id=InstrumentId.from_str(f"{symbol}.{venue_name}"),
-        symbol=Symbol(symbol),
-        venue=Venue(venue_name),
+        raw_symbol=Symbol(symbol),
         currency=USD,
         price_precision=2,
-        size_precision=0,
         price_increment=Price(0.01, 2),
-        size_increment=Quantity(1, 0),
         lot_size=Quantity(1, 0),
+        ts_event=0,
+        ts_init=0,
     )
     bar_type = BarType(
         instrument_id=instrument.id,
