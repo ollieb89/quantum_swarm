@@ -3,13 +3,13 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: Yellow
-stopped_at: Completed 03-l3-executors-nautilus-trader-integration-03-02-PLAN.md
-last_updated: "2026-03-06T01:06:05.371Z"
+stopped_at: Completed 03-l3-executors-nautilus-trader-integration-03-03-PLAN.md
+last_updated: "2026-03-06T01:12:38.327Z"
 progress:
   total_phases: 2
   completed_phases: 1
   total_plans: 10
-  completed_plans: 8
+  completed_plans: 9
 ---
 
 # Project State
@@ -63,6 +63,9 @@ Status: Yellow
 - Phase 03-01: FRED uses DTWEXBGS (Broad USD Index) not DXY — DXY is not a FRED series identifier
 - [Phase 03-02]: NT 1.223.0 Equity constructor uses raw_symbol (not symbol) and requires ts_event/ts_init — RESEARCH.md documented old API; fixed in implementation and tests
 - [Phase 03-02]: NautilusTrader imports deferred inside _run_nautilus_backtest body — keeps module importable if NT has install issues
+- [Phase 03-l3-executors-nautilus-trader-integration]: Interactive Brokers selected for live equities — NautilusTrader 1.223.0 has no Alpaca adapter; user confirmed IB (option-ib) at Task 0 checkpoint
+- [Phase 03-l3-executors-nautilus-trader-integration]: TCP reachability gate (asyncio.wait_for open_connection, 3s timeout) used before IB TradingNode init — cheap fast-fail with clear error message
+- [Phase 03-l3-executors-nautilus-trader-integration]: Paper mode uses yfinance last price + 0.01% slippage instead of BacktestEngine — simpler, no venue state, sufficient for single-order paper simulation
 
 ## Performance Metrics
 
@@ -71,8 +74,9 @@ Status: Yellow
 | 03-l3-executors-nautilus-trader-integration | 00 | 12min | 2 | 8 |
 | 03-l3-executors-nautilus-trader-integration | 01 | 8min | 2 | 11 |
 | Phase 03-l3-executors-nautilus-trader-integration P02 | 8min | 1 tasks | 2 files |
+| Phase 03-l3-executors-nautilus-trader-integration P03 | 15min | 1 tasks | 2 files |
 
 ## Session
 
-- **Stopped At:** Completed 03-l3-executors-nautilus-trader-integration-03-02-PLAN.md
-- **Last session:** 2026-03-06T01:06:05.370Z
+- **Stopped At:** Completed 03-l3-executors-nautilus-trader-integration-03-03-PLAN.md
+- **Last session:** 2026-03-06T01:12:38.326Z
