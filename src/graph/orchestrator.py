@@ -22,9 +22,13 @@ from .agents.l3.data_fetcher import data_fetcher_node
 from .nodes.knowledge_base import knowledge_base_node
 from .nodes.l1 import risk_manager_node, synthesize_consensus, classify_intent_with_registry
 from src.security.claw_guard import claw_guard_node
+from src.security.institutional_guard import institutional_guard_node
 from .agents.l3.backtester import backtester_node
 from .agents.l3.order_router import order_router_node
 from .agents.l3.trade_logger import trade_logger_node
+from .nodes.write_external_memory import write_external_memory_node
+from .nodes.write_research_memory import write_research_memory_node
+from .nodes.write_trade_memory import write_trade_memory_node
 
 logger = logging.getLogger(__name__)
 
@@ -68,47 +72,113 @@ def route_after_debate(state: SwarmState) -> str:
 
 # --- Graph Construction ---
 
-def create_orchestrator_graph(config: Dict):
-    """Builds the LangGraph orchestration graph."""
+from src.core.audit_logger import AuditLogger
+
+# Global instance for the orchestrator session
+audit_logger = AuditLogger()
+
+def with_audit_logging(node_fn, node_id: str):
+    """
+    Decorator/Wrapper to automatically log node transitions with the AuditLogger.
+    Ensures every node execution is recorded with its input, output, and hash chain.
+    """
+    async def wrapped_node(state: SwarmState, **kwargs):
+        # Identify the task context
+        task_id = state.get("task_id", "unknown")
+        
+        # In a real LangGraph node, input is the state.
+        # We capture a snippet of the state for audit (avoiding massive binary blobs if any)
+        input_snapshot = {k: v for k, v in state.items() if not k.startswith("_")}
+        
+        # Execute the actual node logic
+        # Note: Some nodes might be sync, some async. 
+        # Since we are in an async context (orchestrator), we handle both.
+        if asyncio.iscoroutinefunction(node_fn):
+            result = await node_fn(state, **kwargs)
+        else:
+            # Run sync nodes in a thread pool to avoid blocking the event loop
+            result = await asyncio.to_thread(node_fn, state, **kwargs)
+        
+        # Capture the output (the state update)
+        output_snapshot = result if isinstance(result, dict) else {}
+        
+        # Asynchronously log the transition
+        try:
+            await audit_logger.log_transition(
+                task_id=task_id,
+                node_id=node_id,
+                input_data=input_snapshot,
+                output_data=output_snapshot
+            )
+        except Exception as e:
+            logger.error("Failed to log audit transition for node %s: %s", node_id, e)
+            # In institutional compliance, a logging failure might require a halt.
+            # For now, we log the error and continue.
+            
+        return result
+        
+    return wrapped_node
+
+def create_orchestrator_graph(config: Dict, checkpointer: Any = None, memory: Any = None):
+    """Builds the LangGraph orchestration graph.
+
+    Args:
+        config: Dict containing agent and runtime settings.
+        checkpointer: Optional LangGraph checkpointer (e.g. MemorySaver, PostgresSaver).
+    """
 
     workflow = StateGraph(SwarmState)
     board = Blackboard()
     inter_agent_board = InterAgentBlackboard()
     budget = BudgetManager(config=config)
 
+    # Memory service — constructed lazily if not provided
+    if memory is None:
+        from src.memory.service import MemoryService
+        memory = MemoryService(chroma_path="data/chroma_db")
+
     # --- L1 nodes ---
     workflow.add_node(
         "classify_intent",
-        partial(classify_intent_with_registry, config=config, board=inter_agent_board, budget=budget),
+        with_audit_logging(
+            partial(classify_intent_with_registry, config=config, board=inter_agent_board, budget=budget),
+            "classify_intent"
+        ),
     )
 
-    # --- L2 Analyst nodes (Phase 2, Plan 02-01) ---
-    workflow.add_node("macro_analyst", partial(MacroAnalyst, budget=budget))
-    workflow.add_node("quant_modeler", partial(QuantModeler, budget=budget))
+    # --- L2 Analyst nodes ---
+    workflow.add_node("macro_analyst", with_audit_logging(partial(MacroAnalyst, budget=budget), "macro_analyst"))
+    workflow.add_node("quant_modeler", with_audit_logging(partial(QuantModeler, budget=budget), "quant_modeler"))
 
-    # --- L2 Adversarial Researcher nodes (Phase 2, Plan 02-02) ---
-    # Both run in PARALLEL after analysts (fan-out pattern)
-    workflow.add_node("bullish_researcher", partial(BullishResearcher, budget=budget))
-    workflow.add_node("bearish_researcher", partial(BearishResearcher, budget=budget))
+    # --- L2 Adversarial Researcher nodes ---
+    workflow.add_node("bullish_researcher", with_audit_logging(partial(BullishResearcher, budget=budget), "bullish_researcher"))
+    workflow.add_node("bearish_researcher", with_audit_logging(partial(BearishResearcher, budget=budget), "bearish_researcher"))
 
-    # --- L2 Debate Synthesis node (Phase 2, Plan 02-03) ---
-    # Aggregates researcher outputs into weighted_consensus_score (fan-in)
-    workflow.add_node("debate_synthesizer", DebateSynthesizer)
+    # --- L2 Debate Synthesis node ---
+    workflow.add_node("debate_synthesizer", with_audit_logging(DebateSynthesizer, "debate_synthesizer"))
 
-    # --- Existing downstream nodes (Plans 02-04+) ---
-    workflow.add_node("risk_manager", partial(risk_manager_node, board=board))
+    # --- Existing downstream nodes ---
+    workflow.add_node("risk_manager", with_audit_logging(partial(risk_manager_node, board=board), "risk_manager"))
 
-    # --- ClawGuard (Phase 1, Deliverable 2) — between risk_manager and order_router ---
-    workflow.add_node("claw_guard", partial(claw_guard_node, config=config))
+    # --- ClawGuard ---
+    workflow.add_node("claw_guard", with_audit_logging(partial(claw_guard_node, config=config), "claw_guard"))
 
-    # --- L3 Executor nodes (Phase 3, Plan 03-04) ---
-    workflow.add_node("data_fetcher", data_fetcher_node)
-    workflow.add_node("knowledge_base", knowledge_base_node)
-    workflow.add_node("backtester", backtester_node)
-    workflow.add_node("order_router", order_router_node)
-    workflow.add_node("trade_logger", trade_logger_node)
+    # --- Institutional Guard (Phase 4) ---
+    workflow.add_node("institutional_guard", with_audit_logging(partial(institutional_guard_node, config=config), "institutional_guard"))
 
-    workflow.add_node("synthesize", partial(synthesize_consensus, config=config, board=board))
+    # --- L3 Executor nodes ---
+    workflow.add_node("data_fetcher", with_audit_logging(data_fetcher_node, "data_fetcher"))
+    workflow.add_node("knowledge_base", with_audit_logging(knowledge_base_node, "knowledge_base"))
+    workflow.add_node("backtester", with_audit_logging(backtester_node, "backtester"))
+    workflow.add_node("order_router", with_audit_logging(order_router_node, "order_router"))
+    workflow.add_node("trade_logger", with_audit_logging(trade_logger_node, "trade_logger"))
+
+    workflow.add_node("synthesize", with_audit_logging(partial(synthesize_consensus, config=config, board=board), "synthesize"))
+
+    # --- Phase 4: Memory write nodes ---
+    workflow.add_node("write_external_memory", partial(write_external_memory_node, memory=memory))
+    workflow.add_node("write_research_memory", partial(write_research_memory_node, memory=memory))
+    workflow.add_node("write_trade_memory", partial(write_trade_memory_node, memory=memory))
 
     # Set Entry Point
     workflow.set_entry_point("classify_intent")
@@ -125,7 +195,6 @@ def create_orchestrator_graph(config: Dict):
     )
 
     # --- Fan-out: analysts → both researchers run in parallel ---
-    # Each analyst fans out to both researchers; LangGraph executes parallel branches
     workflow.add_edge("macro_analyst", "bullish_researcher")
     workflow.add_edge("macro_analyst", "bearish_researcher")
     workflow.add_edge("quant_modeler", "bullish_researcher")
@@ -134,10 +203,12 @@ def create_orchestrator_graph(config: Dict):
     # --- Fan-in: both researchers must complete before debate_synthesizer ---
     workflow.add_edge(["bullish_researcher", "bearish_researcher"], "debate_synthesizer")
 
-    # --- Risk gating: conditional edge from debate_synthesizer (Plan 02-04) ---
-    # Routes to risk_manager only if weighted_consensus_score > 0.6; else hold (END).
+    # --- Phase 4: research memory written after debate, before risk gate ---
+    workflow.add_edge("debate_synthesizer", "write_research_memory")
+
+    # --- Risk gating: conditional edge from write_research_memory ---
     workflow.add_conditional_edges(
-        "debate_synthesizer",
+        "write_research_memory",
         route_after_debate,
         {
             "risk_manager": "risk_manager",
@@ -145,20 +216,23 @@ def create_orchestrator_graph(config: Dict):
         },
     )
 
-    # --- Phase 3: risk_manager → claw_guard → L3 chain → synthesize → END ---
+    # --- Phase 3+4: risk_manager → claw_guard → L3 chain → synthesize → END ---
     workflow.add_edge("risk_manager", "claw_guard")
     workflow.add_edge("claw_guard", "data_fetcher")
-    workflow.add_edge("data_fetcher", "knowledge_base")
+    workflow.add_edge("data_fetcher", "write_external_memory")   # Phase 4: store market data
+    workflow.add_edge("write_external_memory", "knowledge_base")
     workflow.add_edge("knowledge_base", "backtester")
     workflow.add_edge("backtester", "order_router")
     workflow.add_edge("order_router", "trade_logger")
-    workflow.add_edge("trade_logger", "synthesize")
+    workflow.add_edge("trade_logger", "write_trade_memory")      # Phase 4: store trade outcome
+    workflow.add_edge("write_trade_memory", "synthesize")
     workflow.add_edge("synthesize", END)
 
-    # Persistence
-    memory = MemorySaver()
+    # Default to memory persistence if none provided
+    if checkpointer is None:
+        checkpointer = MemorySaver()
 
-    return workflow.compile(checkpointer=memory)
+    return workflow.compile(checkpointer=checkpointer)
 
 
 def build_graph():
@@ -169,11 +243,14 @@ def build_graph():
     """
     return create_orchestrator_graph({})
 
+import asyncio
+
 class LangGraphOrchestrator:
     """Wrapper for the LangGraph orchestrator to match existing interface."""
 
-    def __init__(self, config: Dict):
+    def __init__(self, config: Dict, checkpointer: Any = None):
         self.config = config
+        self.checkpointer = checkpointer
 
         # Load YAML config for Phase 3 fields (execution_mode, etc.)
         config_path = os.path.join(
@@ -188,10 +265,19 @@ class LangGraphOrchestrator:
 
         # Merge YAML config into runtime config so create_orchestrator_graph has it
         merged_config = {**self._yaml_config, **config}
-        self.app = create_orchestrator_graph(merged_config)
+
+        # Phase 4: Memory service — constructed once, shared across all graph runs
+        from src.memory.service import MemoryService
+        self._memory = MemoryService(chroma_path="data/chroma_db")
+
+        self.app = create_orchestrator_graph(merged_config, checkpointer=self.checkpointer, memory=self._memory)
 
     def run_task(self, user_input: str) -> GraphDecision:
-        """Process user input through the LangGraph."""
+        """Process user input through the LangGraph (Synchronous wrapper)."""
+        return asyncio.run(self.run_task_async(user_input))
+
+    async def run_task_async(self, user_input: str) -> GraphDecision:
+        """Process user input through the LangGraph (Asynchronous)."""
         task_id = str(uuid.uuid4())[:8]
 
         # Resolve execution_mode from YAML config (safe default: "paper")
@@ -236,7 +322,14 @@ class LangGraphOrchestrator:
         config = {"configurable": {"thread_id": task_id}}
 
         try:
-            final_state = self.app.invoke(initial_state, config=config)
+            # LangGraph invoke is async if app was compiled with an async checkpointer
+            # or if using astream, but for simplicity here we assume invoke works.
+            # In LangGraph 0.2+, invoke is sync if checkpointer is sync, 
+            # and ainvoke is async. PostgresSaver is async.
+            if self.checkpointer and hasattr(self.app, "ainvoke"):
+                final_state = await self.app.ainvoke(initial_state, config=config)
+            else:
+                final_state = self.app.invoke(initial_state, config=config)
         except SafetyShutdown as e:
             logger.warning("run_task: SafetyShutdown triggered: %s", e)
             return GraphDecision(

@@ -219,8 +219,12 @@ def test_l3_chain_order():
     edge_pairs = [(e[0], e[1]) for e in edges]
     assert ("risk_manager", "claw_guard") in edge_pairs
     assert ("claw_guard", "data_fetcher") in edge_pairs
-    assert ("data_fetcher", "knowledge_base") in edge_pairs
+    # Phase 4: write_external_memory inserted between data_fetcher and knowledge_base
+    assert ("data_fetcher", "write_external_memory") in edge_pairs
+    assert ("write_external_memory", "knowledge_base") in edge_pairs
     assert ("knowledge_base", "backtester") in edge_pairs
     assert ("backtester", "order_router") in edge_pairs
     assert ("order_router", "trade_logger") in edge_pairs
-    assert ("trade_logger", "synthesize") in edge_pairs
+    # Phase 4: write_trade_memory inserted between trade_logger and synthesize
+    assert ("trade_logger", "write_trade_memory") in edge_pairs
+    assert ("write_trade_memory", "synthesize") in edge_pairs

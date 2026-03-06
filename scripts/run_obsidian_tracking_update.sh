@@ -20,8 +20,18 @@ if [[ -z "${PYTHON_EXEC:-}" ]]; then
   exit 1
 fi
 
-exec "$PYTHON_EXEC" "$REPO_DIR/scripts/update_project_tracking.py" \
+"$PYTHON_EXEC" "$REPO_DIR/scripts/update_project_tracking.py" \
   --project "$PROJECT_SLUG" \
   --event "$EVENT" \
   --input "$INPUT_PATH" \
   --vault-root "$VAULT_ROOT"
+
+"$PYTHON_EXEC" "$REPO_DIR/scripts/generate_transclusion_indexes.py" \
+  --vault-root "$VAULT_ROOT" \
+  --project "$PROJECT_SLUG" \
+  --repo-root "$REPO_DIR"
+
+# Phase 4: weekly memory deduplication and orphan cleanup
+echo "Running memory indexer..."
+(cd "$REPO_DIR" && "$PYTHON_EXEC" -m src.memory.indexer) || \
+  echo "Warning: memory indexer failed (non-fatal)" >&2
