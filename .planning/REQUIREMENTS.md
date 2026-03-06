@@ -1,79 +1,110 @@
 # Requirements: Quantum Swarm
 
-## v1 Requirements (MVP)
+**Defined:** 2026-03-06 (v1.0), updated 2026-03-06 (v1.1)
+**Core Value:** Institutional-quality trade signal generation through adversarial AI debate, with immutable audit trails and hard compliance guardrails
+
+## Validated Requirements (v1.0 — Shipped 2026-03-06)
 
 ### Orchestration & Framework (ORCH)
-- [ ] **ORCH-01**: Implement Level 1 Strategic Orchestrator using a suspension model to minimize token context.
-- [ ] **ORCH-02**: Establish a "Blackboard" coordination state using filesystem-as-context for inter-agent communication.
-- [ ] **ORCH-03**: Implement deterministic bypass (command-dispatch) for sub-millisecond procedural task execution.
-- [ ] **ORCH-04**: Implement progressive disclosure for agent skills using YAML metadata discovery.
-- [ ] **ORCH-05**: Implement a "Council-as-a-Judge" consensus mechanism with weighted confidence scoring.
+- ✓ **ORCH-01**: L1 Strategic Orchestrator using LangGraph StateGraph — v1.0
+- ✓ **ORCH-02**: Filesystem blackboard for inter-agent communication — v1.0
+- ✓ **ORCH-03**: Deterministic bypass for sub-ms procedural task execution — v1.0
+- ✓ **ORCH-04**: Progressive skill disclosure via YAML metadata — v1.0
+- ✓ **ORCH-05**: Council-as-Judge consensus with weighted confidence scoring — v1.0
 
 ### Analysis & Reasoning (ANALY)
-- [ ] **ANALY-01**: Implement Level 2 Macro Analyst for evaluating global market conditions and sentiment.
-- [ ] **ANALY-02**: Implement Level 2 Quant Modeler for technical indicator analysis and price action data arrays.
-- [ ] **ANALY-03**: Develop the `quant-alpha-intelligence` skill for centralized financial mathematics (RSI, MACD, etc.).
-- [ ] **ANALY-04**: Implement an "Adversarial Debate" layer (Bull vs. Bear) to stress-test trade theses (Table Stakes).
+- ✓ **ANALY-01**: L2 MacroAnalyst ReAct agent — v1.0
+- ✓ **ANALY-02**: L2 QuantModeler ReAct agent — v1.0
+- ✓ **ANALY-04**: Adversarial debate layer (BullishResearcher vs BearishResearcher) — v1.0
 
 ### Execution & Tools (EXEC)
-- [ ] **EXEC-01**: Implement Level 3 Data Fetcher for multi-source data integration (Technical, News, Fundamental).
-- [ ] **EXEC-02**: Implement Level 3 Backtester for event-driven simulations with realistic friction (slippage, commissions).
-- [ ] **EXEC-03**: Implement Level 3 Order Router for secure exchange connectivity (via CCXT/NautilusTrader).
+- ✓ **EXEC-01**: L3 DataFetcher (yfinance, ccxt, news, economic calendar) — v1.0
+- ✓ **EXEC-02**: L3 Backtester (NautilusTrader BacktestEngine) — v1.0
+- ✓ **EXEC-03**: L3 OrderRouter (paper, IB equities, Binance crypto) — v1.0
 
 ### Risk & Compliance (RISK)
-- [ ] **RISK-01**: Implement Level 2 Risk Manager as a mandatory gate for all trade proposals.
-- [ ] **RISK-02**: Enforce hard limits on position sizing and leverage (max 10x).
-- [ ] **RISK-03**: Implement mandatory stop-loss calculation and verification for every execution.
-- [ ] **RISK-04**: Integrate Finanstilsynet (Norway) and MiFID II compliance checks (Position limits, SSR locate verification).
+- ✓ **RISK-01**: RiskManager mandatory gate (consensus_score > 0.6) — v1.0
+- ✓ **RISK-02**: Hard leverage limits (max 10x) and restricted asset blocklist — v1.0
 
 ### Memory & Improvement (MEM)
-- [ ] **MEM-01**: Implement exhaustive execution logging (trades.json) with multi-dimensional context capture.
-- [ ] **MEM-02**: Implement a "Weekly Review" loop that evaluates live performance against backtested expectations.
-- [ ] **MEM-03**: Implement an automated rule generator that updates `MEMORY.md` with PREFER/AVOID/CAUTION directives.
+- ✓ **MEM-01**: Exhaustive execution logging to PostgreSQL trade warehouse — v1.0
 
 ### Security & Safety (SEC)
-- [ ] **SEC-01**: Implement "ClawGuard" verifiable guardrails to sandbox agent shell execution.
-- [ ] **SEC-02**: Implement programmatic budget ceilings to trigger safety shutdowns on excessive token spend.
-- [ ] **SEC-03**: Implement system-wide circuit breakers for API degradation or anomalous strategy behavior.
-- [ ] **SEC-04**: Maintain an immutable audit trail for every trade signal to satisfy MiFID II explainability requirements.
+- ✓ **SEC-01**: ClawGuard verifiable guardrails for agent shell execution — v1.0
+- ✓ **SEC-02**: Budget ceilings via BudgetedTool wrapper — v1.0
+- ✓ **SEC-04**: Immutable hash-chained audit trail (SHA-256, MiFID II) — v1.0
 
-## v2 Requirements (Deferred)
-- [ ] **ORCH-06**: Multi-modal input support (chart image analysis).
-- [ ] **ANALY-05**: Reinforcement Learning (RL) optimization for order flow.
-- [ ] **MEM-04**: Regime-aware vector memory for recognizing long-term historical parallels.
+---
+
+## v1.1 Requirements
+
+Requirements for the Self-Improvement Loop milestone. Each maps to roadmap phases.
+
+### Analytics (ANALY)
+
+- [ ] **ANALY-03**: Swarm can compute RSI, MACD, and Bollinger Bands technical indicators via centralized `quant-alpha-intelligence` registered skill
+
+### Risk Management (RISK)
+
+- [ ] **RISK-03**: System calculates ATR-based stop-loss for every trade before order submission
+- [ ] **RISK-05**: OrderRouter rejects any trade execution missing a valid stop-loss calculation (hard gate, no exception)
+- [ ] **RISK-06**: Stop-loss level is recorded in the trade's PostgreSQL audit log entry alongside entry price and position size
+
+### Memory / Self-Improvement (MEM)
+
+- [ ] **MEM-02**: Weekly review agent compares actual live P&L against backtested projections and writes a structured performance drift report
+- [ ] **MEM-03**: Rule generator reads weekly review output and appends PREFER/AVOID/CAUTION rules to MEMORY.md for future swarm context
+
+---
+
+## Future Requirements
+
+Deferred from current scope. Tracked but not in v1.1 roadmap.
+
+### Analytics
+- **ANALY-05**: Reinforcement Learning optimization for order flow — post v1.1
+
+### Security
+- **SEC-03**: System-wide circuit breakers for API degradation or anomalous strategy behavior — post v1.1
+
+### Memory
+- **MEM-04**: Regime-aware vector memory for recognizing long-term historical parallels — v2.0
+
+### Orchestration
+- **ORCH-06**: Multi-modal input support (chart image analysis) — v2.0
 
 ## Out of Scope
-- High-frequency trading (HFT) / sub-second reasoning loops.
-- Retail "social trading" features.
-- Direct management of non-institutional retail accounts.
+
+Explicit exclusions. Documented to prevent scope creep.
+
+| Feature | Reason |
+|---------|--------|
+| High-frequency / sub-second trading loops | Swarm is cognitive, not latency-optimized |
+| RL optimization for order flow | Deferred to v2.0 |
+| Multi-modal chart image analysis | Deferred to v2.0 |
+| Direct retail account management | Institutional mandate only |
+| Real-time stop-loss auto-triggering | v1.1 calculates and gates at submission; live monitoring is post-v1.1 |
 
 ## Traceability
 
+Which phases cover which requirements. Updated during roadmap creation.
+
+### v1.1 Requirements
+
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| ORCH-01 | Phase 1 | Pending |
-| ORCH-02 | Phase 1 | Pending |
-| ORCH-03 | Phase 1 | Pending |
-| ORCH-04 | Phase 1 | Pending |
-| ORCH-05 | Phase 2 | Pending |
-| ANALY-01 | Phase 2 | Pending |
-| ANALY-02 | Phase 2 | Pending |
-| ANALY-03 | Phase 2 | Pending |
-| ANALY-04 | Phase 2 | Pending |
-| EXEC-01 | Phase 3 | Pending |
-| EXEC-02 | Phase 3 | Pending |
-| EXEC-03 | Phase 3 | Pending |
-| RISK-01 | Phase 2 | Pending |
-| RISK-02 | Phase 2 | Pending |
-| RISK-03 | Phase 2 | Pending |
-| RISK-04 | Phase 3 | Pending |
-| MEM-01 | Phase 4 | Pending |
-| MEM-02 | Phase 4 | Pending |
-| MEM-03 | Phase 4 | Pending |
-| SEC-01 | Phase 1 | Pending |
-| SEC-02 | Phase 1 | Pending |
-| SEC-03 | Phase 3 | Pending |
-| SEC-04 | Phase 4 | Pending |
+| ANALY-03 | — | Pending |
+| RISK-03 | — | Pending |
+| RISK-05 | — | Pending |
+| RISK-06 | — | Pending |
+| MEM-02 | — | Pending |
+| MEM-03 | — | Pending |
+
+**Coverage:**
+- v1.1 requirements: 6 total
+- Mapped to phases: 0
+- Unmapped: 6 ⚠️
 
 ---
-*Last updated: March 6, 2026*
+*Requirements defined: 2026-03-06 (v1.0)*
+*Last updated: 2026-03-06 — v1.1 requirements added*
