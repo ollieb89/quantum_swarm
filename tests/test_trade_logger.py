@@ -3,7 +3,8 @@ import json
 import pytest
 
 
-def test_trade_logger_appends_record():
+@pytest.mark.asyncio
+async def test_trade_logger_appends_record():
     """trade_logger_node appends one TradeRecord dict to trade_history."""
     from src.graph.agents.l3.trade_logger import trade_logger_node
 
@@ -33,7 +34,7 @@ def test_trade_logger_appends_record():
         "execution_result": {"success": True, "execution_price": 150.25, "order_id": "PAPER-ABC123"},
     }
 
-    result = trade_logger_node(state)
+    result = await trade_logger_node(state)
 
     assert "trade_history" in result
     assert isinstance(result["trade_history"], list)
@@ -71,7 +72,8 @@ def test_trade_history_window_enforced():
     assert recent[-1]["trade_id"] == "t19"
 
 
-def test_trade_record_is_serializable():
+@pytest.mark.asyncio
+async def test_trade_record_is_serializable():
     """json.dumps(trade_history_entry) does not raise."""
     from src.graph.agents.l3.trade_logger import trade_logger_node
 
@@ -101,7 +103,7 @@ def test_trade_record_is_serializable():
         "execution_result": {"success": True, "execution_price": 45000.0, "order_id": "PAPER-XYZ"},
     }
 
-    result = trade_logger_node(state)
+    result = await trade_logger_node(state)
     record = result["trade_history"][0]
 
     # Should not raise
