@@ -1,6 +1,7 @@
 """L3 integration tests — orchestrator wiring and feedback loop."""
+import asyncio
 import pytest
-from unittest.mock import patch, AsyncMock, MagicMock
+from unittest.mock import patch
 
 
 def _make_full_state(**overrides):
@@ -76,27 +77,8 @@ def test_feedback_loop_l2_receives_trade_history():
 
 def test_end_to_end_paper_graph():
     """Full graph invocation: mock L3 nodes; assert trade_history has one entry after run."""
-    from src.graph.orchestrator import create_orchestrator_graph
+    import src.graph.orchestrator as orch_module
 
-    # Mock data: what each L3 node should return
-    mock_market_data_dict = {
-        "market": {"symbol": "AAPL", "price": 150.0, "volume": 1e6, "open": 149.0,
-                   "high": 151.0, "low": 148.5, "close": 150.0,
-                   "timestamp": "2026-03-06T00:00:00", "source": "yfinance", "interval": "1d"},
-        "sentiment": {"symbol": "AAPL", "overall_sentiment": "bullish", "sentiment_score": 0.6,
-                      "article_count": 10, "timestamp": "2026-03-06T00:00:00", "source": "mock"},
-        "economic": {"vix": 18.0, "usd_index": 102.0, "yield_10y": 4.2,
-                     "timestamp": "2026-03-06T00:00:00", "source": "mock"},
-        "fundamentals": None,
-    }
-    mock_backtest_dict = {
-        "success": True,
-        "sharpe_ratio": 1.2,
-        "total_return_pct": 5.5,
-        "max_drawdown_pct": -2.1,
-        "total_trades": 8,
-        "win_rate_pct": 62.5,
-    }
     mock_execution_dict = {
         "success": True,
         "order_id": "PAPER-ABCD1234",
@@ -108,22 +90,22 @@ def test_end_to_end_paper_graph():
         "quantity": 5.0,
     }
 
-    # Patch the three I/O-heavy L3 nodes; trade_logger is pure and runs for real
+    # Patch the I/O-heavy L3 nodes; trade_logger is pure and runs for real
     async def mock_data_fetcher(state):
-        return {"data_fetcher_result": mock_market_data_dict, "messages": []}
+        return {"data_fetcher_result": {"market": {}, "sentiment": {}, "economic": {}, "fundamentals": None}, "messages": []}
 
     async def mock_backtester(state):
-        return {"backtest_result": mock_backtest_dict, "messages": []}
+        return {"backtest_result": {"success": True, "sharpe_ratio": 1.2}, "messages": []}
 
     async def mock_order_router(state):
         return {"execution_result": mock_execution_dict, "messages": []}
 
-    # Also mock the L2 agents (they call external LLM APIs)
+    # Mock L2 agents (they call external LLM APIs)
     def mock_bullish(state):
-        return {"messages": [{"role": "assistant", "content": "bullish thesis", "name": "bullish_research"}]}
+        return {"messages": []}
 
     def mock_bearish(state):
-        return {"messages": [{"role": "assistant", "content": "bearish thesis", "name": "bearish_research"}]}
+        return {"messages": []}
 
     def mock_debate_synthesizer(state):
         return {
@@ -146,17 +128,29 @@ def test_end_to_end_paper_graph():
     def mock_risk_manager(state):
         return {"risk_approved": True, "risk_notes": "All checks passed.", "messages": []}
 
-    with patch("src.graph.agents.l3.data_fetcher.data_fetcher_node", new=mock_data_fetcher), \
-         patch("src.graph.agents.l3.backtester.backtester_node", new=mock_backtester), \
-         patch("src.graph.agents.l3.order_router.order_router_node", new=mock_order_router), \
-         patch("src.graph.agents.researchers.BullishResearcher", new=mock_bullish), \
-         patch("src.graph.agents.researchers.BearishResearcher", new=mock_bearish), \
-         patch("src.graph.debate.DebateSynthesizer", new=mock_debate_synthesizer), \
-         patch("src.graph.agents.analysts.MacroAnalyst", new=mock_macro_analyst), \
-         patch("src.graph.agents.analysts.QuantModeler", new=mock_quant_modeler), \
-         patch("src.graph.orchestrator.risk_manager_node", new=mock_risk_manager):
+    # Use patch.object on the orchestrator module — ensures the graph captures mocked funcs
+    # at create_orchestrator_graph() call time (which happens inside the patch context).
+    # Pass intent_patterns so classify_intent can route "trade AAPL" → quant_modeler.
+    graph_config = {
+        "orchestrator": {
+            "intent_patterns": {
+                "trade": ["trade", "buy", "sell", "long", "short"],
+                "analysis": ["analyze", "review"],
+            }
+        }
+    }
 
-        graph = create_orchestrator_graph({})
+    with patch.object(orch_module, "data_fetcher_node", new=mock_data_fetcher), \
+         patch.object(orch_module, "backtester_node", new=mock_backtester), \
+         patch.object(orch_module, "order_router_node", new=mock_order_router), \
+         patch.object(orch_module, "BullishResearcher", new=mock_bullish), \
+         patch.object(orch_module, "BearishResearcher", new=mock_bearish), \
+         patch.object(orch_module, "DebateSynthesizer", new=mock_debate_synthesizer), \
+         patch.object(orch_module, "MacroAnalyst", new=mock_macro_analyst), \
+         patch.object(orch_module, "QuantModeler", new=mock_quant_modeler), \
+         patch.object(orch_module, "risk_manager_node", new=mock_risk_manager):
+
+        graph = orch_module.create_orchestrator_graph(graph_config)
 
         initial_state = {
             "task_id": "e2e-test-001",
@@ -184,8 +178,9 @@ def test_end_to_end_paper_graph():
             "execution_result": None,
         }
 
-        config = {"configurable": {"thread_id": "e2e-test-001"}}
-        final_state = graph.invoke(initial_state, config=config)
+        invoke_config = {"configurable": {"thread_id": "e2e-test-001"}}
+        # Use ainvoke because L3 nodes (data_fetcher, backtester, order_router) are async
+        final_state = asyncio.run(graph.ainvoke(initial_state, config=invoke_config))
 
         # The graph should have completed with trade_history containing one entry
         assert "trade_history" in final_state

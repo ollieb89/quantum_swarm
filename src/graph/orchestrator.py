@@ -1,9 +1,11 @@
 import logging
+import os
 import uuid
 from datetime import datetime, timezone
 from functools import partial
 from typing import Any, Dict, Literal, Union
 
+import yaml
 from langgraph.graph import StateGraph, END
 from langgraph.checkpoint.memory import MemorySaver
 
@@ -12,6 +14,10 @@ from .state import SwarmState
 from .agents.analysts import MacroAnalyst, QuantModeler
 from .agents.researchers import BullishResearcher, BearishResearcher
 from .debate import DebateSynthesizer
+from .agents.l3.data_fetcher import data_fetcher_node
+from .agents.l3.backtester import backtester_node
+from .agents.l3.order_router import order_router_node
+from .agents.l3.trade_logger import trade_logger_node
 
 logger = logging.getLogger(__name__)
 
@@ -23,7 +29,7 @@ def classify_intent(state: SwarmState, config: Dict):
     """
     user_input = state["user_input"].lower()
     intent_patterns = config.get("orchestrator", {}).get("intent_patterns", {})
-    
+
     intent = "unknown"
     for intent_name, patterns in intent_patterns.items():
         for pattern in patterns:
@@ -32,9 +38,9 @@ def classify_intent(state: SwarmState, config: Dict):
                 break
         if intent != "unknown":
             break
-            
+
     logger.info(f"Classified intent: {intent}")
-    
+
     return {
         "intent": intent,
         "messages": [{"role": "assistant", "content": f"Classified intent: {intent}"}]
@@ -115,7 +121,7 @@ def synthesize_consensus(state: SwarmState, config: Dict):
 def route_by_intent(state: SwarmState) -> Literal["macro_analyst", "quant_modeler", "end"]:
     """Routes to appropriate nodes based on classified intent."""
     intent = state["intent"]
-    
+
     if intent in ["trade", "analysis"]:
         return "quant_modeler"
     elif intent == "macro":
@@ -173,6 +179,13 @@ def create_orchestrator_graph(config: Dict):
     # --- Existing downstream nodes (Plans 02-04+) ---
     # risk_manager_node takes only state (no config) — no partial needed
     workflow.add_node("risk_manager", risk_manager_node)
+
+    # --- L3 Executor nodes (Phase 3, Plan 03-04) ---
+    workflow.add_node("data_fetcher", data_fetcher_node)
+    workflow.add_node("backtester", backtester_node)
+    workflow.add_node("order_router", order_router_node)
+    workflow.add_node("trade_logger", trade_logger_node)
+
     workflow.add_node("synthesize", partial(synthesize_consensus, config=config))
 
     # Set Entry Point
@@ -210,8 +223,12 @@ def create_orchestrator_graph(config: Dict):
         },
     )
 
-    # --- Downstream: risk_manager → synthesize → END (Phase 3 will add execute node) ---
-    workflow.add_edge("risk_manager", "synthesize")
+    # --- Phase 3: risk_manager → L3 chain → synthesize → END ---
+    workflow.add_edge("risk_manager", "data_fetcher")
+    workflow.add_edge("data_fetcher", "backtester")
+    workflow.add_edge("backtester", "order_router")
+    workflow.add_edge("order_router", "trade_logger")
+    workflow.add_edge("trade_logger", "synthesize")
     workflow.add_edge("synthesize", END)
 
     # Persistence
@@ -230,14 +247,34 @@ def build_graph():
 
 class LangGraphOrchestrator:
     """Wrapper for the LangGraph orchestrator to match existing interface."""
-    
+
     def __init__(self, config: Dict):
         self.config = config
-        self.app = create_orchestrator_graph(config)
-        
+
+        # Load YAML config for Phase 3 fields (execution_mode, etc.)
+        config_path = os.path.join(
+            os.path.dirname(__file__), "../../config/swarm_config.yaml"
+        )
+        try:
+            with open(config_path) as f:
+                self._yaml_config: Dict = yaml.safe_load(f) or {}
+        except (FileNotFoundError, OSError):
+            logger.warning("swarm_config.yaml not found at %s — using empty defaults", config_path)
+            self._yaml_config = {}
+
+        # Merge YAML config into runtime config so create_orchestrator_graph has it
+        merged_config = {**self._yaml_config, **config}
+        self.app = create_orchestrator_graph(merged_config)
+
     def run_task(self, user_input: str) -> GraphDecision:
         """Process user input through the LangGraph."""
         task_id = str(uuid.uuid4())[:8]
+
+        # Resolve execution_mode from YAML config (safe default: "paper")
+        execution_mode: str = (
+            self._yaml_config.get("trading", {}).get("execution_mode", "paper")
+            or "paper"
+        )
 
         initial_state: dict[str, Any] = {
             "task_id": task_id,
@@ -258,6 +295,12 @@ class LangGraphOrchestrator:
             "risk_notes": None,
             "final_decision": None,
             "metadata": {"created_at": datetime.now(timezone.utc).isoformat()},
+            # Phase 3: L3 executor fields
+            "trade_history": [],
+            "execution_mode": execution_mode,
+            "data_fetcher_result": None,
+            "backtest_result": None,
+            "execution_result": None,
         }
 
         # Configure the thread (required for checkpointing)

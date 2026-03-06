@@ -33,6 +33,7 @@ from src.tools.analyst_tools import (
     run_backtest,
 )
 from src.tools.verification_wrapper import BudgetedTool, budgeted
+from src.graph.agents.l3.trade_logger import get_recent_trades, TRADE_HISTORY_WINDOW
 
 logger = logging.getLogger(__name__)
 
@@ -232,9 +233,23 @@ def BullishResearcher(state: SwarmState) -> dict[str, Any]:
     user_input = state.get("user_input", "")
     intent = state.get("intent", "")
 
+    # Self-improvement: inject recent trade history as context (Phase 3, Plan 03-04)
+    recent_trades = get_recent_trades(state)
+    trade_history_block = ""
+    if recent_trades:
+        trade_history_block = (
+            f"\n[Trade History — last {len(recent_trades)} trades]\n"
+        )
+        for t in recent_trades:
+            pnl_str = f"P&L: {t.get('pnl_pct')}%" if t.get("pnl_pct") else "P&L: open"
+            trade_history_block += (
+                f"  - {t['symbol']} {t['side']} @ {t['entry_price']} ({pnl_str})\n"
+            )
+
     query = (
         f"User intent: {intent}. Query: {user_input}\n\n"
-        f"Analyst conclusions to verify/support:\n{analyst_context}\n\n"
+        f"Analyst conclusions to verify/support:\n{analyst_context}\n"
+        f"{trade_history_block}\n"
         "Find SUPPORTING evidence for a BULLISH thesis. "
         "Use available tools and include hypothesis= in each call. "
         "Conclude with your structured JSON findings."
@@ -285,9 +300,23 @@ def BearishResearcher(state: SwarmState) -> dict[str, Any]:
     user_input = state.get("user_input", "")
     intent = state.get("intent", "")
 
+    # Self-improvement: inject recent trade history as context (Phase 3, Plan 03-04)
+    recent_trades = get_recent_trades(state)
+    trade_history_block = ""
+    if recent_trades:
+        trade_history_block = (
+            f"\n[Trade History — last {len(recent_trades)} trades]\n"
+        )
+        for t in recent_trades:
+            pnl_str = f"P&L: {t.get('pnl_pct')}%" if t.get("pnl_pct") else "P&L: open"
+            trade_history_block += (
+                f"  - {t['symbol']} {t['side']} @ {t['entry_price']} ({pnl_str})\n"
+            )
+
     query = (
         f"User intent: {intent}. Query: {user_input}\n\n"
-        f"Analyst conclusions to challenge:\n{analyst_context}\n\n"
+        f"Analyst conclusions to challenge:\n{analyst_context}\n"
+        f"{trade_history_block}\n"
         "Find REFUTING evidence for a BEARISH thesis — challenge or undermine the bullish case. "
         "Use available tools and include hypothesis= in each call. "
         "Conclude with your structured JSON findings."
