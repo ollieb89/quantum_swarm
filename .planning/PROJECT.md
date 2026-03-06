@@ -8,6 +8,16 @@ A production-grade hierarchical multi-agent financial analysis swarm built on La
 
 Institutional-quality trade signal generation through adversarial AI debate, with immutable audit trails and hard compliance guardrails — from market data ingestion to PostgreSQL-persisted execution records.
 
+## Current Milestone: v1.1 Self-Improvement Loop
+
+**Goal:** Close the feedback loop — enforce stop-losses at execution time, centralize quant alpha math, and teach the swarm to learn from its own live-vs-backtested performance.
+
+**Target features:**
+- ANALY-03: `quant-alpha-intelligence` skill (centralized RSI, MACD, financial math)
+- RISK-03: Mandatory stop-loss calculation and verification per execution
+- MEM-02: Weekly review loop evaluating live vs backtested performance
+- MEM-03: Automated rule generator updating MEMORY.md with PREFER/AVOID/CAUTION
+
 ## Current State (v1.0)
 
 - **Runtime:** Python 3.12, LangGraph StateGraph, uv-managed
@@ -91,4 +101,4 @@ Shipped v1.0 in 2 days (2026-03-05 → 2026-03-06), 67 commits, 155 tests.
 Next: v1.1 focuses on self-improvement loop (MEM-02/03) and stop-loss enforcement (RISK-03).
 
 ---
-*Last updated: 2026-03-06 after v1.0 milestone*
+*Last updated: 2026-03-06 — Milestone v1.1 started*

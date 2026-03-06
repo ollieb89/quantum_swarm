@@ -1,18 +1,18 @@
 ---
 phase:
-  current: 4
-  name: Memory & Institutional Compliance
-  status: complete
-  started: 2026-03-06
-  completed: 2026-03-06
+  current: not_started
+  name: ""
+  status: pending
+  started: ""
+  completed: ""
   blockers: []
 milestone:
-  current: v1.0
-  name: MVP
-  status: shipped
-  shipped: 2026-03-06
-  next: v1.1
-  next_name: Self-Improvement
+  current: v1.1
+  name: Self-Improvement Loop
+  status: active
+  started: 2026-03-06
+  previous: v1.0
+  previous_name: MVP
 health:
   status: green
   risks: []
@@ -44,27 +44,30 @@ updated: '2026-03-06'
 
 ## Milestone
 
-**v1.0 MVP** — SHIPPED 2026-03-06
-See: `.planning/milestones/v1.0-ROADMAP.md`
+**v1.1 Self-Improvement Loop** — ACTIVE (started 2026-03-06)
+
+Previous: v1.0 MVP — SHIPPED 2026-03-06 (155 tests, 4 phases, ~14,600 LOC)
 
 ## Current Phase
 
-**Phase 4** — Memory & Institutional Compliance — Complete
-Next: `/gsd:new-milestone` to define v1.1
+Phase: Not started (defining requirements)
+Plan: —
+Status: Defining requirements
+Last activity: 2026-03-06 — Milestone v1.1 started
 
 ## Health
 
 Status: Green
 - v1.0 shipped: 155 tests passing, all 4 phases complete
 - PostgreSQL infrastructure operational (Port 5433)
-- Archived: `.planning/milestones/v1.0-ROADMAP.md`, `v1.0-REQUIREMENTS.md`
+- Architecture stable: LangGraph + Gemini + psycopg3
 
 ## Project Reference
 
-See: `.planning/PROJECT.md` (updated 2026-03-06 after v1.0 milestone)
+See: `.planning/PROJECT.md` (updated 2026-03-06 — Milestone v1.1 started)
 
 **Core value:** Institutional-quality trade signal generation through adversarial AI debate, with immutable audit trails and hard compliance guardrails
-**Current focus:** v1.0 shipped — planning v1.1 Self-Improvement Loop
+**Current focus:** v1.1 — Self-improvement loop, stop-loss enforcement, quant alpha skill
 
 ## Architecture
 
@@ -85,8 +88,10 @@ See: `.planning/PROJECT.md` (updated 2026-03-06 after v1.0 milestone)
 | Planning | `.planning/` |
 | Data | `data/` |
 
-## Session Continuity
+## Accumulated Context (from v1.0)
 
-Last session: 2026-03-06
-Stopped at: v1.0 milestone archived, retrospective written
-Resume: `/gsd:new-milestone` to start v1.1
+- Lazy LLM init pattern required for all module-level LLM instances (GOOGLE_API_KEY not available at import)
+- pytest binary missing from venv — use `.venv/bin/python3.12 -m pytest`
+- Python 3.12: use `asyncio.run()` not `asyncio.get_event_loop().run_until_complete()`
+- ccxt package broken in env; chromadb and pytest-asyncio missing — known env issues, not regressions
+- psycopg3 async throughout (not psycopg2)
