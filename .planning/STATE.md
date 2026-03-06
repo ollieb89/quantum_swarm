@@ -3,13 +3,13 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: Yellow
-stopped_at: Completed 03-l3-executors-nautilus-trader-integration-03-03-PLAN.md
-last_updated: "2026-03-06T01:12:38.327Z"
+stopped_at: "Checkpoint 03-04 Task 3 — awaiting human smoke run verification"
+last_updated: "2026-03-06T01:24:00.000Z"
 progress:
   total_phases: 2
   completed_phases: 1
   total_plans: 10
-  completed_plans: 9
+  completed_plans: 10
 ---
 
 # Project State
@@ -66,6 +66,9 @@ Status: Yellow
 - [Phase 03-l3-executors-nautilus-trader-integration]: Interactive Brokers selected for live equities — NautilusTrader 1.223.0 has no Alpaca adapter; user confirmed IB (option-ib) at Task 0 checkpoint
 - [Phase 03-l3-executors-nautilus-trader-integration]: TCP reachability gate (asyncio.wait_for open_connection, 3s timeout) used before IB TradingNode init — cheap fast-fail with clear error message
 - [Phase 03-l3-executors-nautilus-trader-integration]: Paper mode uses yfinance last price + 0.01% slippage instead of BacktestEngine — simpler, no venue state, sufficient for single-order paper simulation
+- [Phase 03-l3-executors-nautilus-trader-integration]: List-wrapped TradeRecord ([record_dict]) required for operator.add reducer to append trade_history correctly
+- [Phase 03-l3-executors-nautilus-trader-integration]: patch.object(orch_module, ...) required over patch('...') for integration test mocking of orchestrator nodes
+- [Phase 03-l3-executors-nautilus-trader-integration]: asyncio.run(graph.ainvoke()) required in e2e tests because L3 nodes are async coroutines
 
 ## Performance Metrics
 
@@ -75,8 +78,9 @@ Status: Yellow
 | 03-l3-executors-nautilus-trader-integration | 01 | 8min | 2 | 11 |
 | Phase 03-l3-executors-nautilus-trader-integration P02 | 8min | 1 tasks | 2 files |
 | Phase 03-l3-executors-nautilus-trader-integration P03 | 15min | 1 tasks | 2 files |
+| 03-l3-executors-nautilus-trader-integration | 04 | 10min | 2 | 5 |
 
 ## Session
 
-- **Stopped At:** Completed 03-l3-executors-nautilus-trader-integration-03-03-PLAN.md
-- **Last session:** 2026-03-06T01:12:38.326Z
+- **Stopped At:** Checkpoint 03-04 Task 3 — awaiting human smoke run verification
+- **Last session:** 2026-03-06T01:24:00.000Z
