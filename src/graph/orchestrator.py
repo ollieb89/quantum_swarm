@@ -12,9 +12,13 @@ from langgraph.checkpoint.memory import MemorySaver
 from .models import GraphDecision
 from .state import SwarmState
 from .agents.analysts import MacroAnalyst, QuantModeler
+from src.blackboard.board import Blackboard
 from .agents.researchers import BullishResearcher, BearishResearcher
 from .debate import DebateSynthesizer
 from .agents.l3.data_fetcher import data_fetcher_node
+from .nodes.knowledge_base import knowledge_base_node
+from .nodes.l1 import risk_manager_node, synthesize_consensus, classify_intent_with_registry
+from src.security.claw_guard import claw_guard_node
 from .agents.l3.backtester import backtester_node
 from .agents.l3.order_router import order_router_node
 from .agents.l3.trade_logger import trade_logger_node
@@ -46,75 +50,7 @@ def classify_intent(state: SwarmState, config: Dict):
         "messages": [{"role": "assistant", "content": f"Classified intent: {intent}"}]
     }
 
-def risk_manager_node(state: SwarmState) -> dict:
-    """RiskManager LangGraph node — final validation before execution.
-
-    Reads debate_history and weighted_consensus_score from SwarmState.
-    Performs final risk validation:
-      1. Checks for conflicting hypotheses (both bullish and bearish sources present)
-      2. Checks for missing provenance (empty debate_history)
-      3. Validates that the consensus score is not anomalous (outside [0.0, 1.0])
-
-    Returns:
-        Partial state update with risk_approved (bool) and risk_notes (str).
-    """
-    logger.info("RiskManager node invoked (task_id=%s)", state.get("task_id"))
-
-    debate_history = state.get("debate_history", [])
-    score = state.get("weighted_consensus_score")
-
-    notes: list[str] = []
-    approved = True
-
-    # Check for missing provenance
-    if not debate_history:
-        notes.append("No debate history found — provenance missing.")
-        approved = False
-
-    # Check for anomalous score
-    if score is None:
-        notes.append("weighted_consensus_score is None — cannot validate.")
-        approved = False
-    elif not (0.0 <= score <= 1.0):
-        notes.append(f"Anomalous consensus score {score:.4f} outside [0.0, 1.0].")
-        approved = False
-
-    # Check for conflicting hypotheses (both bullish and bearish present is EXPECTED and healthy)
-    sources = {entry.get("hypothesis") for entry in debate_history}
-    if "bullish" in sources and "bearish" in sources:
-        notes.append("Conflicting hypotheses detected (bullish + bearish) — normal adversarial debate.")
-    elif not sources or sources == {"neutral"}:
-        notes.append("No adversarial hypotheses found — debate may have been skipped.")
-        approved = False
-
-    risk_notes = " | ".join(notes) if notes else "All risk checks passed."
-
-    logger.info(
-        "RiskManager: approved=%s score=%s notes=%s",
-        approved, score, risk_notes,
-    )
-
-    return {
-        "risk_approved": approved,
-        "risk_notes": risk_notes,
-        "messages": [
-            {
-                "role": "assistant",
-                "content": f"RiskManager: approved={approved} | {risk_notes}",
-            }
-        ],
-    }
-
-def synthesize_consensus(state: SwarmState, config: Dict):
-    """Final node to synthesize the result."""
-    return {
-        "final_decision": {
-            "task_id": state["task_id"],
-            "decision": "HOLD", # Default
-            "rationale": "Phase 1 PoC: Execution node reached."
-        },
-        "messages": [{"role": "assistant", "content": "L1 Orchestrator: Final consensus synthesized."}]
-    }
+# risk_manager_node and synthesize_consensus imported from .nodes.l1
 
 # --- Routing Logic ---
 
@@ -158,9 +94,10 @@ def create_orchestrator_graph(config: Dict):
     """Builds the LangGraph orchestration graph."""
 
     workflow = StateGraph(SwarmState)
+    board = Blackboard()
 
-    # --- L1 nodes (existing) ---
-    workflow.add_node("classify_intent", partial(classify_intent, config=config))
+    # --- L1 nodes ---
+    workflow.add_node("classify_intent", partial(classify_intent_with_registry, config=config))
 
     # --- L2 Analyst nodes (Phase 2, Plan 02-01) ---
     # Real ReAct agents — do not accept config param (node functions take state only)
@@ -177,16 +114,19 @@ def create_orchestrator_graph(config: Dict):
     workflow.add_node("debate_synthesizer", DebateSynthesizer)
 
     # --- Existing downstream nodes (Plans 02-04+) ---
-    # risk_manager_node takes only state (no config) — no partial needed
-    workflow.add_node("risk_manager", risk_manager_node)
+    workflow.add_node("risk_manager", partial(risk_manager_node, board=board))
+
+    # --- ClawGuard (Phase 1, Deliverable 2) — between risk_manager and order_router ---
+    workflow.add_node("claw_guard", partial(claw_guard_node, config=config))
 
     # --- L3 Executor nodes (Phase 3, Plan 03-04) ---
     workflow.add_node("data_fetcher", data_fetcher_node)
+    workflow.add_node("knowledge_base", knowledge_base_node)
     workflow.add_node("backtester", backtester_node)
     workflow.add_node("order_router", order_router_node)
     workflow.add_node("trade_logger", trade_logger_node)
 
-    workflow.add_node("synthesize", partial(synthesize_consensus, config=config))
+    workflow.add_node("synthesize", partial(synthesize_consensus, config=config, board=board))
 
     # Set Entry Point
     workflow.set_entry_point("classify_intent")
@@ -223,9 +163,11 @@ def create_orchestrator_graph(config: Dict):
         },
     )
 
-    # --- Phase 3: risk_manager → L3 chain → synthesize → END ---
-    workflow.add_edge("risk_manager", "data_fetcher")
-    workflow.add_edge("data_fetcher", "backtester")
+    # --- Phase 3: risk_manager → claw_guard → L3 chain → synthesize → END ---
+    workflow.add_edge("risk_manager", "claw_guard")
+    workflow.add_edge("claw_guard", "data_fetcher")
+    workflow.add_edge("data_fetcher", "knowledge_base")
+    workflow.add_edge("knowledge_base", "backtester")
     workflow.add_edge("backtester", "order_router")
     workflow.add_edge("order_router", "trade_logger")
     workflow.add_edge("trade_logger", "synthesize")

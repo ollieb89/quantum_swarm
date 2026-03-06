@@ -16,6 +16,17 @@ from statistics import mean, stdev
 
 logger = logging.getLogger(__name__)
 
+# Skill registry interface
+SKILL_INTENT = "weekly_review"
+
+
+def handle(state: dict) -> dict:
+    """Handle a weekly_review intent — returns review status without touching disk."""
+    return {
+        "skill_result": {"skill": "weekly_review", "status": "ok"},
+        "messages": [{"role": "assistant", "content": "weekly_review skill: review triggered"}],
+    }
+
 
 @dataclass
 class TradeRecord:

@@ -71,6 +71,13 @@ executors:
     id: "l3-order-router"
     timeout: 30
 
+# ClawGuard Security Configuration
+security:
+  # Minimum weighted_consensus_score required before order execution
+  min_consensus: 0.75
+  # Block live execution unless explicitly set to false
+  paper_trade_only: true
+
 # Risk Management Limits
 risk_limits:
   max_position_size: 0.1  # 10% of portfolio

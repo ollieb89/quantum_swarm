@@ -14,6 +14,19 @@ from enum import Enum
 
 logger = logging.getLogger(__name__)
 
+# Skill registry interface
+SKILL_INTENT = "market_analysis"
+
+
+def handle(state: dict) -> dict:
+    """Handle a market_analysis intent by generating a basic market report."""
+    symbol = (state.get("quant_proposal") or {}).get("symbol", "UNKNOWN")
+    report = {"symbol": symbol, "skill": "market_analysis", "status": "ok"}
+    return {
+        "skill_result": report,
+        "messages": [{"role": "assistant", "content": f"market_analysis skill: report for {symbol}"}],
+    }
+
 
 class MarketPhase(Enum):
     """Market phase classification"""
