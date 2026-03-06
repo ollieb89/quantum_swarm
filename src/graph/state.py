@@ -46,3 +46,12 @@ class SwarmState(TypedDict):
 
     # Optional: External context (config, etc. - though usually passed in nodes)
     metadata: dict
+
+    # Phase 3: L3 Executor state fields
+    # trade_history: Annotated reducer (operator.add) — always appends, trim at read time
+    # Sliding window N=15 enforced in L2 agents: state["trade_history"][-15:]
+    trade_history: Annotated[List[dict], operator.add]
+    execution_mode: str                        # "paper" | "live"
+    data_fetcher_result: Optional[dict]        # MarketData + SentimentData + EconomicData dicts
+    backtest_result: Optional[dict]            # NautilusTrader metrics dict
+    execution_result: Optional[dict]           # OrderRouter fill dict
