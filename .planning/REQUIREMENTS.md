@@ -48,7 +48,32 @@
 - Direct management of non-institutional retail accounts.
 
 ## Traceability
-*(To be populated during Roadmap creation)*
+
+| Requirement | Phase | Status |
+|-------------|-------|--------|
+| ORCH-01 | Phase 1 | Pending |
+| ORCH-02 | Phase 1 | Pending |
+| ORCH-03 | Phase 1 | Pending |
+| ORCH-04 | Phase 1 | Pending |
+| ORCH-05 | Phase 2 | Pending |
+| ANALY-01 | Phase 2 | Pending |
+| ANALY-02 | Phase 2 | Pending |
+| ANALY-03 | Phase 2 | Pending |
+| ANALY-04 | Phase 2 | Pending |
+| EXEC-01 | Phase 3 | Pending |
+| EXEC-02 | Phase 3 | Pending |
+| EXEC-03 | Phase 3 | Pending |
+| RISK-01 | Phase 2 | Pending |
+| RISK-02 | Phase 2 | Pending |
+| RISK-03 | Phase 2 | Pending |
+| RISK-04 | Phase 3 | Pending |
+| MEM-01 | Phase 4 | Pending |
+| MEM-02 | Phase 4 | Pending |
+| MEM-03 | Phase 4 | Pending |
+| SEC-01 | Phase 1 | Pending |
+| SEC-02 | Phase 1 | Pending |
+| SEC-03 | Phase 3 | Pending |
+| SEC-04 | Phase 4 | Pending |
 
 ---
-*Last updated: March 6, 2026 after project initialization*
+*Last updated: March 6, 2026*

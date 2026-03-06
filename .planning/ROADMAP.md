@@ -1,122 +1,62 @@
----
-project: quantum-swarm
-updated: '2026-03-05'
-phases:
-- number: 0
-  name: LangGraph Migration Assessment & Setup
-  status: completed
-  started: '2026-03-05'
-  completed: '2026-03-05'
-  plan_file: PHASES/phase-0.md
-  deliverables:
-  - langgraph, langchain-anthropic, nautilus_trader dependencies
-  - Codebase audit and migration mapping
-  - Adversarial debate layer design
-  - LangGraph PoC (src/poc/langgraph_orchestrator_poc.py)
-  - NautilusTrader PoC (src/poc/nautilus_integration_poc.py)
-- number: 1
-  name: Core Orchestration Migration (L1 Orchestrator)
-  status: completed
-  started: '2026-03-05'
-  completed: '2026-03-05'
-  plan_file: PHASES/phase-1.md
-  deliverables:
-  - SwarmState definition (src/graph/state.py)
-  - L1 nodes & routing logic
-  - LangGraph StateGraph orchestrator (src/graph/orchestrator.py)
-  - Integration with OpenClaw & main.py
-  - Testing & validation
-- number: 2
-  name: L2 Domain Managers & Adversarial Debate Layer
-  status: completed
-  started: '2026-03-05'
-  completed: '2026-03-05'
-  plan_file: PHASES/phase-2.md
-  plans_completed:
-  - 02-01: L2 Analyst Agents (MacroAnalyst + QuantModeler ReAct nodes, analyst_tools)
-  - 02-02: Adversarial Researcher Nodes (BullishResearcher + BearishResearcher with BudgetedTool and ToolCache)
-  - 02-03: Debate Synthesis (DebateSynthesizer node, fan-out/fan-in wiring, weighted_consensus_score)
-  - 02-04: Risk Gating (RiskManager node, conditional edge with >0.6 threshold, route_after_debate)
-  - 02-05: Integration Tests (3-scenario adversarial debate test suite, 11/11 tests passing)
-  deliverables:
-  - Migrate MacroAnalyst, QuantModeler, RiskManager to LangGraph subgraphs
-  - Implement adversarial debate (bullish/bearish thesis resolution)
-  - Wire consensus scoring into graph state
-  - Full integration test suite for debate pipeline (tests/test_adversarial_debate.py)
-- number: 3
-  name: L3 Executors & NautilusTrader Integration
-  status: completed
-  started: '2026-03-06'
-  completed: '2026-03-06'
-  plan_file: PHASES/03-l3-executors-nautilus-trader-integration
-  plans_count: 5
-  plans_completed:
-  - 03-00: Environment setup — NautilusTrader install, Pydantic data models, test stubs
-  - 03-01: DataFetcher node — yfinance, ccxt, news sentiment, economic calendar, Dexter bridge
-  - 03-02: Backtester node — NautilusTrader BacktestEngine wrapped in asyncio.to_thread
-  - 03-03: OrderRouter node — paper simulation + IB live equities + Binance live crypto
-  - 03-04: TradeLogger + self-improvement loop + orchestrator wiring (human checkpoint approved)
-  deliverables:
-  - Migrate DataFetcher, Backtester, OrderRouter to real LangGraph async nodes
-  - Integrate NautilusTrader BacktestEngine (paper + live execution)
-  - IB adapter for live equities, Binance adapter for live crypto
-  - Dexter fundamentals bridge (async subprocess)
-  - Implement trade logging and self-improvement loop via trade_history in SwarmState
-- number: 4
-  name: Dashboard & Observability
-  status: not_started
-  started: null
-  completed: null
-  plan_file: null
-  deliverables:
-  - Real-time graph execution visualization
-  - LangSmith integration for tracing
-  - Alert system for risk threshold breaches
----
+# Roadmap: Quantum Swarm
 
-# Roadmap
+## Phases
 
-> Machine-readable phase data lives in YAML frontmatter above.
-> This markdown body is auto-generated — do not edit manually.
+- [ ] **Phase 1: Foundation & Orchestration (L1)** - Establish the core communication framework, L1 orchestrator, and basic security guardrails.
+- [ ] **Phase 2: Cognitive Analysis & Risk Gating (L2)** - Implement specialized L2 agents, adversarial debate, and mandatory risk management checks.
+- [ ] **Phase 3: Market Execution & Data (L3)** - Connect the swarm to live/historical data, backtesting engine, and secure order routing.
+- [ ] **Phase 4: Memory & Institutional Compliance** - Close the self-improvement loop and ensure full MiFID II / Finanstilsynet auditability.
 
-## Phase 0 — LangGraph Migration Assessment & Setup [COMPLETED]
-- Completed: 2026-03-05
-- Plan: [[planning/PHASES/phase-0]]
+## Phase Details
 
-## Phase 1 — Core Orchestration Migration (L1 Orchestrator) [COMPLETED]
-- Completed: 2026-03-05
-- Plan: [[planning/PHASES/phase-1]]
+### Phase 1: Foundation & Orchestration (L1)
+**Goal**: Build the skeletal hierarchical framework and inter-agent communication layer.
+**Depends on**: Nothing
+**Requirements**: ORCH-01, ORCH-02, ORCH-03, ORCH-04, SEC-01, SEC-02
+**Success Criteria**:
+  1. User can initiate a task through L1 and see it delegated to a child agent via filesystem "Blackboard" state.
+  2. System executes shell commands within ClawGuard sandboxed environment.
+  3. Sub-millisecond commands bypass LLM reasoning via deterministic dispatch.
+  4. System automatically shuts down if token expenditure exceeds budget ceilings.
+**Plans**: TBD
 
-## Phase 2 — L2 Domain Managers & Adversarial Debate Layer [COMPLETED]
-- Started: 2026-03-05
-- Completed: 2026-03-05
-- Plan: [[planning/PHASES/phase-2]]
-- Plans completed: 02-01 (L2 Analyst Agents), 02-02 (Adversarial Researcher Nodes), 02-03 (Debate Synthesis), 02-04 (Risk Gating), 02-05 (Integration Tests)
-- Deliverables:
-  - Migrate MacroAnalyst, QuantModeler, RiskManager to LangGraph subgraphs
-  - Implement adversarial debate (bullish/bearish thesis resolution)
-  - Wire consensus scoring into graph state
-  - Full integration test suite for debate pipeline (tests/test_adversarial_debate.py)
+### Phase 2: Cognitive Analysis & Risk Gating (L2)
+**Goal**: Implement the reasoning core of the swarm with specialized domain managers and bias reduction.
+**Depends on**: Phase 1
+**Requirements**: ANALY-01, ANALY-02, ANALY-03, ANALY-04, RISK-01, RISK-02, RISK-03, ORCH-05
+**Success Criteria**:
+  1. System produces a "Council-as-a-Judge" consensus recommendation derived from independent Macro and Quant signals.
+  2. Trade proposals are automatically rejected by the Risk Manager if they violate the 10x leverage hard limit.
+  3. Every trade recommendation includes an adversarial "Bull vs. Bear" debate summary to reduce consensus bias.
+  4. Every proposed trade has a calculated stop-loss and verified exit strategy.
+**Plans**: TBD
 
-## Phase 3 — L3 Executors & NautilusTrader Integration [COMPLETED]
-- Started: 2026-03-06
-- Completed: 2026-03-06
-- Plans: 5/5 complete
-- Plans:
-  - [x] 03-00-PLAN.md — Environment setup: NautilusTrader install, Pydantic data models, test stubs
-  - [x] 03-01-PLAN.md — DataFetcher node: yfinance, ccxt, news sentiment, economic calendar, Dexter bridge
-  - [x] 03-02-PLAN.md — Backtester node: NautilusTrader BacktestEngine wrapped in asyncio.to_thread
-  - [x] 03-03-PLAN.md — OrderRouter node: paper simulation + IB live equities + Binance live crypto
-  - [x] 03-04-PLAN.md — TradeLogger + self-improvement loop + orchestrator wiring (human checkpoint approved)
-- Deliverables:
-  - Migrate DataFetcher, Backtester, OrderRouter to real LangGraph async nodes
-  - Integrate NautilusTrader BacktestEngine (paper + live execution)
-  - IB adapter for live equities, Binance for crypto (Alpaca has no NT adapter)
-  - Dexter fundamentals bridge (async subprocess, 90s timeout)
-  - Implement trade logging and self-improvement loop via trade_history in SwarmState
+### Phase 3: Market Execution & Data (L3)
+**Goal**: Enable real-world interaction through data ingestion, performance simulation, and order routing.
+**Depends on**: Phase 2
+**Requirements**: EXEC-01, EXEC-02, EXEC-03, RISK-04, SEC-03
+**Success Criteria**:
+  1. L3 Data Fetcher consolidates information from at least two market sources (Technical + Fundamental/News).
+  2. Backtester produces a performance report for a strategy using historical data with slippage and commission friction.
+  3. Order Router successfully places a test order on a simulated exchange (CCXT/NautilusTrader).
+  4. System-wide circuit breakers trigger and halt activity on API degradation or anomalous strategy behavior.
+**Plans**: TBD
 
-## Phase 4 — Dashboard & Observability [NOT STARTED]
-- Deliverables:
-  - Real-time graph execution visualization
-  - LangSmith integration for tracing
-  - Alert system for risk threshold breaches
+### Phase 4: Memory & Institutional Compliance
+**Goal**: Implement the long-term learning loop and regulatory explainability requirements.
+**Depends on**: Phase 3
+**Requirements**: MEM-01, MEM-02, MEM-03, SEC-04
+**Success Criteria**:
+  1. Every trade signal generates an immutable audit trail showing the full "Chain of Reasoning" for MiFID II compliance.
+  2. Weekly review loop automatically identifies performance gaps and appends new behavioral rules to `MEMORY.md`.
+  3. System maintains an exhaustive `trades.json` log with multi-dimensional context capture.
+**Plans**: TBD
+
+## Progress Table
+
+| Phase | Plans Complete | Status | Completed |
+|-------|----------------|--------|-----------|
+| 1: Foundation & Orchestration (L1) | 0/0 | Not started | - |
+| 2: Cognitive Analysis & Risk (L2) | 0/0 | Not started | - |
+| 3: Market Execution & Data (L3) | 0/0 | Not started | - |
+| 4: Memory & Institutional Compliance | 0/0 | Not started | - |
