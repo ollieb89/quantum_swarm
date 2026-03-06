@@ -25,12 +25,14 @@ in SwarmState concatenates lists — returning a plain dict would raise a TypeEr
 
 from __future__ import annotations
 
+import json
 import logging
 from datetime import datetime, timezone
 from typing import Any
 
 from src.graph.state import SwarmState
 from src.models.data_models import TradeRecord
+from src.core.db import get_pool
 
 logger = logging.getLogger(__name__)
 
@@ -47,17 +49,7 @@ TRADE_HISTORY_WINDOW: int = 15  # N=15 within Claude's discretion range 10-20
 
 
 def get_recent_trades(state: Any) -> list:
-    """Return at most TRADE_HISTORY_WINDOW most recent trade records from state.
-
-    Enforces the sliding window at READ time so the SwarmState accumulator
-    (operator.add) can grow unbounded — trim only when reading for context.
-
-    Args:
-        state: SwarmState dict or any mapping with a "trade_history" key.
-
-    Returns:
-        List of trade record dicts (up to N=15 most recent entries).
-    """
+    """Return at most TRADE_HISTORY_WINDOW most recent trade records from state."""
     history = state.get("trade_history", [])
     return list(history[-TRADE_HISTORY_WINDOW:])
 
@@ -67,21 +59,17 @@ def get_recent_trades(state: Any) -> list:
 # ---------------------------------------------------------------------------
 
 
-def trade_logger_node(state: SwarmState) -> dict[str, Any]:
-    """L3 TradeLogger — append a TradeRecord to SwarmState.trade_history.
-
-    Builds a TradeRecord from the current execution state (quant_proposal +
-    execution_result) and returns it as a single-element list so LangGraph's
-    operator.add reducer correctly appends it to trade_history.
+async def trade_logger_node(state: SwarmState) -> dict[str, Any]:
+    """L3 TradeLogger — append a TradeRecord to SwarmState.trade_history AND persist to PostgreSQL Warehouse.
 
     Args:
         state: Current SwarmState shared across the LangGraph graph.
 
     Returns:
         Partial state update dict with ``trade_history`` and ``messages`` keys.
-        trade_history value is a list with one dict so operator.add appends it.
     """
-    logger.info("TradeLogger node invoked (task_id=%s)", state.get("task_id"))
+    task_id = state.get("task_id", "unknown")
+    logger.info("TradeLogger node invoked (task_id=%s)", task_id)
 
     quant_proposal: dict = state.get("quant_proposal") or {}
     execution_result: dict = state.get("execution_result") or {}
@@ -91,8 +79,10 @@ def trade_logger_node(state: SwarmState) -> dict[str, Any]:
     quantity: float = float(quant_proposal.get("quantity", 1.0))
     execution_price: float = float(execution_result.get("execution_price", 0.0) or 0.0)
     execution_mode: str = state.get("execution_mode", "paper")
+    trade_id: str = execution_result.get("order_id", f"trade_{task_id}_{datetime.now(timezone.utc).timestamp()}")
 
     record = TradeRecord(
+        trade_id=trade_id,
         symbol=symbol,
         side=side,
         entry_price=execution_price,
@@ -105,6 +95,40 @@ def trade_logger_node(state: SwarmState) -> dict[str, Any]:
         execution_mode=execution_mode,
         strategy_context=dict(quant_proposal),  # snapshot
     )
+
+    # Persist to Trade Warehouse (PostgreSQL)
+    pool = get_pool()
+    try:
+        async with pool.connection() as conn:
+            async with conn.cursor() as cur:
+                # Resolve the last audit log ID for this task to provide full trace
+                await cur.execute(
+                    "SELECT id FROM audit_logs WHERE task_id = %s ORDER BY id DESC LIMIT 1",
+                    (task_id,)
+                )
+                audit_row = await cur.fetchone()
+                audit_log_id = audit_row[0] if audit_row else None
+
+                await cur.execute(
+                    """
+                    INSERT INTO trades (trade_id, task_id, audit_log_id, symbol, side, quantity, execution_price, execution_mode, strategy_context)
+                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
+                    ON CONFLICT (trade_id) DO NOTHING;
+                    """,
+                    (
+                        trade_id,
+                        task_id,
+                        audit_log_id,
+                        symbol,
+                        side,
+                        quantity,
+                        execution_price,
+                        execution_mode,
+                        json.dumps(dict(quant_proposal))
+                    )
+                )
+    except Exception as e:
+        logger.error("Failed to persist trade %s to PostgreSQL warehouse: %s", trade_id, e)
 
     # Pydantic v2 — mode="json" ensures datetime is serialized to ISO string
     record_dict = record.model_dump(mode="json")
@@ -124,7 +148,7 @@ def trade_logger_node(state: SwarmState) -> dict[str, Any]:
         "messages": [
             {
                 "role": "assistant",
-                "content": f"TradeLogger: recorded {symbol} {side} trade_id={record.trade_id}",
+                "content": f"TradeLogger: recorded {symbol} {side} trade_id={record.trade_id} in PostgreSQL warehouse",
             }
         ],
     }

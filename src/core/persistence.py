@@ -1,0 +1,81 @@
+import logging
+import os
+from contextlib import asynccontextmanager
+from typing import AsyncGenerator
+
+from langgraph.checkpoint.postgres.aio import AsyncPostgresSaver
+from psycopg_pool import AsyncConnectionPool
+
+from .db import DB_URL
+
+logger = logging.getLogger(__name__)
+
+@asynccontextmanager
+async def get_checkpointer() -> AsyncGenerator[AsyncPostgresSaver, None]:
+    """
+    Initialize and return an AsyncPostgresSaver checkpointer.
+
+    This context manager handles both the connection pool and the 
+    checkpointer initialization.
+    """
+    async with AsyncConnectionPool(
+        conninfo=DB_URL,
+        min_size=1,
+        max_size=5,
+        kwargs={"autocommit": True}
+    ) as pool:
+        checkpointer = AsyncPostgresSaver(pool)
+        yield checkpointer
+
+async def setup_persistence():
+    """
+    Initializes the database schema for LangGraph checkpointing and Trade Warehouse.
+    Should be run once during application startup.
+    """
+    logger.info("Setting up PostgreSQL schemas (LangGraph + Trade Warehouse)...")
+    async with AsyncConnectionPool(conninfo=DB_URL, min_size=1, max_size=1, kwargs={"autocommit": True}) as pool:
+        # 1. LangGraph Checkpoints
+        checkpointer = AsyncPostgresSaver(pool)
+        await checkpointer.setup()
+
+        
+        # 2. Audit Logs (Phase 4, Step 2)
+        async with pool.connection() as conn:
+            await conn.execute("""
+            CREATE TABLE IF NOT EXISTS audit_logs (
+                id SERIAL PRIMARY KEY,
+                task_id VARCHAR(64) NOT NULL,
+                timestamp TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+                node_id VARCHAR(128) NOT NULL,
+                input_data JSONB NOT NULL,
+                output_data JSONB NOT NULL,
+                entry_hash CHAR(64) NOT NULL,
+                prev_hash CHAR(64),
+                CONSTRAINT audit_log_immutability CHECK (id IS NOT NULL)
+            );
+            CREATE INDEX IF NOT EXISTS idx_audit_task_id ON audit_logs(task_id);
+            """)
+
+        # 3. Trade Warehouse
+        async with pool.connection() as conn:
+            await conn.execute("""
+            CREATE TABLE IF NOT EXISTS trades (
+                id SERIAL PRIMARY KEY,
+                trade_id VARCHAR(64) UNIQUE NOT NULL,
+                task_id VARCHAR(64) NOT NULL,
+                audit_log_id INTEGER REFERENCES audit_logs(id),
+                symbol VARCHAR(32) NOT NULL,
+                side VARCHAR(16) NOT NULL,
+                quantity NUMERIC NOT NULL,
+                execution_price NUMERIC NOT NULL,
+                execution_time TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+                execution_mode VARCHAR(16) NOT NULL,
+                strategy_context JSONB,
+                pnl NUMERIC,
+                pnl_pct NUMERIC
+            );
+            CREATE INDEX IF NOT EXISTS idx_trades_task_id ON trades(task_id);
+            CREATE INDEX IF NOT EXISTS idx_trades_symbol ON trades(symbol);
+            """)
+            
+    logger.info("PostgreSQL schemas initialized.")

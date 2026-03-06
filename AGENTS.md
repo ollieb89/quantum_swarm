@@ -1,46 +1,46 @@
-# Repository Guidelines
+# Agent Ecosystem Guide
 
-## Project Structure & Module Organization
-The entrypoint is `main.py`, which wires the orchestrator, agents, executors, and self-learning pipeline. Core runtime logic lives in `src/`:
-- `src/core/`: CLI and file-protocol wrappers (`cli_wrapper.py`)
-- `src/orchestrator/`: L1 strategic orchestration
-- `src/agents/`: L2/L3 trading and risk agents
-- `src/skills/`: market-analysis and learning modules
+This guide details the specialized agents within the **Quantum Swarm** and their roles in the LangGraph orchestration.
 
-Configuration is in `config/` (`swarm_config.yaml`, `agents.json`). Runtime artifacts and memory files go in `data/`. UI assets are in `dashboard/` and `dashboard/templates/`.
+## L1: Strategic Orchestration
+*   **Path**: `src/graph/orchestrator.py`
+*   **Role**: Entry point for all user tasks. Responsible for intent classification and routing.
+*   **Capabilities**: Uses a deterministic skill registry to bypass the graph for common commands or routes to the analysis layers based on intent (trade, macro, analysis).
 
-## Build, Test, and Development Commands
-- `pip install -r requirements.txt`: install Python dependencies.
-- `python main.py`: run interactive swarm mode.
-- `python main.py --task "Analyze BTC and recommend a trade"`: run one task non-interactively.
-- `python main.py --mode test`: execute built-in integration smoke checks.
-- `python main.py --mode daemon`: run daemon mode.
+## L2: Cognitive Analysis Layer
+The L2 layer performs adversarial analysis to reach a high-confidence consensus.
 
-Use Python 3.9+ and ensure `openclaw` CLI is installed if gateway-backed features are needed.
+### Analysts (ReAct Agents)
+*   **MacroAnalyst** (`src/graph/agents/analysts.py`): Performs broad market analysis using economic data and sentiment.
+*   **QuantModeler** (`src/graph/agents/analysts.py`): Executes quantitative analysis on specific symbols to generate trade proposals (signal, confidence, stop-loss).
 
-## Coding Style & Naming Conventions
-Follow existing Python style:
-- 4-space indentation; keep functions focused and small.
-- `snake_case` for functions, methods, variables, and module names.
-- `PascalCase` for classes and dataclasses.
-- Add type hints on public methods and structured return values.
-- Prefer module-level loggers (`logging.getLogger(__name__)`) and consistent error handling.
+### Researchers (Adversarial Nodes)
+*   **BullishResearcher** (`src/graph/agents/researchers.py`): Gathers supporting evidence for the analyst's proposal.
+*   **BearishResearcher** (`src/graph/agents/researchers.py`): Attempts to refute the proposal using macro headwinds and contrary data.
+*   **Verification**: Both researchers use the `BudgetedTool` wrapper to enforce call limits and ensure data deduplication.
 
-Keep configuration keys stable and descriptive (for example, `risk_limits.max_daily_loss`).
+### Debate Synthesizer
+*   **Path**: `src/graph/debate.py`
+*   **Role**: Aggregates researcher outputs and computes a **Weighted Consensus Score**.
+*   **Threshold**: Only scores > 0.6 proceed to execution (L3).
 
-## Testing Guidelines
-There is no dedicated `tests/` suite yet; baseline verification is `python main.py --mode test`. For new features, add targeted unit tests under `tests/` using `test_*.py` naming and isolate external dependencies (OpenClaw gateway, exchange APIs) with mocks/stubs where possible.
+## L3: Execution Engine
+*   **Risk Manager**: Validates position sizing, leverage, and daily loss limits.
+*   **ClawGuard**: Hard-coded safety node that blocks execution if risk approval is missing or if PII/credentials are detected in the state messages.
+*   **Executors**:
+    *   `data_fetcher`: Real-time market data retrieval.
+    *   `backtester`: Historical strategy verification.
+    *   `order_router`: Direct integration with OpenClaw/CCXT.
+    *   `trade_logger`: Persistence of trade outcomes for self-learning.
 
-## Commit & Pull Request Guidelines
-Use Conventional Commits:
-- `feat:`, `fix:`, `docs:`, `refactor:`, `test:`, `chore:`
-- Example: `feat: add risk guard for max leverage breaches`
+## Testing & Quality Gates
+*   **Unit Tests**: Located in `tests/test_*.py`.
+*   **Reproduction**: Use `uv run python -m pytest` for all verification.
+*   **Mocking**: LLM nodes must be mocked using the `unittest.mock` pattern to ensure tests run without API keys.
 
-PRs should include:
-- Clear summary of behavior changes
-- Linked issue/task reference
-- Commands run for verification
-- Dashboard screenshot(s) when UI/templates change
+---
 
-## Security & Configuration Tips
-Never commit secrets. Keep tokens (for example `OPENCLAW_API_TOKEN`) in environment variables, not in tracked config. Validate risk limits in `config/swarm_config.yaml` before enabling live trading paths.
+## Coding Standards for Agents
+1.  **Lazy Initialization**: Initialize LLM singletons inside getter functions to prevent API key validation errors at import time.
+2.  **State Immutability**: Always return a partial state update dictionary from graph nodes.
+3.  **Traceability**: Ensure all AIMessages are tagged with a unique `name` (e.g., `bullish_research`) for consensus aggregation.

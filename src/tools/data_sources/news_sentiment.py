@@ -1,140 +1,117 @@
 """
-src.tools.data_sources.news_sentiment — FinBERT news sentiment client (async).
+src.tools.data_sources.news_sentiment — Market news sentiment via FinBERT.
 
 Provides:
     fetch_news_sentiment(symbol) -> SentimentData
-
-Primary path:
-    - Calls the HuggingFace Inference API for ProsusAI/finbert with a simple
-      headline about the symbol.
-    - If HUGGINGFACE_API_KEY env var is set it is sent as a Bearer token.
-    - Parses the JSON response and maps finbert labels to sentiment strings.
-
-Fallback:
-    - If HUGGINGFACE_API_KEY is absent OR if the API call fails for any reason,
-      degrades to a mock SentimentData with source="mock" and sentiment_score=0.0.
-
-Uses httpx for async HTTP requests.
 """
 
-from __future__ import annotations
-
+import asyncio
 import logging
 import os
 from datetime import datetime, timezone
-from typing import Any
+from typing import Any, Dict, List, Optional
+
+import httpx
 
 from src.models.data_models import SentimentData
 
 logger = logging.getLogger(__name__)
 
-_FINBERT_ENDPOINT = (
-    "https://api-inference.huggingface.co/models/ProsusAI/finbert"
-)
-
-# FinBERT label → canonical sentiment string
-_LABEL_MAP = {
-    "positive": "bullish",
-    "negative": "bearish",
-    "neutral": "neutral",
-}
-
-# FinBERT label → signed score contribution
-_SCORE_SIGN = {
-    "positive": 1.0,
-    "negative": -1.0,
-    "neutral": 0.0,
-}
+# In-memory cache to prevent duplicate API calls in one run
+_sentiment_cache: Dict[str, SentimentData] = {}
 
 
-def _mock_sentiment(symbol: str) -> SentimentData:
-    """Return a zeroed-out mock SentimentData when the real API is unavailable."""
+def clear_cache():
+    """Clear the in-memory sentiment data cache."""
+    _sentiment_cache.clear()
+
+
+async def fetch_news_sentiment(symbol: str) -> SentimentData:
+    """Fetch news sentiment for a symbol using HuggingFace FinBERT API or mock fallback.
+
+    Args:
+        symbol: Ticker symbol (e.g., 'AAPL').
+
+    Returns:
+        SentimentData Pydantic model with sentiment analysis.
+    """
+    if symbol in _sentiment_cache:
+        logger.info("Cache hit for sentiment data: %s", symbol)
+        return _sentiment_cache[symbol]
+
+    hf_api_key = os.environ.get("HUGGINGFACE_API_KEY")
+    now = datetime.now(tz=timezone.utc)
+
+    if not hf_api_key:
+        logger.warning("HUGGINGFACE_API_KEY not set; using mock news sentiment for %s", symbol)
+        sentiment = _get_mock_sentiment(symbol, now)
+        _sentiment_cache[symbol] = sentiment
+        return sentiment
+
+    logger.info("Fetching news sentiment for %s via HuggingFace FinBERT", symbol)
+
+    # Simplified headline for sentiment analysis
+    headline = f"The latest financial reports for {symbol} indicate potential market growth."
+    
+    api_url = "https://api-inference.huggingface.co/models/ProsusAI/finbert"
+    headers = {"Authorization": f"Bearer {hf_api_key}"}
+
+    try:
+        async with httpx.AsyncClient() as client:
+            response = await client.post(
+                api_url, 
+                headers=headers, 
+                json={"inputs": headline}, 
+                timeout=10.0
+            )
+            
+            if response.status_code != 200:
+                logger.warning("FinBERT API returned status %d; falling back to mock", response.status_code)
+                sentiment = _get_mock_sentiment(symbol, now)
+                _sentiment_cache[symbol] = sentiment
+                return sentiment
+
+            results: List[List[Dict[str, Any]]] = response.json()
+            if not results or not results[0]:
+                raise ValueError("Unexpected response format from FinBERT API")
+
+            # Extract highest score label
+            # Response structure: [[{'label': 'positive', 'score': 0.95}, ...]]
+            scores = results[0]
+            top_sentiment = max(scores, key=lambda x: x["score"])
+            
+            label = top_sentiment["label"]
+            score = top_sentiment["score"]
+            
+            # Map label to a numeric score range for consistency if needed
+            # (FinBERT uses positive, negative, neutral)
+            
+            sentiment = SentimentData(
+                symbol=symbol,
+                overall_sentiment=label,
+                sentiment_score=float(score),
+                article_count=1,  # Single-headline inference
+                timestamp=now,
+                source="finbert"
+            )
+            
+            _sentiment_cache[symbol] = sentiment
+            return sentiment
+
+    except Exception as e:
+        logger.error("Error fetching news sentiment for %s: %s; falling back to mock", symbol, e)
+        sentiment = _get_mock_sentiment(symbol, now)
+        _sentiment_cache[symbol] = sentiment
+        return sentiment
+
+
+def _get_mock_sentiment(symbol: str, timestamp: datetime) -> SentimentData:
+    """Return a mock SentimentData model."""
     return SentimentData(
         symbol=symbol,
         overall_sentiment="neutral",
         sentiment_score=0.0,
         article_count=0,
-        timestamp=datetime.now(tz=timezone.utc),
-        source="mock",
+        timestamp=timestamp,
+        source="mock"
     )
-
-
-def _parse_finbert_response(symbol: str, payload: Any) -> SentimentData:
-    """Parse the HuggingFace FinBERT response payload into SentimentData.
-
-    HuggingFace returns a list of lists of dicts:
-        [[{"label": "positive", "score": 0.98}, ...]]
-
-    The label with the highest score is taken as the overall sentiment.
-    The signed score is: score * sign(label).
-    """
-    if not payload or not isinstance(payload, list):
-        return _mock_sentiment(symbol)
-
-    # Unwrap outer list if present
-    candidates = payload[0] if isinstance(payload[0], list) else payload
-
-    if not candidates:
-        return _mock_sentiment(symbol)
-
-    # Sort by score descending and pick top
-    sorted_candidates = sorted(candidates, key=lambda x: x.get("score", 0.0), reverse=True)
-    top = sorted_candidates[0]
-
-    label = top.get("label", "neutral").lower()
-    score = float(top.get("score", 0.0))
-
-    overall = _LABEL_MAP.get(label, "neutral")
-    signed_score = score * _SCORE_SIGN.get(label, 0.0)
-
-    return SentimentData(
-        symbol=symbol,
-        overall_sentiment=overall,
-        sentiment_score=round(signed_score, 4),
-        article_count=1,  # one synthetic headline submitted
-        timestamp=datetime.now(tz=timezone.utc),
-        source="finbert",
-    )
-
-
-async def fetch_news_sentiment(symbol: str) -> SentimentData:
-    """Fetch FinBERT sentiment for *symbol* via HuggingFace Inference API.
-
-    Degrades gracefully to mock if the API key is absent or the request fails.
-
-    Args:
-        symbol: Ticker symbol used to construct a synthetic headline.
-
-    Returns:
-        SentimentData Pydantic model.
-    """
-    api_key = os.environ.get("HUGGINGFACE_API_KEY", "")
-
-    if not api_key:
-        logger.debug("HUGGINGFACE_API_KEY not set — using mock sentiment for %s", symbol)
-        return _mock_sentiment(symbol)
-
-    headline = f"Latest news and market outlook for {symbol} stock performance"
-
-    headers = {"Authorization": f"Bearer {api_key}"}
-    payload = {"inputs": headline}
-
-    try:
-        import httpx  # type: ignore[import-untyped]
-
-        async with httpx.AsyncClient(timeout=15.0) as client:
-            response = await client.post(
-                _FINBERT_ENDPOINT,
-                headers=headers,
-                json=payload,
-            )
-            response.raise_for_status()
-            data = response.json()
-
-        return _parse_finbert_response(symbol, data)
-
-    except Exception as exc:  # noqa: BLE001
-        logger.warning(
-            "FinBERT API call failed for %s: %s — falling back to mock", symbol, exc
-        )
-        return _mock_sentiment(symbol)

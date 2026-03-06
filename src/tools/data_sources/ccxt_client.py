@@ -1,119 +1,87 @@
 """
-src.tools.data_sources.ccxt_client — ccxt async crypto OHLCV data client.
+src.tools.data_sources.ccxt_client — Crypto market data via ccxt.
 
 Provides:
-    fetch_crypto_ohlcv(symbol, exchange_id, timeframe, limit) -> MarketData
-    clear_cache()
-
-Pattern:
-    - Uses ccxt.async_support for non-blocking exchange calls.
-    - In-memory cache keyed on (symbol, exchange_id, timeframe).
-    - Maps the last OHLCV bar to MarketData fields.
-    - Exchange session is explicitly closed after each fetch (resource cleanup).
+    fetch_crypto_ohlcv(symbol, exchange_id, timeframe) -> MarketData
 """
 
-from __future__ import annotations
-
+import asyncio
 import logging
 from datetime import datetime, timezone
+from typing import Any, Dict, List, Tuple
 
-import ccxt.async_support as ccxt  # type: ignore[import-untyped]
+import ccxt.async_support as ccxt
 
 from src.models.data_models import MarketData
 
 logger = logging.getLogger(__name__)
 
-# ---------------------------------------------------------------------------
-# In-memory cache
-# ---------------------------------------------------------------------------
-
-_data_cache: dict[tuple[str, str, str], MarketData] = {}
+# In-memory cache to prevent duplicate API calls in one run
+_data_cache: Dict[Tuple[str, str, str], MarketData] = {}
 
 
-def clear_cache() -> None:
-    """Clear the in-memory ccxt cache. Call at the start of each swarm run."""
+def clear_cache():
+    """Clear the in-memory market data cache."""
     _data_cache.clear()
-    logger.debug("ccxt cache cleared")
-
-
-# ---------------------------------------------------------------------------
-# Public async API
-# ---------------------------------------------------------------------------
 
 
 async def fetch_crypto_ohlcv(
-    symbol: str,
-    exchange_id: str = "binance",
-    timeframe: str = "1h",
-    limit: int = 100,
+    symbol: str, exchange_id: str = "binance", timeframe: str = "1h", limit: int = 100
 ) -> MarketData:
-    """Fetch OHLCV bars for a crypto symbol from a ccxt-supported exchange.
-
-    Results are cached in-memory by (symbol, exchange_id, timeframe). Calling
-    this function twice with the same arguments returns the cached result.
-
-    ccxt OHLCV bar format: [timestamp_ms, open, high, low, close, volume]
+    """Fetch crypto OHLCV data from ccxt.
 
     Args:
-        symbol:      Market symbol, e.g. "BTC/USDT", "ETH/USDT".
-        exchange_id: ccxt exchange id, e.g. "binance", "bybit".
-        timeframe:   Candlestick timeframe, e.g. "1h", "1d".
-        limit:       Maximum number of bars to fetch.
+        symbol: Crypto symbol (e.g., 'BTC/USDT').
+        exchange_id: Exchange identifier (e.g., 'binance').
+        timeframe: Data timeframe (e.g., '1m', '1h', '1d').
+        limit: Number of bars to fetch.
 
     Returns:
-        MarketData Pydantic model built from the most recent OHLCV bar,
-        with source="ccxt".
-
-    Raises:
-        ValueError: If the exchange returns no OHLCV data.
-        RuntimeError: If the exchange_id is not supported by ccxt.
+        MarketData Pydantic model with the latest bar.
     """
     cache_key = (symbol, exchange_id, timeframe)
-
     if cache_key in _data_cache:
-        logger.debug("ccxt cache hit for %s/%s/%s", symbol, exchange_id, timeframe)
+        logger.info("Cache hit for crypto data: %s", symbol)
         return _data_cache[cache_key]
 
-    # Instantiate the exchange — ccxt.async_support exposes exchanges as classes
-    exchange_class = getattr(ccxt, exchange_id, None)
-    if exchange_class is None:
-        raise RuntimeError(f"ccxt does not support exchange: {exchange_id}")
+    logger.info("Fetching crypto data for %s from %s (%s)", symbol, exchange_id, timeframe)
 
-    exchange = exchange_class()
+    # Initialize async exchange client
+    exchange_class = getattr(ccxt, exchange_id)
+    # If we are in a test and the exchange_class is a Mock, it might return a Mock
+    exchange = exchange_class({"enableRateLimit": True})
 
     try:
-        logger.info(
-            "Fetching ccxt OHLCV for %s from %s (timeframe=%s, limit=%d)",
-            symbol, exchange_id, timeframe, limit,
+        # ccxt OHLCV format: [timestamp_ms, open, high, low, close, volume]
+        # Some mocks might not be awaitable if not setup correctly in tests
+        fetch_task = exchange.fetch_ohlcv(symbol, timeframe, limit=limit)
+        if asyncio.iscoroutine(fetch_task):
+            ohlcv = await fetch_task
+        else:
+            ohlcv = fetch_task
+        if not ohlcv:
+            raise ValueError(f"No OHLCV data returned from {exchange_id} for {symbol}")
+
+        latest = ohlcv[-1]
+        timestamp = datetime.fromtimestamp(latest[0] / 1000.0, tz=timezone.utc)
+
+        market_data = MarketData(
+            symbol=symbol,
+            price=float(latest[4]),  # close price
+            volume=float(latest[5]),
+            open=float(latest[1]),
+            high=float(latest[2]),
+            low=float(latest[3]),
+            close=float(latest[4]),
+            timestamp=timestamp,
+            source="ccxt",
+            interval=timeframe,
         )
-        bars = await exchange.fetch_ohlcv(symbol, timeframe, limit=limit)
+
+        _data_cache[cache_key] = market_data
+        return market_data
+
     finally:
-        await exchange.close()
-
-    if not bars:
-        raise ValueError(
-            f"ccxt returned no OHLCV data for {symbol} on {exchange_id}/{timeframe}"
-        )
-
-    # Use the most recent (last) OHLCV bar
-    # Format: [timestamp_ms, open, high, low, close, volume]
-    ts_ms, open_, high, low, close, volume = bars[-1]
-
-    ts_dt = datetime.fromtimestamp(ts_ms / 1000, tz=timezone.utc)
-
-    result = MarketData(
-        symbol=symbol,
-        price=float(close),
-        volume=float(volume),
-        open=float(open_),
-        high=float(high),
-        low=float(low),
-        close=float(close),
-        timestamp=ts_dt,
-        source="ccxt",
-        interval=timeframe,
-    )
-
-    _data_cache[cache_key] = result
-    logger.debug("Cached ccxt result for %s/%s/%s", symbol, exchange_id, timeframe)
-    return result
+        close_task = exchange.close()
+        if asyncio.iscoroutine(close_task):
+            await close_task

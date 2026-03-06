@@ -8,7 +8,7 @@ BullishResearcher seeks SUPPORTING evidence for a bullish thesis.
 BearishResearcher seeks REFUTING evidence, looking for bearish signals.
 
 Both agents:
-  - Use claude-haiku-4-5-20251001 (fast, cost-efficient)
+  - Use gemini-2.0-flash (fast, cost-efficient)
   - Have a tool budget of 5 calls per invocation (via BudgetedTool)
   - Require a hypothesis= kwarg on every tool call (enforced by BudgetedTool)
   - Append tagged AIMessage findings to state["messages"] for DebateSynthesizer
@@ -20,9 +20,9 @@ from __future__ import annotations
 
 import logging
 import unittest.mock
-from typing import Any
+from typing import Any, Optional
 
-from langchain_anthropic import ChatAnthropic
+from langchain_google_genai import ChatGoogleGenerativeAI
 from langchain_core.messages import AIMessage, HumanMessage
 from langchain_core.tools import tool
 
@@ -38,14 +38,28 @@ from src.graph.agents.l3.trade_logger import get_recent_trades, TRADE_HISTORY_WI
 logger = logging.getLogger(__name__)
 
 # ---------------------------------------------------------------------------
-# Shared LLM — claude-haiku-4-5-20251001
+# Shared LLM — gemini-2.0-flash
 # ---------------------------------------------------------------------------
 
-_MODEL_ID = "claude-haiku-4-5-20251001"
+_MODEL_ID = "gemini-2.0-flash"
 
-# Each researcher gets its own LLM instance (separate call context)
-_bullish_llm = ChatAnthropic(model=_MODEL_ID)  # type: ignore[call-arg]
-_bearish_llm = ChatAnthropic(model=_MODEL_ID)  # type: ignore[call-arg]
+# Lazy singletons — deferred to first call so import never requires GOOGLE_API_KEY
+_bullish_llm: "ChatGoogleGenerativeAI | None" = None
+_bearish_llm: "ChatGoogleGenerativeAI | None" = None
+
+
+def _get_bullish_llm() -> ChatGoogleGenerativeAI:
+    global _bullish_llm
+    if _bullish_llm is None:
+        _bullish_llm = ChatGoogleGenerativeAI(model=_MODEL_ID)
+    return _bullish_llm
+
+
+def _get_bearish_llm() -> ChatGoogleGenerativeAI:
+    global _bearish_llm
+    if _bearish_llm is None:
+        _bearish_llm = ChatGoogleGenerativeAI(model=_MODEL_ID)
+    return _bearish_llm
 
 # ---------------------------------------------------------------------------
 # System prompts
@@ -136,13 +150,16 @@ def _make_budgeted_tools(max_calls: int = 5) -> list[BudgetedTool]:
 # ---------------------------------------------------------------------------
 
 
+from src.core.budget_manager import BudgetManager
+
 def _run_researcher_agent(
-    llm: ChatAnthropic,
+    llm: ChatGoogleGenerativeAI,
     system_prompt: str,
     query: str,
     budgeted_tools: list[BudgetedTool],
-) -> str:
-    """Run a simple ReAct loop with budgeted tools and return the final text.
+    budget: Optional[BudgetManager] = None,
+) -> tuple[str, int]:
+    """Run a simple ReAct loop with budgeted tools and return the final text and tokens used.
 
     We implement a lightweight manual ReAct loop here rather than using
     create_react_agent so that the BudgetedTool instances (with per-invocation
@@ -166,10 +183,18 @@ def _run_researcher_agent(
 
     MAX_ITERATIONS = 8  # safety cap on ReAct loop
     last_text: str = ""
+    tokens_used: int = 0
 
     for _i in range(MAX_ITERATIONS):
         response = bound_llm.invoke(messages)
         messages.append(response)
+
+        if budget and hasattr(response, "usage_metadata") and response.usage_metadata:
+            u = response.usage_metadata
+            inp = int(u.get("input_tokens", 0))
+            out = int(u.get("output_tokens", 0))
+            budget.record_usage(input_tokens=inp, output_tokens=out)
+            tokens_used += inp + out
 
         # Check for tool calls
         tool_calls = getattr(response, "tool_calls", None) or []
@@ -206,7 +231,7 @@ def _run_researcher_agent(
                 )
             )
 
-    return last_text or "No research output produced."
+    return last_text or "No research output produced.", tokens_used
 
 
 # ---------------------------------------------------------------------------
@@ -214,7 +239,7 @@ def _run_researcher_agent(
 # ---------------------------------------------------------------------------
 
 
-def BullishResearcher(state: SwarmState) -> dict[str, Any]:
+def BullishResearcher(state: SwarmState, budget: Optional[BudgetManager] = None) -> dict[str, Any]:
     """LangGraph node: run the BullishResearcher adversarial agent.
 
     Reads analyst conclusions from SwarmState messages, then seeks SUPPORTING
@@ -222,6 +247,7 @@ def BullishResearcher(state: SwarmState) -> dict[str, Any]:
 
     Args:
         state: Current SwarmState shared across the graph.
+        budget: Shared BudgetManager instance.
 
     Returns:
         Partial state update dict with ``messages`` key containing the agent
@@ -256,13 +282,15 @@ def BullishResearcher(state: SwarmState) -> dict[str, Any]:
     )
 
     budgeted_tools = _make_budgeted_tools(max_calls=5)
+    tokens_to_add = 0
 
     try:
-        content = _run_researcher_agent(
-            llm=_bullish_llm,
+        content, tokens_to_add = _run_researcher_agent(
+            llm=_get_bullish_llm(),
             system_prompt=_BULLISH_SYSTEM,
             query=query,
             budgeted_tools=budgeted_tools,
+            budget=budget,
         )
     except Exception as exc:
         logger.warning("BullishResearcher encountered error: %s", exc)
@@ -277,10 +305,10 @@ def BullishResearcher(state: SwarmState) -> dict[str, Any]:
         content=content,
         name="bullish_research",
     )
-    return {"messages": [response]}
+    return {"messages": [response], "total_tokens": tokens_to_add}
 
 
-def BearishResearcher(state: SwarmState) -> dict[str, Any]:
+def BearishResearcher(state: SwarmState, budget: Optional[BudgetManager] = None) -> dict[str, Any]:
     """LangGraph node: run the BearishResearcher adversarial agent.
 
     Reads analyst conclusions from SwarmState messages, then seeks REFUTING
@@ -289,6 +317,7 @@ def BearishResearcher(state: SwarmState) -> dict[str, Any]:
 
     Args:
         state: Current SwarmState shared across the graph.
+        budget: Shared BudgetManager instance.
 
     Returns:
         Partial state update dict with ``messages`` key containing the agent
@@ -323,13 +352,15 @@ def BearishResearcher(state: SwarmState) -> dict[str, Any]:
     )
 
     budgeted_tools = _make_budgeted_tools(max_calls=5)
+    tokens_to_add = 0
 
     try:
-        content = _run_researcher_agent(
-            llm=_bearish_llm,
+        content, tokens_to_add = _run_researcher_agent(
+            llm=_get_bearish_llm(),
             system_prompt=_BEARISH_SYSTEM,
             query=query,
             budgeted_tools=budgeted_tools,
+            budget=budget,
         )
     except Exception as exc:
         logger.warning("BearishResearcher encountered error: %s", exc)
@@ -344,7 +375,7 @@ def BearishResearcher(state: SwarmState) -> dict[str, Any]:
         content=content,
         name="bearish_research",
     )
-    return {"messages": [response]}
+    return {"messages": [response], "total_tokens": tokens_to_add}
 
 
 # ---------------------------------------------------------------------------
@@ -393,17 +424,20 @@ if __name__ == "__main__":
         )
     )
 
+    _bl = _get_bullish_llm()
+    _br = _get_bearish_llm()
+
     with unittest.mock.patch.object(
-        _bullish_llm, "bind_tools", return_value=_bullish_llm
+        _bl, "bind_tools", return_value=_bl
     ), unittest.mock.patch.object(
-        _bullish_llm, "invoke", return_value=fake_response
+        _bl, "invoke", return_value=fake_response
     ):
         bullish_result = BullishResearcher(test_state)
 
     with unittest.mock.patch.object(
-        _bearish_llm, "bind_tools", return_value=_bearish_llm
+        _br, "bind_tools", return_value=_br
     ), unittest.mock.patch.object(
-        _bearish_llm, "invoke", return_value=fake_response
+        _br, "invoke", return_value=fake_response
     ):
         bearish_result = BearishResearcher(test_state)
 

@@ -42,7 +42,7 @@ def test_order_router_paper_mode():
 
     state = _make_state(execution_mode="paper", risk_approved=True)
 
-    result = asyncio.get_event_loop().run_until_complete(order_router_node(state))
+    result = asyncio.run(order_router_node(state))
 
     assert "execution_result" in result
     er = result["execution_result"]
@@ -75,7 +75,7 @@ def test_execution_mode_routing():
         new_callable=AsyncMock,
         return_value=live_success,
     ) as mock_live:
-        result = asyncio.get_event_loop().run_until_complete(order_router_node(state))
+        result = asyncio.run(order_router_node(state))
 
     mock_live.assert_called_once()
     assert result["execution_result"]["success"] is True
@@ -104,7 +104,7 @@ def test_execution_mode_routing_crypto():
         new_callable=AsyncMock,
         return_value=crypto_success,
     ) as mock_crypto:
-        result = asyncio.get_event_loop().run_until_complete(order_router_node(state))
+        result = asyncio.run(order_router_node(state))
 
     mock_crypto.assert_called_once()
     assert result["execution_result"]["success"] is True
@@ -121,7 +121,7 @@ def test_risk_gate():
 
     state = _make_state(risk_approved=False)
 
-    result = asyncio.get_event_loop().run_until_complete(order_router_node(state))
+    result = asyncio.run(order_router_node(state))
 
     assert "execution_result" in result
     er = result["execution_result"]
@@ -141,7 +141,7 @@ def test_result_serializable():
 
     state = _make_state(execution_mode="paper", risk_approved=True)
 
-    result = asyncio.get_event_loop().run_until_complete(order_router_node(state))
+    result = asyncio.run(order_router_node(state))
 
     # Should not raise
     serialized = json.dumps(result["execution_result"])
@@ -166,7 +166,7 @@ def test_live_gate_no_ib():
         raise ConnectionRefusedError("Connection refused")
 
     with patch("asyncio.open_connection", side_effect=ConnectionRefusedError("Connection refused")):
-        result = asyncio.get_event_loop().run_until_complete(order_router_node(state))
+        result = asyncio.run(order_router_node(state))
 
     er = result["execution_result"]
     assert er["success"] is False

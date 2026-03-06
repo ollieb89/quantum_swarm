@@ -9,6 +9,8 @@ import logging
 from typing import Any, Dict, Optional
 
 from src.blackboard.board import Blackboard
+from src.core.blackboard import InterAgentBlackboard
+from src.core.budget_manager import BudgetManager
 from src.skills.registry import SkillRegistry
 
 _registry: Optional[SkillRegistry] = None
@@ -103,27 +105,48 @@ def synthesize_consensus(state: dict, config: dict, board: Optional[Blackboard] 
 def classify_intent_with_registry(
     state: Dict[str, Any],
     config: Optional[Dict[str, Any]] = None,
+    board: Optional[InterAgentBlackboard] = None,
+    budget: Optional[BudgetManager] = None,
 ) -> Dict[str, Any]:
     """Classify intent, routing deterministically to a skill if one matches.
 
     Checks the SkillRegistry first. If the user_input contains a known
     SKILL_INTENT token, calls the handler directly (bypassing the graph).
     Falls through to pattern-based intent classification otherwise.
+
+    If *board* is provided, writes the delegation objective to the blackboard
+    so that child agents can pick it up via the session_id.
+
+    If *budget* is provided, checks budget ceilings before proceeding.
+    Raises SafetyShutdown (propagated from BudgetManager) if limits are hit.
     """
     if config is None:
         config = {}
-    user_input = state.get("user_input", "").lower()
+
+    # --- Budget gate (runs before any LLM work) ---
+    if budget is not None:
+        budget.check_budget()
+        # Record a dummy cost for intent classification (e.g. 50 input tokens)
+        budget.record_usage(input_tokens=50, output_tokens=0)
+
+    user_input = state.get("user_input", "")
     registry = _get_registry()
+
+    # Get cumulative tokens from budget if available
+    tokens_to_add = 50 if budget is not None else 0
 
     # Deterministic bypass: check each registered intent against user input
     for intent in registry.intents:
-        if intent in user_input:
+        if intent in user_input.lower():
             skill_result = registry.route(intent, state)
             if skill_result is not None:
                 logger.info("classify_intent_with_registry: bypassing graph for skill=%r", intent)
+                _write_objective(board, state, intent)
                 return {
                     "intent": intent,
                     "skill_result": skill_result,
+                    "blackboard_session": state.get("task_id"),
+                    "total_tokens": tokens_to_add,
                     "messages": [
                         {"role": "assistant", "content": f"Skill bypass: {intent}"}
                     ],
@@ -134,14 +157,37 @@ def classify_intent_with_registry(
     intent = "unknown"
     for intent_name, patterns in intent_patterns.items():
         for pattern in patterns:
-            if pattern in user_input:
+            if pattern in user_input.lower():
                 intent = intent_name
                 break
         if intent != "unknown":
             break
 
     logger.info("classify_intent_with_registry: pattern intent=%r", intent)
+    _write_objective(board, state, intent)
     return {
         "intent": intent,
+        "blackboard_session": state.get("task_id"),
+        "total_tokens": tokens_to_add,
         "messages": [{"role": "assistant", "content": f"Classified intent: {intent}"}],
     }
+
+
+def _write_objective(
+    board: Optional[InterAgentBlackboard],
+    state: Dict[str, Any],
+    intent: str,
+) -> None:
+    """Write the current task objective to the blackboard if board is provided."""
+    if board is None:
+        return
+    session_id = state.get("task_id")
+    if not session_id:
+        return
+    objective = {
+        "task_id": session_id,
+        "user_input": state.get("user_input", ""),
+        "intent": intent,
+    }
+    board.write_state(session_id, "objective", objective)
+    logger.info("classify_intent_with_registry: objective written to blackboard session=%s", session_id)

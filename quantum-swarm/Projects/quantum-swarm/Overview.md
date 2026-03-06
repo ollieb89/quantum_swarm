@@ -33,6 +33,12 @@ tags:
 ## Decisions
 - [[Projects/quantum-swarm/Decisions]]
 
+## Plugin Context
+- [[Projects/quantum-swarm/Plugin-Context]]
+
+## Plans & State
+- [[Projects/quantum-swarm/Plans]]
+
 ## Latest Weekly Status
 - [[Projects/quantum-swarm/Status/Weekly-2026-10]]
 

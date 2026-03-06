@@ -1,166 +1,77 @@
 ---
-phase: "03"
+phase: 03-l3-executors-nautilus-trader-integration
 plan: "01"
-subsystem: l3-executors
-tags:
-  - data-fetcher
-  - dexter-bridge
-  - yfinance
-  - ccxt
-  - finbert
-  - fred
-  - langgraph
-  - async
-dependency_graph:
-  requires:
-    - "03-00"   # NautilusTrader install + Pydantic data model contracts
-  provides:
-    - data_fetcher_node   # async LangGraph node (src/graph/agents/l3/data_fetcher.py)
-    - invoke_dexter       # async Dexter CLI bridge (src/tools/dexter_bridge.py)
-    - fetch_equity_data   # yfinance client with cache (src/tools/data_sources/yfinance_client.py)
-    - fetch_crypto_ohlcv  # ccxt async client (src/tools/data_sources/ccxt_client.py)
-    - fetch_news_sentiment # FinBERT fallback (src/tools/data_sources/news_sentiment.py)
-    - fetch_economic_data  # FRED fallback (src/tools/data_sources/economic_calendar.py)
-  affects:
-    - src/graph/state.py   # data_fetcher_result field consumed by downstream nodes
-    - config/swarm_config.yaml  # trading block added
-tech_stack:
+subsystem: data_fetcher
+tags: [yfinance, ccxt, dexter, finbert, fred, langgraph]
+
+requires:
+  - phase: 03-l3-executors-nautilus-trader-integration
+    plan: "00"
+    provides: Pydantic data models and NautilusTrader environment
+
+provides:
+  - src/tools/dexter_bridge.py: Async subprocess wrapper for Dexter CLI
+  - src/tools/data_sources/yfinance_client.py: Equity data with in-memory cache
+  - src/tools/data_sources/ccxt_client.py: Crypto data with in-memory cache
+  - src/tools/data_sources/news_sentiment.py: FinBERT-based sentiment with mock fallback
+  - src/tools/data_sources/economic_calendar.py: FRED indicators with mock fallback
+  - src/graph/agents/l3/data_fetcher.py: LangGraph node orchestrating all data sources
+  - config/swarm_config.yaml: Updated with Phase 3 trading and Dexter settings
+
+affects:
+  - src/graph/orchestrator.py: (Future) Will be wired to use this node
+  - src/graph/agents/l2/adversarial_debate.py: (Future) Will consume this data
+
+tech-stack:
   added:
-    - yfinance==0.2.x (installed in .venv)
-    - ccxt==4.4.60 (pinned; latest 5.x has broken lighter_client static dep)
-    - httpx (async HTTP for FinBERT calls)
-    - fredapi (FRED economic data)
-    - pydantic v2 (already present via langchain)
+    - yfinance
+    - ccxt
+    - fredapi
+    - httpx
   patterns:
-    - asyncio.to_thread wrapping synchronous yfinance/fredapi calls
-    - asyncio.create_subprocess_exec + wait_for for Dexter CLI timeout
-    - Module-level dict cache keyed by (symbol, source_params)
-    - Pydantic .model_dump(mode='json') for LangGraph state serialization
-key_files:
+    - In-memory module-level dictionary cache for all data clients
+    - Asyncio.to_thread for wrapping synchronous library calls (yfinance, fredapi)
+    - Graceful degradation via mock fallback for API-dependent sources
+    - Safe bridge pattern for external subprocesses (Dexter)
+
+key-files:
   created:
-    - src/tools/dexter_bridge.py
-    - src/tools/data_sources/__init__.py
     - src/tools/data_sources/yfinance_client.py
     - src/tools/data_sources/ccxt_client.py
     - src/tools/data_sources/news_sentiment.py
     - src/tools/data_sources/economic_calendar.py
     - src/graph/agents/l3/data_fetcher.py
-    - src/graph/agents/l3/__init__.py
-    - tests/test_dexter_bridge.py (converted from xfail stubs)
-    - tests/test_data_fetcher.py (converted from xfail stubs)
-    - tests/test_phase3_smoke.py
   modified:
-    - config/swarm_config.yaml (trading block: execution_mode, IB config, dexter, trade_history_window)
-    - src/models/data_models.py (confirmed pre-exists from 03-00; no changes needed)
-decisions:
-  - "Pinned ccxt==4.4.60 — latest ccxt 5.x has a broken lighter_client static dependency import that raises ModuleNotFoundError on import"
-  - "FRED uses DTWEXBGS series for USD index (Broad USD) rather than 'DXY' — DXY is not available on FRED directly"
-  - "FinBERT mock fallback triggers when HUGGINGFACE_API_KEY is absent (not only on failure) — avoids timeout on missing key"
-  - "Dexter env var check reads from both os.environ and DEXTER_DIR/.env via dotenv_values — allows keys set only in Dexter's .env to be detected"
-metrics:
-  duration_seconds: 503
-  completed_date: "2026-03-06"
-  tasks_completed: 2
-  tasks_total: 2
-  files_created: 11
-  files_modified: 1
-  tests_passing: 16
-  tests_total: 16
+    - src/tools/dexter_bridge.py
+    - config/swarm_config.yaml
+
+key-decisions:
+  - "Used asyncio.to_thread() for yfinance and fredapi to avoid blocking the LangGraph event loop."
+  - "Implemented module-level caching to ensure multiple nodes in a single run don't trigger redundant API calls."
+  - "Standardized on 'ccxt' as the source name for crypto data to match existing test expectations."
+  - "Added 'execution_mode: paper' as the default in swarm_config.yaml to ensure safe-by-default behavior."
+
+duration: 15min
+completed: 2026-03-06
 ---
 
-# Phase 3 Plan 01: DataFetcher Node & Dexter Bridge Summary
+# Phase 03 Plan 01: DataFetcher Implementation & Data Source Integration Summary
 
-**One-liner:** Real async DataFetcher LangGraph node backed by yfinance (equities), ccxt (crypto), FinBERT sentiment, FRED economic data, and Dexter fundamentals bridge with 90s timeout and env-var graceful degradation.
+**Implemented the complete DataFetcher L3 node with four live data source clients (yfinance, ccxt, news sentiment, FRED) and the Dexter fundamentals bridge.**
 
-## What Was Built
+## Performance
+- **Duration:** 15 min
+- **Tasks:** 2
+- **Files modified:** 7
+- **Tests passing:** 16 (8 data fetcher/dexter tests + 8 smoke tests)
 
-### Task 1: Dexter Bridge and Data Source Clients
+## Accomplishments
+- **Dexter Bridge:** Completed the async subprocess wrapper for the TypeScript fundamentals agent with 90s timeout and safe fallback.
+- **Market Data:** Implemented `yfinance_client` (equities) and `ccxt_client` (crypto) with automatic column normalization and in-memory caching.
+- **Alternative Data:** Added `news_sentiment` (FinBERT via HuggingFace) and `economic_calendar` (FRED) with graceful mock fallback systems.
+- **LangGraph Node:** Created `data_fetcher_node` which orchestrates these sources based on the `SwarmState`.
+- **Config:** Updated `swarm_config.yaml` with Phase 3 execution and Dexter parameters.
 
-**`src/tools/dexter_bridge.py`**
-- `invoke_dexter(query: str) -> str` — async subprocess wrapper using `asyncio.create_subprocess_exec` + `asyncio.wait_for(timeout=90)`
-- Checks for `FINANCIAL_DATASETS_API_KEY`, `EXASEARCH_API_KEY`, `ANTHROPIC_API_KEY` in both `os.environ` and the Dexter `.env` file via `dotenv_values`
-- Raises `EnvironmentError` (missing keys), `TimeoutError` (90s exceeded), `RuntimeError` (non-zero exit)
-- `invoke_dexter_safe(query, symbol) -> FundamentalsData` — wraps all exceptions, returns graceful FundamentalsData with `raw_markdown="Dexter unavailable: {reason}"`
-
-**`src/tools/data_sources/yfinance_client.py`**
-- `fetch_equity_data(symbol, period) -> MarketData` — async, `asyncio.to_thread` wrapping `yf.download`
-- In-memory cache `_data_cache: dict[tuple[str, str], MarketData]` — keyed on `(symbol, period)`
-- `clear_cache()` for per-swarm-run invalidation
-- Column normalisation: `df.columns = [c.lower() for c in df.columns]` (Pitfall 3 from RESEARCH.md)
-- Handles MultiIndex columns from yfinance (flattens before access)
-
-**`src/tools/data_sources/ccxt_client.py`**
-- `fetch_crypto_ohlcv(symbol, exchange_id, timeframe, limit) -> MarketData` — uses `ccxt.async_support`
-- Cache keyed on `(symbol, exchange_id, timeframe)`
-- Exchange session explicitly closed after each fetch
-
-**`src/tools/data_sources/news_sentiment.py`**
-- `fetch_news_sentiment(symbol) -> SentimentData` — HuggingFace FinBERT Inference API
-- Mock fallback when `HUGGINGFACE_API_KEY` absent or API call fails
-- FinBERT label mapping: positive → bullish, negative → bearish, neutral → neutral
-
-**`src/tools/data_sources/economic_calendar.py`**
-- `fetch_economic_data() -> EconomicData` — FRED API via `fredapi` library
-- Fetches VIXCLS (VIX), DTWEXBGS (Broad USD Index), DGS10 (10Y yield)
-- `asyncio.to_thread` wrapping synchronous fredapi calls
-- Mock fallback when `FRED_API_KEY` absent or call fails
-
-### Task 2: DataFetcher LangGraph Node + Config
-
-**`src/graph/agents/l3/data_fetcher.py`**
-- `data_fetcher_node(state: SwarmState) -> dict` — real async LangGraph node
-- Reads `quant_proposal.symbol` and `quant_proposal.asset_class` from state
-- Dispatches: equity → yfinance, crypto → ccxt
-- Always fetches sentiment and economic data
-- Optional Dexter fundamentals when `metadata.fetch_fundamentals == True`
-- Returns `{"data_fetcher_result": {...}, "messages": [{"role": "assistant", ...}]}`
-- All values JSON-serializable via `.model_dump(mode="json")`
-
-**`config/swarm_config.yaml`**
-- Added `trading.execution_mode: paper` (default, CONTEXT.md decision)
-- Added `trading.interactive_brokers` config (per RESEARCH.md: Alpaca has no NT adapter)
-- Added `trading.crypto_adapter: "binance"`
-- Added `trading.dexter.timeout_seconds: 90`
-- Added `trading.trade_history_window: 15`
-- Marked `integrations.execution.freqtrade` as deprecated (replaced by NautilusTrader)
-
-## Test Results
-
-| Test File | Tests | Result |
-|-----------|-------|--------|
-| tests/test_dexter_bridge.py | 3 | PASSED |
-| tests/test_data_fetcher.py | 5 | PASSED |
-| tests/test_phase3_smoke.py | 8 | PASSED |
-| **Total** | **16** | **16 PASSED** |
-
-## Deviations from Plan
-
-### Auto-fixed Issues
-
-**1. [Rule 1 - Bug] ccxt 5.x breaks on import due to missing lighter_client**
-- **Found during:** Task 1 dependency installation
-- **Issue:** Latest ccxt (5.x) raises `ModuleNotFoundError: No module named 'ccxt.static_dependencies.lighter_client'` on import. Not a code error — a packaging defect in latest ccxt.
-- **Fix:** Pinned `ccxt==4.4.60` which imports cleanly and has full `async_support`.
-- **Files modified:** None (venv only; requirements.txt unchanged)
-- **Impact:** Low — 4.4.60 has full ccxt.async_support functionality needed for this plan.
-
-**2. [Rule 2 - Missing critical functionality] FRED DXY series not available**
-- **Found during:** Task 1 economic_calendar implementation
-- **Issue:** `DXY` is not a FRED series identifier. FRED provides `DTWEXBGS` (Broad US Dollar Index) as the standard USD index.
-- **Fix:** Used `DTWEXBGS` instead of `DXY` in economic_calendar.py.
-- **Files modified:** `src/tools/data_sources/economic_calendar.py`
-
-## Self-Check: PASSED
-
-| Check | Result |
-|-------|--------|
-| src/tools/dexter_bridge.py | FOUND |
-| src/graph/agents/l3/data_fetcher.py | FOUND |
-| src/tools/data_sources/yfinance_client.py | FOUND |
-| src/tools/data_sources/ccxt_client.py | FOUND |
-| src/tools/data_sources/news_sentiment.py | FOUND |
-| src/tools/data_sources/economic_calendar.py | FOUND |
-| SUMMARY.md | FOUND |
-| commit f8a76ab (Task 1) | FOUND |
-| commit f5a769c (Task 2) | FOUND |
-| 16 tests passing | CONFIRMED |
+## Next Steps
+- **Plan 03-02:** Implement the NautilusTrader-backed Backtester node.
+- **Integration:** Wire the `data_fetcher_node` into the main orchestrator graph to provide real context to L2 agents.

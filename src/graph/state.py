@@ -47,11 +47,18 @@ class SwarmState(TypedDict):
     # Optional: External context (config, etc. - though usually passed in nodes)
     metadata: dict
 
+    # Phase 1: Blackboard session ID (maps to data/inter_agent_comms/{session_id}/)
+    blackboard_session: Optional[str]
+
+    # Phase 1: Cumulative token usage tracked by BudgetManager
+    total_tokens: Annotated[int, operator.add]
+
     # Phase 3: L3 Executor state fields
     # trade_history: Annotated reducer (operator.add) — always appends, trim at read time
     # Sliding window N=15 enforced in L2 agents: state["trade_history"][-15:]
     trade_history: Annotated[List[dict], operator.add]
     execution_mode: str                        # "paper" | "live"
     data_fetcher_result: Optional[dict]        # MarketData + SentimentData + EconomicData dicts
+    knowledge_base_result: Optional[dict]      # Local KB context (sentiment_context + historical_stats)
     backtest_result: Optional[dict]            # NautilusTrader metrics dict
     execution_result: Optional[dict]           # OrderRouter fill dict

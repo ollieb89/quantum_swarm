@@ -10,14 +10,27 @@
 
 This document describes the phased migration of the Quantum Swarm multi-agent financial analysis system from its current custom orchestration layer to LangGraph. The goal is to gain structured workflow management, checkpoint-based state persistence, and native support for parallel agent execution — while preserving the existing skills, configuration schema, and OpenClaw external integrations.
 
+### Reference Architectures
+
+This plan is informed by analysis of 11 repositories (see `claudedocs/research_agentic_frameworks_2026-03-05.md`). Key influences:
+
+| Source | What We Adopt | Why |
+|--------|--------------|-----|
+| **TradingAgents** (31.3k stars, LangGraph) | Adversarial bullish/bearish researcher debate pattern, 4-analyst fan-out, risk veto authority | Proven at scale, nearly identical L1->L2->L3 architecture, same tech stack |
+| **NautilusTrader** (20.9k stars, Rust+Python) | L3 execution backend: order management, nanosecond backtesting, multi-venue routing | Production-grade, replaces custom OrderRouter/Backtester, designed for AI agent training |
+| **quant-trading** (9.3k stars) | Strategy implementations as LangChain tools (MACD, RSI, Bollinger, pair trading, Monte Carlo) | Clean Python, well-tested, wrappable without major refactoring |
+| **multi-agent-framework** (ICRA 2024) | HMAS-2 topology validation, full dialogue history retention | Academic proof that 2-level hierarchy outperforms flat/distributed coordination |
+
 ---
 
 ## Phase 0: Assessment & Setup
 
-- [ ] Audit existing codebase: Identify what works (skills, config, `agents.json` schema, file protocol) vs. what needs replacement (orchestration logic, agent communication)
-- [ ] Install LangGraph: `pip install langgraph langchain-anthropic langchain-community`
-- [ ] Set up LangSmith for observability (optional but recommended)
-- [ ] Create a proof-of-concept: Single L1->L2 delegation using LangGraph supervisor pattern
+- [x] Audit existing codebase: Identify what works (skills, config, `agents.json` schema, file protocol) vs. what needs replacement (orchestration logic, agent communication)
+- [x] Study TradingAgents repo architecture: Extract the adversarial debate pattern, agent sub-graph structure, and LangGraph wiring patterns
+- [x] Install dependencies: `pip install langgraph langchain-anthropic langchain-community nautilus_trader`
+- [x] Set up LangSmith for observability (optional but recommended)
+- [x] Create a proof-of-concept: Single L1->L2 delegation using LangGraph supervisor pattern
+- [x] Create a NautilusTrader proof-of-concept: Verify backtest execution and data feed integration with existing config
 
 ---
 
@@ -25,12 +38,12 @@ This document describes the phased migration of the Quantum Swarm multi-agent fi
 
 **Goal:** Replace `StrategicOrchestrator` (`src/orchestrator/strategic_l1.py`) with a LangGraph-based orchestrator.
 
-- [ ] Define the swarm state schema (`TypedDict` with all shared state fields)
-- [ ] Implement L1 Orchestrator as a LangGraph supervisor node
-- [ ] Implement intent classification as a conditional edge router
-- [ ] Wire up the existing `swarm_config.yaml` routing rules as LangGraph edges
-- [ ] Implement the "Blackboard" as LangGraph shared state with checkpoint persistence
-- [ ] Preserve existing OpenClaw gateway integration (`src/core/cli_wrapper.py` stays as-is)
+- [x] Define the swarm state schema (`TypedDict` with all shared state fields)
+- [x] Implement L1 Orchestrator as a LangGraph supervisor node
+- [x] Implement intent classification as a conditional edge router
+- [x] Wire up the existing `swarm_config.yaml` routing rules as LangGraph edges
+- [x] Implement the "Blackboard" as LangGraph shared state with checkpoint persistence
+- [x] Preserve existing OpenClaw gateway integration (`src/core/cli_wrapper.py` stays as-is)
 
 ### State Schema
 
@@ -42,9 +55,13 @@ from langgraph.prebuilt import create_react_agent
 class SwarmState(TypedDict):
     task_id: str
     intent: str
-    messages: list
+    messages: list  # Full dialogue history (HMAS-2 validated: don't prune)
     macro_report: Optional[dict]
     quant_proposal: Optional[dict]
+    # Adversarial debate (adapted from TradingAgents)
+    bullish_thesis: Optional[dict]   # Arguments for the trade
+    bearish_thesis: Optional[dict]   # Arguments against the trade
+    debate_resolution: Optional[dict] # Synthesized position after debate
     risk_approval: Optional[dict]
     consensus_score: float
     compliance_flags: list
@@ -59,6 +76,10 @@ orchestrator = StateGraph(SwarmState)
 orchestrator.add_node("classify_intent", classify_intent)
 orchestrator.add_node("macro_analyst", macro_agent)
 orchestrator.add_node("quant_modeler", quant_agent)
+# Adversarial debate layer (adapted from TradingAgents pattern)
+orchestrator.add_node("bullish_researcher", bullish_agent)
+orchestrator.add_node("bearish_researcher", bearish_agent)
+orchestrator.add_node("debate_synthesizer", resolve_debate)
 orchestrator.add_node("risk_manager", risk_agent)
 orchestrator.add_node("synthesize", synthesize_consensus)
 orchestrator.add_node("execute", execute_trade)
@@ -70,9 +91,16 @@ orchestrator.add_conditional_edges("classify_intent", route_by_intent, {
     "analysis": ["macro_analyst", "quant_modeler"],
 })
 
-# Bottom-up aggregation
-orchestrator.add_edge("macro_analyst", "risk_manager")
-orchestrator.add_edge("quant_modeler", "risk_manager")
+# Analyst outputs feed into adversarial debate
+orchestrator.add_edge("macro_analyst", "bullish_researcher")
+orchestrator.add_edge("macro_analyst", "bearish_researcher")
+orchestrator.add_edge("quant_modeler", "bullish_researcher")
+orchestrator.add_edge("quant_modeler", "bearish_researcher")
+
+# Debate resolution -> Risk gating
+orchestrator.add_edge("bullish_researcher", "debate_synthesizer")
+orchestrator.add_edge("bearish_researcher", "debate_synthesizer")
+orchestrator.add_edge("debate_synthesizer", "risk_manager")
 orchestrator.add_edge("risk_manager", "synthesize")
 
 # Consensus gating
@@ -83,58 +111,116 @@ orchestrator.add_conditional_edges("synthesize", check_consensus, {
 })
 ```
 
+**Why the debate layer?** TradingAgents (31.3k stars) demonstrates that adversarial reasoning between bullish and bearish researchers reduces confirmation bias and catches risks that consensus-only approaches miss. The bullish researcher argues for the trade based on analyst outputs; the bearish researcher argues against it. The debate synthesizer resolves the conflict into a net position with weighted confidence, which then flows to the Risk Manager for final gating.
+
 ---
 
-## Phase 2: L2 Domain Managers as Sub-Graphs
+## Phase 2: L2 Domain Managers & Adversarial Debate Layer
 
-**Goal:** Each L2 agent becomes a LangGraph sub-graph with its own tool set.
+**Goal:** Each L2 agent becomes a LangGraph sub-graph with its own tool set. Add adversarial debate layer (adapted from TradingAgents) between analyst output and risk gating.
 
 **Model:** `claude-haiku-4-5-20251001` for all L2 agents (superior tool-use over Haiku 3.x).
 
+### L2 Analyst Agents
 - [ ] Migrate `MacroAnalyst` to a LangGraph ReAct agent with market analysis tools
 - [ ] Migrate `QuantModeler` to a LangGraph ReAct agent with technical analysis tools
-- [ ] Migrate `RiskManager` to a LangGraph agent with hard-coded compliance rules + LLM reasoning
 - [ ] Each L2 agent delegates to L3 executors via tool calls (preserving stateless executor pattern)
 - [ ] Implement confidence scoring as structured output from each L2 agent
+
+### Adversarial Debate Layer (New — from TradingAgents)
+- [ ] Implement `BullishResearcher` agent: receives analyst outputs, argues FOR the proposed action
+- [ ] Implement `BearishResearcher` agent: receives analyst outputs, argues AGAINST the proposed action
+- [ ] Implement `DebateSynthesizer` node: resolves debate into net position with weighted confidence
+- [ ] Debate agents use `claude-haiku-4-5-20251001` (reasoning-focused, no tools needed)
+
+### Risk Gating
+- [ ] Migrate `RiskManager` to a LangGraph agent with hard-coded compliance rules + LLM reasoning
+- [ ] Risk Manager receives debate-resolved position (not raw analyst outputs)
 - [ ] Wire conflict resolution: Risk Manager output gates all trade execution paths
 
 ### Agent-Tool Mapping
 
-| L2 Agent | L3 Tools | Skills |
-|----------|----------|--------|
-| Macro Analyst | `data_fetcher` | `market-environment-analysis`, `economic-indicators` |
-| Quant Modeler | `backtester`, `data_fetcher` | `day-trading-skill`, `technical-analysis` |
-| Risk Manager | `order_router` (gated) | `risk-management`, `position-sizing` |
+| L2 Agent | L3 Tools | Skills | Model |
+|----------|----------|--------|-------|
+| Macro Analyst | `data_fetcher` | `market-environment-analysis`, `economic-indicators` | Haiku 4.5 |
+| Quant Modeler | `nautilus_backtest`, `data_fetcher` | `day-trading-skill`, `technical-analysis` | Haiku 4.5 |
+| Bullish Researcher | None (reasoning only) | N/A | Haiku 4.5 |
+| Bearish Researcher | None (reasoning only) | N/A | Haiku 4.5 |
+| Risk Manager | `nautilus_order_router` (gated) | `risk-management`, `position-sizing` | Haiku 4.5 |
 
 ---
 
-## Phase 3: L3 Executors as Tools
+## Phase 3: L3 Executors — NautilusTrader Integration
 
-**Goal:** L3 executors become deterministic LangChain tools (not LLM agents). Zero token cost for procedural tasks.
+**Goal:** L3 executors become deterministic LangChain tools backed by NautilusTrader (Rust+Python, 20.9k stars) for production-grade execution and backtesting. Zero token cost for all L3 operations.
 
-- [ ] Convert `DataFetcher` (`src/agents/l3_executor.py`) to a LangChain tool wrapping yfinance/ccxt APIs
-- [ ] Convert `Backtester` to a LangChain tool wrapping the existing backtest scripts
-- [ ] Convert `OrderRouter` to a LangChain tool wrapping the exchange API
-- [ ] Use `command-dispatch` pattern: Skip LLM for purely procedural L3 tasks
-- [ ] Preserve the existing `src/skills/` directory — register as LangChain tools
+### 3a: NautilusTrader Core Setup
+- [ ] Install and configure NautilusTrader: `pip install nautilus_trader`
+- [ ] Configure venue adapters for supported exchanges (Binance, Kraken — matching `swarm_config.yaml:integrations`)
+- [ ] Set up data catalog for historical data ingestion (replaces yfinance for backtesting)
+- [ ] Configure risk engine with limits from `swarm_config.yaml:risk_limits`
+
+### 3b: Backtester Migration
+- [ ] Replace custom `Backtester` (`src/agents/l3_executor.py`) with NautilusTrader backtest engine
+- [ ] Wrap as LangChain tool with nanosecond-resolution simulation
+- [ ] Integrate strategy implementations from quant-trading repo (MACD, RSI, Bollinger, pair trading)
+- [ ] Add realistic transaction costs, slippage modeling, and partial fill simulation (currently assumed frictionless)
+
+### 3c: Order Router Migration
+- [ ] Replace custom `OrderRouter` (`src/agents/l3_executor.py`) with NautilusTrader execution engine
+- [ ] Gain advanced order types (IOC, FOK, GTC), contingency orders (OCO, OUO, OTO), and iceberg execution
+- [ ] Wire multi-venue routing: execute across Binance + Kraken simultaneously
+- [ ] Integrate NautilusTrader's built-in position tracking and risk engine
+
+### 3d: Data Fetcher
+- [ ] Convert `DataFetcher` to LangChain tool wrapping NautilusTrader data adapters + yfinance fallback
+- [ ] Use NautilusTrader's data catalog for tick-level and OHLCV data
+
+### 3e: Strategy Tools (from quant-trading)
+- [ ] Wrap quant-trading strategy implementations as LangChain tools:
+  - `technical_analysis`: MACD, RSI, Bollinger Bands, Parabolic SAR, Heikin-Ashi
+  - `statistical_arbitrage`: Pair trading (cointegration-based)
+  - `risk_simulation`: Monte Carlo simulation, VIX calculator
+- [ ] Preserve existing `src/skills/` directory — register as LangChain tools alongside new tools
 
 ### Example Tool Registration
 
 ```python
 from langchain_core.tools import tool
+from nautilus_trader.backtest.engine import BacktestEngine
+from nautilus_trader.model.identifiers import InstrumentId, Venue
 
 @tool
 def fetch_market_data(symbol: str, timeframe: str = "1H", lookback_days: int = 30) -> dict:
     """Fetch OHLCV market data for a symbol. Returns dict with prices, volume, and timestamps."""
-    # Wraps existing DataFetcher logic — no LLM invocation
-    fetcher = DataFetcher(config)
-    return fetcher.fetch(symbol, timeframe, lookback_days)
+    # NautilusTrader data adapter with yfinance fallback
+    adapter = get_data_adapter(symbol)
+    return adapter.fetch(symbol, timeframe, lookback_days)
 
 @tool
 def run_backtest(strategy: dict, symbol: str, start_date: str, end_date: str) -> dict:
-    """Execute a historical backtest. Returns PnL distribution, drawdown metrics, Sharpe ratio."""
-    backtester = Backtester(config)
-    return backtester.run(strategy, symbol, start_date, end_date)
+    """Execute a historical backtest with NautilusTrader engine.
+    Returns PnL distribution, drawdown metrics, Sharpe ratio, with realistic fills and slippage."""
+    engine = BacktestEngine()
+    # Configure with transaction costs, slippage, and position limits
+    configure_engine(engine, strategy, symbol, start_date, end_date)
+    engine.run()
+    return extract_results(engine)
+
+@tool
+def submit_order(symbol: str, direction: str, size: float, order_type: str = "MARKET",
+                 stop_loss: float = None, take_profit: float = None) -> dict:
+    """Submit order via NautilusTrader execution engine.
+    Supports advanced order types (IOC, FOK, GTC) and contingency orders (OCO)."""
+    # Routes to appropriate venue based on symbol
+    exec_client = get_execution_client(symbol)
+    return exec_client.submit(direction, size, order_type, stop_loss, take_profit)
+
+@tool
+def run_monte_carlo(symbol: str, num_simulations: int = 10000, horizon_days: int = 30) -> dict:
+    """Run Monte Carlo price simulation. Returns probability distributions and VaR estimates."""
+    # Adapted from quant-trading repo
+    return monte_carlo_simulate(symbol, num_simulations, horizon_days)
 ```
 
 ---
@@ -233,7 +319,9 @@ These existing limits are enforced at the graph level:
 |---------|-------------|
 | `src/orchestrator/strategic_l1.py` | LangGraph supervisor workflow (`src/graph/orchestrator.py`) |
 | `src/agents/__init__.py` (L2 classes) | LangGraph sub-graph agents (`src/graph/agents/`) |
-| `src/agents/l3_executor.py` | LangChain tools — deterministic, no LLM (`src/tools/`) |
+| `src/agents/l3_executor.py:Backtester` | NautilusTrader backtest engine (`src/tools/nautilus_backtest.py`) |
+| `src/agents/l3_executor.py:OrderRouter` | NautilusTrader execution engine (`src/tools/nautilus_execution.py`) |
+| `src/agents/l3_executor.py:DataFetcher` | NautilusTrader data adapters + yfinance fallback (`src/tools/data_fetcher.py`) |
 | `main.py` `QuantumSwarm` class | LangGraph application with compiled graph |
 
 ### Add New
@@ -241,11 +329,18 @@ These existing limits are enforced at the graph level:
 | Path | Purpose |
 |------|---------|
 | `src/graph/` | LangGraph workflow definitions |
-| `src/graph/state.py` | Shared state schema (`SwarmState`) |
-| `src/graph/orchestrator.py` | L1 graph definition |
-| `src/graph/agents/` | L2 sub-graphs (macro, quant, risk) |
-| `src/tools/` | LangChain tool wrappers for L3 executors |
+| `src/graph/state.py` | Shared state schema (`SwarmState` with debate fields) |
+| `src/graph/orchestrator.py` | L1 graph definition (including debate layer) |
+| `src/graph/agents/` | L2 sub-graphs (macro, quant, bullish/bearish researchers, risk) |
+| `src/graph/debate.py` | Adversarial debate logic (bullish/bearish/synthesizer) |
 | `src/graph/safety.py` | Circuit breakers, budget tracking |
+| `src/tools/` | LangChain tool wrappers for all L3 executors |
+| `src/tools/nautilus_backtest.py` | NautilusTrader backtest engine wrapper |
+| `src/tools/nautilus_execution.py` | NautilusTrader order management wrapper |
+| `src/tools/data_fetcher.py` | Market data tool (NautilusTrader + yfinance) |
+| `src/tools/strategies/` | Strategy tools adapted from quant-trading repo |
+| `src/tools/strategies/technical.py` | MACD, RSI, Bollinger, Parabolic SAR, Heikin-Ashi |
+| `src/tools/strategies/statistical.py` | Pair trading, Monte Carlo, VIX calculator |
 
 ---
 
@@ -273,23 +368,37 @@ OpenClaw remains critical but shifts responsibility:
 
 ---
 
+## Dependencies
+
+```
+# Core orchestration
+langgraph>=0.2.0
+langchain-anthropic>=0.3.0
+langchain-community>=0.3.0
+langsmith>=0.2.0           # optional, for observability
+
+# L3 execution infrastructure
+nautilus_trader>=1.210.0    # Rust+Python trading platform (backtest + live execution)
+
+# Data & analysis (existing + new)
+yfinance>=0.2.0            # Market data fallback
+ccxt>=4.0.0                # Crypto exchange connectivity
+numpy>=1.26.0
+pandas>=2.2.0
+
+# Strategy tools (from quant-trading patterns)
+scipy>=1.12.0              # Statistical tests for pair trading
+statsmodels>=0.14.0        # Cointegration, time-series analysis
+```
+
 ## Risk Assessment
 
 | Risk | Likelihood | Impact | Mitigation |
 |------|-----------|--------|------------|
 | LangGraph API changes | Low | Medium | Pin version, abstract behind interfaces |
 | OpenClaw + LangGraph integration friction | Medium | Medium | Clean separation: OpenClaw handles external I/O, LangGraph handles internal orchestration |
-| Token cost increase from richer agent interactions | Medium | Medium | Deterministic tools for L3 (zero tokens); Haiku 4.5 for L2 reasoning |
+| Token cost increase from debate layer (2 extra LLM calls) | Medium | Low | Haiku 4.5 for researchers (~$0.001/call); debate only triggers on trade intents, not analysis-only |
+| NautilusTrader learning curve (Rust internals) | Medium | Medium | Use Python-only interface; treat as black-box execution engine behind LangChain tool wrappers |
+| NautilusTrader breaking changes | Low | Medium | Pin version; abstract behind tool interface so engine can be swapped |
 | Migration disrupts working features | Low | High | Phased approach; each phase independently testable |
 | LangSmith vendor lock-in | Low | Low | LangSmith is optional; standard Python logging as fallback |
-
----
-
-## Dependencies
-
-```
-langgraph>=0.2.0
-langchain-anthropic>=0.3.0
-langchain-community>=0.3.0
-langsmith>=0.2.0  # optional, for observability
-```

@@ -71,6 +71,16 @@ executors:
     id: "l3-order-router"
     timeout: 30
 
+# Token Budget Configuration (BudgetManager — Phase 1 Plan 02)
+budget:
+  session_token_limit: 100000
+  daily_token_limit: 1000000
+  daily_usd_limit: 5.00
+  model_pricing:
+    gemini-2.0-flash:
+      input_per_million: 0.075
+      output_per_million: 0.30
+
 # ClawGuard Security Configuration
 security:
   # Minimum weighted_consensus_score required before order execution

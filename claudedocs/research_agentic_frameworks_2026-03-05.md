@@ -6,11 +6,15 @@
 
 ## Executive Summary
 
-After analyzing 7 repositories and cross-referencing with current ecosystem data, **LangGraph** emerges as the strongest candidate for Quantum Swarm's core orchestration layer, with **Microsoft Agent Framework** as a strong alternative. The existing OpenClaw integration should be preserved as the agent runtime/routing layer, with the chosen framework handling workflow orchestration and state management.
+After analyzing 11 repositories and cross-referencing with current ecosystem data, **LangGraph** emerges as the strongest candidate for Quantum Swarm's core orchestration layer. This choice is strongly validated by **TradingAgents** (31.3k stars), a production LangGraph-based financial multi-agent system with nearly identical architecture to ours.
 
-**Key finding:** No single framework perfectly matches the full Quantum Swarm design. The optimal approach is a **hybrid architecture** combining OpenClaw (agent runtime + message routing + skills) with LangGraph or Microsoft Agent Framework (workflow orchestration + state management + hierarchical coordination).
+**Key finding:** The optimal Quantum Swarm is a **4-layer hybrid architecture:**
+- **OpenClaw** (agent runtime + message routing + skills)
+- **LangGraph** (workflow orchestration + state management + hierarchical coordination)
+- **TradingAgents patterns** (adversarial debate, analyst fan-out, risk veto -- adapted, not forked)
+- **NautilusTrader** (L3 execution infrastructure -- production-grade order management + nanosecond backtesting)
 
-**Confidence level:** High (8/10) -- based on 7 repo analyses, ecosystem surveys, and architectural alignment scoring.
+**Confidence level:** Very High (9/10) -- based on 11 repo analyses, ecosystem surveys, architectural alignment scoring, and discovery of a validated production reference (TradingAgents) using our exact stack.
 
 ---
 
@@ -34,6 +38,15 @@ After analyzing 7 repositories and cross-referencing with current ecosystem data
 | **CrewAI** | Python | Sequential, hierarchical crews | Yes (native) | Yes (100+ LLMs) | Community examples | Manager delegation | Production, large community | **7/10** |
 | **Google ADK** | Python | Hierarchical compositions | Yes (native) | Gemini-first, others via adapters | None | Agent nesting | New (April 2025) | **6/10** |
 | **Agno** | Python | Team-based multi-agent | Yes (native) | Yes (multi-provider) | YFinance tools built-in | Team coordination | Growing (fast) | **6.5/10** |
+
+### Financial Domain & Specialized Frameworks
+
+| Framework | Language | Hierarchy Support | Python | LLM Flexibility | Financial Features | Routing/Conflict | Maturity | **Score** |
+|-----------|----------|-------------------|--------|-----------------|-------------------|------------------|----------|-----------|
+| **TradingAgents** | Python (LangGraph) | Analyst->Researcher->Trader->Risk pipeline | Yes (native) | Yes (OpenAI, Claude, Gemini, Grok, Ollama) | Full: technical, fundamental, sentiment, risk mgmt | Bullish/bearish debate + risk veto | Production (31.3k stars, v0.2.0) | **9/10** |
+| **NautilusTrader** | Rust + Python (Cython/PyO3) | Not multi-agent (event-driven platform) | Yes (bindings) | N/A (not LLM-based) | Full: multi-asset, multi-venue, order management | Event bus + message passing | Production (20.9k stars) | **7/10** (as L3 infra) |
+| **quant-trading** | Python | Not multi-agent (strategy library) | Yes (native) | N/A (not LLM-based) | Strategies: MACD, RSI, Bollinger, pairs, Monte Carlo | N/A | Mature (9.3k stars, 859 commits) | **5/10** (as reference) |
+| **multi-agent-framework** | Python | HMAS/DMAS/CMAS comparative | Yes (native) | OpenAI only | None (robotics domain) | Dialogue-based coordination | Academic (41 stars, ICRA 2024) | **4/10** (arch patterns) |
 
 ---
 
@@ -85,6 +98,77 @@ After analyzing 7 repositories and cross-referencing with current ecosystem data
 - **Key Finding:** All 10 surveyed frameworks are Python-native. The top frameworks for multi-agent orchestration are: **CrewAI** (most multi-agent-focused), **LangGraph** (most flexible graph-based), **Google ADK** (hierarchical compositions), **AutoGen/AG2** (multi-agent conversations).
 - **For financial use:** No framework has built-in financial features. Agno has YFinance tools. LangGraph and CrewAI have the largest ecosystems for building custom financial tools.
 
+### 7. TradingAgents (Tauric Research)
+**Repo:** github.com/TauricResearch/TradingAgents
+
+- **Architecture:** Multi-agent LLM framework built on **LangGraph** that simulates institutional trading firms. Hierarchical pipeline: Analyst Team (4 specialists) -> Researcher Team (bullish/bearish debate) -> Trader Agent -> Risk Manager + Portfolio Manager.
+- **Agent Roles:**
+  - *Fundamentals Analyst:* Company financials, earnings, valuation metrics
+  - *Sentiment Analyst:* Social media sentiment scoring
+  - *News Analyst:* News event impact assessment
+  - *Technical Analyst:* MACD, RSI, pattern recognition
+  - *Bullish Researcher:* Argues for opportunity from analyst inputs
+  - *Bearish Researcher:* Argues for risk/caution from analyst inputs
+  - *Trader Agent:* Synthesizes debate into trade timing and sizing
+  - *Risk Manager / Portfolio Manager:* Veto authority, portfolio-level risk assessment
+- **Strengths:** Purpose-built for financial markets. The bullish/bearish debate mechanism is unique -- it forces adversarial reasoning before trade decisions, reducing confirmation bias. Multi-provider LLM support (OpenAI, Claude, Gemini, Grok, Ollama). 31.3k stars, very active community. Built on LangGraph, so compatible with our chosen orchestration layer.
+- **Weaknesses:** Focused on equity analysis (not crypto-native). No built-in self-improvement/learning loop. The debate mechanism adds latency (2 extra LLM calls per decision). No integrated execution layer (simulated exchange only).
+- **Fit for Quantum Swarm:** **Extremely high.** The architecture is nearly identical to our L1->L2->L3 design. Key patterns to adopt:
+  1. The adversarial researcher debate pattern (bullish vs bearish) could replace simple consensus scoring with richer conflict resolution
+  2. The 4-analyst fan-out pattern maps directly to our L2 domain managers
+  3. Risk Manager veto authority matches our priority-based preemption model
+  4. Since it's LangGraph-native, we can potentially reuse or adapt their agent sub-graphs directly
+
+### 8. Multi-Agent Framework (Yongchao et al.)
+**Repo:** github.com/yongchao98/multi-agent-framework
+
+- **Architecture:** Academic implementation comparing 4 multi-agent coordination architectures: **HMAS-2** (hierarchical, 2-level), **HMAS-1** (hierarchical, 1-level), **DMAS** (distributed/peer-to-peer), **CMAS** (centralized). Agents coordinate through dialogue history with configurable retention. Supports ICRA 2024 paper.
+- **Strengths:** Rigorous comparative analysis of coordination topologies. Provides empirical data on when hierarchical outperforms distributed and vice versa. Clean experimental design with 4 testable environments (BoxNet1, BoxNet2, BoxLift, Warehouse).
+- **Weaknesses:** Robotics domain (not financial). OpenAI-only. 41 stars, academic code quality. Not a reusable framework -- it's a research artifact.
+- **Fit for Quantum Swarm:** **Low for direct use, high for architectural insight.** Key learnings:
+  1. *HMAS-2 (2-level hierarchy) consistently outperforms flat/distributed for complex coordination* -- validates our L1->L2->L3 design choice
+  2. *Dialogue history retention matters* -- agents that retain full conversation context coordinate better than those with sliding windows. Implications for our LangGraph state management (keep full message history in checkpoints, don't prune aggressively)
+  3. *Centralized (CMAS) fails at scale* -- confirms that a single orchestrator bottleneck is dangerous. Our design correctly uses the L1 as a router, not a processor
+
+### 9. quant-trading (je-suis-tm)
+**Repo:** github.com/je-suis-tm/quant-trading
+
+- **Architecture:** Collection of independent Python trading strategy implementations with backtesting. NOT a multi-agent system. Each strategy is a standalone script with its own analysis pipeline.
+- **Strategies Implemented:**
+  - *Technical:* MACD, Awesome Oscillator, Bollinger Bands, RSI, Parabolic SAR, Heikin-Ashi
+  - *Pattern:* Shooting Star, London Breakout, Dual Thrust
+  - *Statistical:* Pair Trading (cointegration-based)
+  - *Options:* Straddle strategy
+  - *Quantitative:* Monte Carlo simulation, VIX calculator
+  - *Alternative Data:* Oil Money (petrocurrency analysis), Smart Farmers (agricultural commodities)
+- **Strengths:** 9.3k stars, 859 commits, well-documented. Clean Python implementations of proven strategies. "Quantamental" approach combining technical + fundamental analysis. Educational with strong documentation.
+- **Weaknesses:** No agent architecture. No real-time execution. No risk management framework. Assumes frictionless trading (no transaction costs). Individual scripts, not an integrated system.
+- **Fit for Quantum Swarm:** **Moderate -- as a strategy library for L3 tools.** Key value:
+  1. The strategy implementations (MACD, RSI, Bollinger, pair trading) can be wrapped as LangChain tools for the Quant Modeler's L3 Backtester
+  2. The Monte Carlo simulation and VIX calculator are directly useful for the Risk Manager's portfolio analysis
+  3. The pair trading implementation provides a template for statistical arbitrage strategies
+  4. Code is clean enough to extract and adapt without major refactoring
+
+### 10. NautilusTrader (Nautech Systems)
+**Repo:** github.com/nautechsystems/nautilus_trader
+
+- **Architecture:** High-performance, event-driven algorithmic trading platform. Rust core with Python bindings (Cython + PyO3). Modular design: message bus -> cache -> adapters -> execution engine. Multi-venue, multi-asset support.
+- **Key Capabilities:**
+  - *Order Management:* Advanced order types (IOC, FOK, GTC, GTD, DAY), contingency orders (OCO, OUO, OTO), execution instructions (post-only, reduce-only, icebergs)
+  - *Backtesting:* Nanosecond-resolution historical simulation, fast enough to train AI agents via RL
+  - *Live Trading:* Identical code for backtest and production (zero parity gap)
+  - *Venues:* 15+ integrated (Binance, Kraken, Interactive Brokers, Betfair, Bybit, dYdX)
+  - *Assets:* FX, equities, futures, options, crypto, DeFi
+  - *Precision:* Standard (64-bit) and high-precision (128-bit) calculation modes
+- **Strengths:** 20.9k stars, bi-weekly releases, production-grade. Rust core provides memory safety + performance without GC overhead. The backtest engine is explicitly designed to "train AI trading agents." Multi-venue support means we can execute across exchanges simultaneously.
+- **Weaknesses:** Not a multi-agent framework. Steep learning curve (Rust + Cython internals). Breaking changes still possible. No LLM integration (purely algorithmic).
+- **Fit for Quantum Swarm:** **Very high -- as the L3 execution infrastructure.** This is the strongest candidate to replace our custom `OrderRouter` and `Backtester`:
+  1. Replace `l3_executor.py:OrderRouter` with NautilusTrader's execution engine -- gain institutional-grade order management, multi-venue routing, and nanosecond execution
+  2. Replace `l3_executor.py:Backtester` with NautilusTrader's backtest engine -- gain nanosecond-resolution simulation with realistic fills, slippage modeling, and transaction costs
+  3. The event-driven message bus complements LangGraph's state management (LangGraph handles agent orchestration, NautilusTrader handles market events)
+  4. The "AI agent training" design goal means our LangGraph agents can use NautilusTrader as a reinforcement learning environment for strategy optimization
+  5. Multi-venue support enables the Risk Manager to monitor positions across all exchanges simultaneously
+
 ---
 
 ## Recommendation: Hybrid Architecture
@@ -108,6 +192,21 @@ After analyzing 7 repositories and cross-referencing with current ecosystem data
 7. **Ecosystem.** LangChain's tool ecosystem provides pre-built integrations for financial data sources (yfinance, Alpha Vantage, etc.), which complement your existing skills.
 
 8. **Complementary to OpenClaw.** LangGraph handles workflow orchestration; OpenClaw handles agent runtime, message routing, skills, and the gateway server. They serve different layers.
+
+9. **Validated by TradingAgents.** The TradingAgents project (31.3k stars) proves LangGraph works at scale for financial multi-agent systems with a nearly identical architecture to ours. This de-risks the framework choice significantly.
+
+### Recommended Component Stack
+
+Based on the expanded research, the optimal Quantum Swarm architecture combines 4 layers:
+
+| Layer | Component | Role |
+|-------|-----------|------|
+| **L0: Runtime** | OpenClaw | Agent deployment, external message routing (Telegram, Discord, cron), skills registry, gateway server |
+| **L1-L2: Orchestration** | LangGraph | Workflow graphs, state management, conditional routing, checkpointing, human-in-the-loop |
+| **L2: Agent Patterns** | TradingAgents (reference) | Adopt adversarial debate pattern (bullish/bearish researchers), 4-analyst fan-out, risk veto authority |
+| **L3: Execution** | NautilusTrader | Production-grade order management, multi-venue execution, nanosecond backtesting, RL training environment |
+| **L3: Strategies** | quant-trading (reference) | Strategy implementations (MACD, RSI, Bollinger, pair trading, Monte Carlo) wrapped as LangChain tools |
+| **Architecture** | HMAS-2 pattern (validated by multi-agent-framework) | 2-level hierarchy with full dialogue history retention |
 
 ### Alternative: OpenClaw + Microsoft Agent Framework
 
@@ -287,6 +386,7 @@ OpenClaw remains critical but shifts responsibility:
 
 ## Sources
 
+### Agentic Frameworks (General)
 1. Microsoft Agent Framework -- github.com/microsoft/agent-framework (RC2/RC3, Python+C#)
 2. Ruflo (Claude Flow) -- github.com/ruvnet/ruflo (TypeScript, hierarchical-mesh)
 3. DeerFlow -- github.com/bytedance/deer-flow (Python/LangGraph, hub-spoke)
@@ -294,7 +394,15 @@ OpenClaw remains critical but shifts responsibility:
 5. MS Agent Framework Samples -- github.com/microsoft/Agent-Framework-Samples (Python+.NET samples)
 6. TEN Framework -- github.com/TEN-framework/ten-framework (C++ core, real-time media)
 7. AI Agents Survey -- github.com/martimfasantos/ai-agents-frameworks (10-framework comparison)
-8. DataCamp 2026 AI Agents Survey -- datacamp.com/blog/best-ai-agents
-9. AgentOrchestra (arXiv) -- arxiv.org/html/2506.12508v4
-10. Digital Applied AI Orchestration Comparison -- digitalapplied.com/blog/ai-workflow-orchestration-platforms-comparison
-11. Agno vs LangGraph -- zenml.io/blog/agno-vs-langgraph
+
+### Financial Domain & Specialized
+8. TradingAgents -- github.com/TauricResearch/TradingAgents (Python/LangGraph, 31.3k stars, multi-agent trading)
+9. NautilusTrader -- github.com/nautechsystems/nautilus_trader (Rust+Python, 20.9k stars, production trading platform)
+10. quant-trading -- github.com/je-suis-tm/quant-trading (Python, 9.3k stars, strategy implementations)
+11. Multi-Agent Framework -- github.com/yongchao98/multi-agent-framework (Python, ICRA 2024, coordination topology comparison)
+
+### Ecosystem Research
+12. DataCamp 2026 AI Agents Survey -- datacamp.com/blog/best-ai-agents
+13. AgentOrchestra (arXiv) -- arxiv.org/html/2506.12508v4
+14. Digital Applied AI Orchestration Comparison -- digitalapplied.com/blog/ai-workflow-orchestration-platforms-comparison
+15. Agno vs LangGraph -- zenml.io/blog/agno-vs-langgraph
