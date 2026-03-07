@@ -42,13 +42,13 @@ Requirements for the Self-Improvement Loop milestone. Each maps to roadmap phase
 
 ### Analytics (ANALY)
 
-- [ ] **ANALY-03**: Swarm can compute RSI, MACD, and Bollinger Bands technical indicators via centralized `quant-alpha-intelligence` registered skill
+- [x] **ANALY-03**: Swarm can compute RSI, MACD, and Bollinger Bands technical indicators via centralized `quant-alpha-intelligence` registered skill
 
 ### Risk Management (RISK)
 
-- [ ] **RISK-03**: System calculates ATR-based stop-loss for every trade before order submission
-- [ ] **RISK-05**: OrderRouter rejects any trade execution missing a valid stop-loss calculation (hard gate, no exception)
-- [ ] **RISK-06**: Stop-loss level is recorded in the trade's PostgreSQL audit log entry alongside entry price and position size
+- [x] **RISK-03**: System calculates ATR-based stop-loss for every trade before order submission
+- [x] **RISK-05**: OrderRouter rejects any trade execution missing a valid stop-loss calculation (hard gate, no exception)
+- [x] **RISK-06**: Stop-loss level is recorded in the trade's PostgreSQL audit log entry alongside entry price and position size
 
 ### Memory / Self-Improvement (MEM)
 
@@ -97,10 +97,10 @@ All v1.0 requirements covered by Phases 1-4 (shipped 2026-03-06).
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| ANALY-03 | Phase 5 | Pending |
-| RISK-03 | Phase 6 | Pending |
-| RISK-05 | Phase 6 | Pending |
-| RISK-06 | Phase 6 | Pending |
+| ANALY-03 | Phase 5 | Complete |
+| RISK-03 | Phase 6 | Complete |
+| RISK-05 | Phase 6 | Complete |
+| RISK-06 | Phase 6 | Complete |
 | MEM-02 | Phase 7 | Pending |
 | MEM-03 | Phase 7 | Pending |
 
