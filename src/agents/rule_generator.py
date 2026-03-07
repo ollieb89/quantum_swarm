@@ -6,6 +6,8 @@ Processes drift reports and appends PREFER/AVOID/CAUTION rules to MEMORY.md.
 
 import logging
 import json
+from datetime import datetime, timezone
+from pathlib import Path
 from typing import Any, Dict, List, Optional
 
 from langchain_google_genai import ChatGoogleGenerativeAI
@@ -36,6 +38,7 @@ class RuleGenerator:
         # in test environments without a live GOOGLE_API_KEY.
         self._llm: Optional[ChatGoogleGenerativeAI] = None
         self.registry = MemoryRegistry()
+        self.memory_md_path = Path("data/MEMORY.md")
 
     @property
     def llm(self) -> ChatGoogleGenerativeAI:
@@ -84,7 +87,30 @@ class RuleGenerator:
                 
         return rules
 
+    def _rule_to_prefix(self, rule: MemoryRule) -> str:
+        """Map a MemoryRule to a PREFER/AVOID/CAUTION prefix for MEMORY.md."""
+        action_vals = " ".join(str(v) for v in rule.action.values()).lower()
+        if any(kw in action_vals for kw in ("avoid", "reduce", "short_only")):
+            return "AVOID"
+        if rule.type == "strategy_preference":
+            return "PREFER"
+        if rule.type == "risk_adjustment":
+            return "AVOID"
+        return "CAUTION"
+
     def persist_rules(self, rules: List[MemoryRule]):
-        """Append new rules to the registry."""
+        """Append new rules to the JSON registry and to data/MEMORY.md."""
+        if not rules:
+            return
         for rule in rules:
             self.registry.add_rule(rule)
+        # Append human-readable entries to MEMORY.md for orchestrator injection
+        self.memory_md_path.parent.mkdir(parents=True, exist_ok=True)
+        timestamp = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+        lines = [f"\n<!-- pipeline:{timestamp} -->"]
+        for rule in rules:
+            prefix = self._rule_to_prefix(rule)
+            lines.append(f"- {prefix}: {rule.title}")
+        with open(self.memory_md_path, "a") as f:
+            f.write("\n".join(lines) + "\n")
+        logger.info("Appended %d rules to %s", len(rules), self.memory_md_path)

@@ -107,5 +107,36 @@ class TestSelfImprovement(unittest.TestCase):
         else:
             memory_path.unlink()
 
+    def test_persist_rules_writes_memory_md(self):
+        import tempfile, os
+        from pathlib import Path
+        from src.models.memory import MemoryRule
+        from src.agents.rule_generator import RuleGenerator
+
+        # Use a temp file so we do not pollute the real MEMORY.md
+        with tempfile.NamedTemporaryFile(suffix=".md", delete=False, mode="w") as f:
+            tmp_path = f.name
+
+        try:
+            generator = RuleGenerator()
+            # Patch the MEMORY_MD path on the instance for this test
+            generator.memory_md_path = Path(tmp_path)
+
+            rule = MemoryRule(
+                title="Prefer Longs in Bullish Regime",
+                type="strategy_preference",
+                condition={"regime": "bullish"},
+                action={"bias": "long"},
+                evidence={"win_rate": 0.72}
+            )
+            generator.persist_rules([rule])
+
+            content = Path(tmp_path).read_text()
+            self.assertIn("PREFER:", content)
+            self.assertIn("Prefer Longs in Bullish Regime", content)
+        finally:
+            os.unlink(tmp_path)
+
+
 if __name__ == "__main__":
     unittest.main()
