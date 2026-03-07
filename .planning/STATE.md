@@ -1,40 +1,15 @@
 ---
-phase:
-  current: 10
-  name: Rule Validation Harness
-  status: not_started
-  started: ''
-  completed: ''
-  blockers: []
-milestone:
-  current: v1.2
-  name: Risk Governance and Rule Validation
-  status: active
-  started: 2026-03-06
-  previous: v1.1
-  previous_name: Self-Improvement Loop
-health:
-  status: green
-  risks: []
-  blockers: []
-architecture:
-  runtime: python
-  pattern: langgraph_orchestration
-  layers:
-    l1: strategic_intent_classifier
-    l2: adversarial_debate_analysis
-    l3: risk_gated_execution
-  communication: langgraph_state_plus_blackboard
-  persistence: postgresql
-  dashboard: html
-paths:
-  main: main.py
-  config: config/
-  agents: src/graph/agents/
-  orchestrator: src/graph/orchestrator.py
-  planning: .planning/
-  data: data/
-updated: '2026-03-07'
+gsd_state_version: 1.0
+milestone: v1.1
+milestone_name: Self-Improvement
+status: Not started
+last_updated: "2026-03-07T20:19:12.616Z"
+last_activity: "2026-03-07 — Phase 05-02 completed; full integration chain verified: 12/12 tests pass, SkillRegistry discovers quant-alpha-intelligence, calculate_indicators tool wired in MacroAnalyst and QuantModeler. Phase 5 complete. Phase 6 can begin."
+progress:
+  total_phases: 7
+  completed_phases: 1
+  total_plans: 2
+  completed_plans: 2
 ---
 
 # Project State
