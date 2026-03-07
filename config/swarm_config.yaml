@@ -90,6 +90,10 @@ security:
 
 # Risk Management Limits
 risk_limits:
+  starting_capital: 1000000.0
+  max_notional_exposure: 500000.0  # Max 50% of capital in open trades
+  max_asset_concentration_pct: 0.20  # Max 20% per single ticker
+  max_concurrent_trades: 10
   max_position_size: 0.1  # 10% of portfolio
   max_leverage: 10.0
   max_daily_loss: 0.05  # 5% of portfolio
@@ -160,6 +164,10 @@ self_improvement:
   # Memory configuration
   memory_file: "data/MEMORY.md"
   max_memory_entries: 100
+
+  # Rule validation harness (Phase 10)
+  validation_lookback_days: 90
+  validation_min_trades: 10
 
 # Logging Configuration
 logging:

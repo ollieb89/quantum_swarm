@@ -65,6 +65,10 @@ class MemoryRegistry:
         """Return only active rules for agent injection."""
         return [r for r in self.schema.rules if r.status == "active"]
 
+    def get_proposed_rules(self) -> List[MemoryRule]:
+        """Return only proposed rules awaiting validation."""
+        return [r for r in self.schema.rules if r.status == "proposed"]
+
     def get_rule(self, rule_id: str) -> Optional[MemoryRule]:
         """Find a rule by ID."""
         for r in self.schema.rules:
