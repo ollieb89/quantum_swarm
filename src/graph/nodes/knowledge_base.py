@@ -10,7 +10,7 @@ import logging
 from typing import Any
 
 from src.graph.state import SwarmState
-from src.tools.knowledge_base import kb
+from src.tools.knowledge_base import get_kb
 
 logger = logging.getLogger(__name__)
 
@@ -30,10 +30,10 @@ async def knowledge_base_node(state: SwarmState) -> dict[str, Any]:
     logger.info("KnowledgeBase node: symbol=%s", symbol)
     
     # 1. Query historical price stats from DuckDB
-    stats = kb.query_historical_stats(symbol)
-    
+    stats = get_kb().query_historical_stats(symbol)
+
     # 2. Query sentiment context from ChromaDB
-    context = kb.query_sentiment_context(f"General market outlook and sentiment for {symbol}")
+    context = get_kb().query_sentiment_context(f"General market outlook and sentiment for {symbol}")
     
     result = {
         "historical_stats": stats,

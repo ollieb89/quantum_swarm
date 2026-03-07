@@ -3,7 +3,7 @@ tests.test_knowledge_base — Tests for the KnowledgeBase and its graph node.
 """
 
 import pytest
-from src.tools.knowledge_base import kb
+from src.tools.knowledge_base import get_kb
 from src.graph.nodes.knowledge_base import knowledge_base_node
 
 @pytest.mark.asyncio
@@ -25,10 +25,10 @@ async def test_knowledge_base_node_basic():
 
 def test_kb_query_sentiment():
     """Test the low-level KB sentiment query."""
-    context = kb.query_sentiment_context("market", n_results=1)
+    context = get_kb().query_sentiment_context("market", n_results=1)
     assert isinstance(context, list)
 
 def test_kb_query_stats_missing():
     """Test querying a symbol that doesn't exist in our current subset."""
-    stats = kb.query_historical_stats("NON_EXISTENT_TICKER")
+    stats = get_kb().query_historical_stats("NON_EXISTENT_TICKER")
     assert "error" in stats
