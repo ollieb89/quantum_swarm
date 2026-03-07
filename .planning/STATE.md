@@ -3,13 +3,13 @@ gsd_state_version: 1.0
 milestone: v1.1
 milestone_name: Self-Improvement
 status: completed
-last_updated: "2026-03-07T21:47:40.451Z"
-last_activity: 2026-03-07 — Phase 08-02 completed; 4 RED stubs turned GREEN. SQL fix, exit_time index, drawdown circuit breaker. RISK-07 + RISK-08 satisfied. 11/11 portfolio risk tests passing.
+last_updated: "2026-03-07T22:12:00.000Z"
+last_activity: 2026-03-07 — Phase 09-01 completed; update_status() lifecycle controls + atomic save() added to MemoryRegistry. MEM-05 satisfied. 10/10 structured memory tests passing.
 progress:
   total_phases: 7
   completed_phases: 3
-  total_plans: 5
-  completed_plans: 7
+  total_plans: 7
+  completed_plans: 9
 ---
 
 # Project State
@@ -25,10 +25,10 @@ Previous: v1.1 Self-Improvement Loop — SHIPPED 2026-03-06 (169 tests, 3 phases
 
 ## Current Phase
 
-Phase: 08 — Portfolio Risk Governance
-Plan: 01 (complete), 02 (complete)
-Status: Complete (2/2 plans done)
-Last activity: 2026-03-07 — Phase 08-02 completed; 4 RED stubs turned GREEN. SQL fix, exit_time index, drawdown circuit breaker. RISK-07 + RISK-08 satisfied. 11/11 portfolio risk tests passing.
+Phase: 09 — Structured Memory Registry
+Plan: 01 (complete)
+Status: In progress (1/1 plans done)
+Last activity: 2026-03-07 — Phase 09-01 completed; update_status() lifecycle controls + atomic save() added to MemoryRegistry. MEM-05 satisfied. 10/10 structured memory tests passing.
 
 ## Progress
 
@@ -43,9 +43,10 @@ Phase 11: Explainability & Decision Cards — Not started
 ## Health
 
 Status: Green
+- Phase 9 plan 01 complete (09-01): update_status() + atomic save(); MEM-05 lifecycle controls verified; 10/10 tests.
 - Phase 8 complete (08-01 + 08-02): TDD stubs written then turned GREEN; RISK-07 + RISK-08 fully satisfied.
 - Phase 7 complete (07-01 + 07-02): self-improvement loop end-to-end + MEM-02/MEM-03 gap closure.
-- 191 tests passing (186 passing + 5 known pre-existing failures in test_order_router + test_persistence).
+- 201 tests passing (196 passing + 5 known pre-existing failures in test_order_router + test_persistence).
 - InstitutionalGuard enforces: restricted assets, max concurrent trades, max notional exposure, asset concentration, daily drawdown.
 - Architecture stable: LangGraph + Gemini + psycopg3.
 
@@ -100,6 +101,9 @@ See: `.planning/PROJECT.md` (updated 2026-03-06 — Milestone v1.1 started)
 - check_compliance() drawdown circuit breaker implemented: rejects trades when daily loss > max_daily_loss (5%) of starting_capital (08-02)
 - _get_daily_pnl() async helper: COALESCE SUM(pnl) for last 24h, safe-fail 0.0 on DB error (08-02)
 - Drawdown test stubs updated to use AsyncMock(_get_daily_pnl, -60000.0) — no live DB required (08-02)
+- MemoryRegistry.update_status() enforces VALID_TRANSITIONS dict; terminal states (deprecated, rejected) have empty allowed lists (09-01)
+- MemoryRegistry.save() uses os.replace(tmp, final) for atomic POSIX rename — no partial-write corruption (09-01)
+- test_transition_logged uses self.assertLogs('src.core.memory_registry', level='INFO') to verify logger.info() is called with rule_id (09-01)
 
 ## v1.1 Phase Dependency Chain
 

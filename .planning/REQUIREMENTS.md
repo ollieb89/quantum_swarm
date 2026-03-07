@@ -64,7 +64,7 @@ Requirements for the Structured Memory Registry milestone. Each maps to roadmap 
 ### Memory / Self-Improvement (MEM)
 
 - [ ] **MEM-04**: Structured JSON registry (`data/memory_registry.json`) serves as the primary machine-readable rule store, superseding the flat MEMORY.md format. Rules are Pydantic-validated with id, type, condition, action, evidence, status, version, and timestamps.
-- [ ] **MEM-05**: Lifecycle controls enforce one-way status transitions (proposed → active → deprecated/rejected) with version incrementing and INFO-level audit logging on every transition. Terminal states (deprecated, rejected) cannot be reversed.
+- [x] **MEM-05**: Lifecycle controls enforce one-way status transitions (proposed → active → deprecated/rejected) with version incrementing and INFO-level audit logging on every transition. Terminal states (deprecated, rejected) cannot be reversed.
 
 ---
 
