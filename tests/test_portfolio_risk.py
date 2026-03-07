@@ -94,11 +94,13 @@ class TestPortfolioRisk(unittest.TestCase):
                 "confidence": 0.8,
             }
         }
+        # _get_daily_pnl returns -60000.0 (6% of 1M capital, exceeds 5% max_daily_loss).
         with patch.object(InstitutionalGuard, "_get_open_positions",
                           new_callable=AsyncMock, return_value=[]):
-            result = await self.guard.check_compliance(state)
-        # RED: drawdown check not implemented; currently returns approved=True
-        self.assertFalse(result["approved"], "drawdown circuit breaker not implemented")
+            with patch.object(InstitutionalGuard, "_get_daily_pnl",
+                              new_callable=AsyncMock, return_value=-60000.0):
+                result = await self.guard.check_compliance(state)
+        self.assertFalse(result["approved"])
         self.assertIn("drawdown", result.get("violation", "").lower())
 
     def test_drawdown_rejection(self):

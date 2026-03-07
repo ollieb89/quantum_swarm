@@ -117,13 +117,14 @@ def test_drawdown_circuit_breaker():
         }
     }
     # No open positions — only the drawdown check should block this trade.
+    # _get_daily_pnl returns -60000.0 (6% of 1M capital, exceeds 5% max_daily_loss).
     with patch.object(InstitutionalGuard, "_get_open_positions",
                       new_callable=AsyncMock, return_value=[]):
-        result = asyncio.run(guard.check_compliance(state))
+        with patch.object(InstitutionalGuard, "_get_daily_pnl",
+                          new_callable=AsyncMock, return_value=-60000.0):
+            result = asyncio.run(guard.check_compliance(state))
 
-    # RED: drawdown circuit breaker not implemented — currently returns approved=True.
-    # Once RISK-07 is implemented this will go GREEN.
-    assert result["approved"] is False, "drawdown circuit breaker not implemented"
+    assert result["approved"] is False
     assert "drawdown" in result.get("violation", "").lower(), (
         f"violation message must mention 'drawdown', got: {result.get('violation')}"
     )

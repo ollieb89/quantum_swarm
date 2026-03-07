@@ -26,6 +26,8 @@ class InstitutionalGuard:
         self.max_notional_exposure = self.risk_limits.get("max_notional_exposure", 500000.0)
         self.max_concentration = self.risk_limits.get("max_asset_concentration_pct", 0.20)
         self.max_concurrent = self.risk_limits.get("max_concurrent_trades", 10)
+        self.max_daily_loss = self.risk_limits.get("max_daily_loss", 0.05)
+        self.max_drawdown = self.risk_limits.get("max_drawdown", 0.15)
 
     async def _get_open_positions(self) -> List[Dict[str, Any]]:
         """Fetch all open positions from PostgreSQL."""
@@ -46,6 +48,22 @@ class InstitutionalGuard:
         except Exception as e:
             logger.error("Failed to fetch open positions: %s", e)
         return open_trades
+
+    async def _get_daily_pnl(self) -> float:
+        """Fetch sum of PnL for closed trades in the last 24 hours."""
+        pool = get_pool()
+        try:
+            async with pool.connection() as conn:
+                async with conn.cursor() as cur:
+                    await cur.execute(
+                        "SELECT COALESCE(SUM(pnl), 0.0) FROM trades "
+                        "WHERE exit_time >= NOW() - INTERVAL '1 day'"
+                    )
+                    row = await cur.fetchone()
+                    return float(row[0])
+        except Exception as e:
+            logger.error("Failed to fetch daily PnL: %s", e)
+            return 0.0  # safe-fail: if query fails, don't block trades
 
     def calculate_risk_score(self, proposal: Dict[str, Any], current_heat: float) -> float:
         """
@@ -106,9 +124,30 @@ class InstitutionalGuard:
         asset_notional = sum(p["quantity"] * p["price"] for p in open_positions if p["symbol"] == symbol)
         if (asset_notional + new_notional) / self.starting_capital > self.max_concentration:
             return {
-                "approved": False, 
+                "approved": False,
                 "violation": f"Concentration limit for {symbol} exceeded ({self.max_concentration*100}%)."
             }
+
+        # 4. Drawdown Circuit Breaker
+        daily_pnl = await self._get_daily_pnl()
+        if daily_pnl < 0:
+            daily_loss_pct = abs(daily_pnl) / self.starting_capital
+            if daily_loss_pct > self.max_daily_loss:
+                return {
+                    "approved": False,
+                    "violation": (
+                        f"Daily drawdown {daily_loss_pct:.1%} exceeds limit "
+                        f"{self.max_daily_loss:.1%}"
+                    )
+                }
+            if daily_loss_pct > self.max_drawdown:
+                return {
+                    "approved": False,
+                    "violation": (
+                        f"Cumulative drawdown {daily_loss_pct:.1%} exceeds max drawdown "
+                        f"{self.max_drawdown:.1%}"
+                    )
+                }
 
         # 3. Risk Scoring
         current_heat = current_total_notional / self.max_notional_exposure
