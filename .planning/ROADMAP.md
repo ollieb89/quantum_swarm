@@ -66,7 +66,7 @@ phases:
   milestone: v1.2
   started: ''
   completed: ''
-updated: '2026-03-06'
+updated: '2026-03-07'
 ---
 
 # Roadmap: Quantum Swarm
@@ -98,7 +98,7 @@ See: `.planning/milestones/v1.0-ROADMAP.md` for full archive
 
 - [ ] **Phase 5: Quant Alpha Intelligence** — Centralized technical indicator skill available to all agents
 - [x] **Phase 6: Stop-Loss Enforcement** — ATR-based stop-loss calculated, gated, and audited on every trade (completed 2026-03-07)
-- [ ] **Phase 7: Self-Improvement Loop** — Weekly review and automated rule generation from live performance
+- [x] **Phase 7: Self-Improvement Loop** — PerformanceReviewAgent + RuleGenerator with lazy LLM init, SelfLearningPipeline, dual-source memory injection, --review CLI (completed 2026-03-07)
 
 ## Phase Details
 
@@ -150,7 +150,7 @@ See: `.planning/milestones/v1.0-ROADMAP.md` for full archive
 | 4. Memory & Institutional Compliance | 3/3 | Complete   | 2026-03-07 |
 | 5. Quant Alpha Intelligence | 2/3 | In Progress|  |
 | 6. Stop-Loss Enforcement | 1/1 | Complete   | 2026-03-07 |
-| 7. Self-Improvement Loop | v1.1 | Complete | 2026-03-06 |
+| 7. Self-Improvement Loop | v1.1 | Complete   | 2026-03-07 |
 | 8. Portfolio Risk Governance | v1.2 | Complete | 2026-03-06 |
 | 9. Structured Memory Registry | v1.2 | Complete | 2026-03-06 |
 | 10. Rule Validation Harness | v1.2 | Not started | — |

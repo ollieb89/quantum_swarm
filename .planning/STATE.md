@@ -3,13 +3,13 @@ gsd_state_version: 1.0
 milestone: v1.1
 milestone_name: Self-Improvement
 status: completed
-last_updated: "2026-03-07T20:35:08.885Z"
-last_activity: "2026-03-07 — Phase 06-01 completed; ATR-based stop_loss enforced end-to-end: QuantModeler mandates it, OrderRouter rejects missing/invalid values, TradeLogger writes full ATR audit trail to PostgreSQL. DB schema fixed (5 missing columns added). 7/7 tests passing. Phase 7 can begin."
+last_updated: "2026-03-07T20:51:00.000Z"
+last_activity: "2026-03-07 — Phase 07-01 completed; self-improvement loop end-to-end: PerformanceReviewAgent, RuleGenerator, SelfLearningPipeline, memory injection via _load_institutional_memory (MemoryRegistry + MEMORY.md), --review CLI flag. Lazy LLM init fixed. 4/4 phase 7 tests passing."
 progress:
   total_phases: 7
   completed_phases: 1
   total_plans: 2
-  completed_plans: 3
+  completed_plans: 4
 ---
 
 # Project State
@@ -25,10 +25,10 @@ Previous: v1.1 Self-Improvement Loop — SHIPPED 2026-03-06 (169 tests, 3 phases
 
 ## Current Phase
 
-Phase: 06 — Stop-Loss Enforcement
+Phase: 07 — Self-Improvement Loop
 Plan: 01 (complete)
 Status: Phase complete
-Last activity: 2026-03-07 — Phase 06-01 completed; ATR-based stop_loss enforced end-to-end: QuantModeler mandates it, OrderRouter rejects missing/invalid values, TradeLogger writes full ATR audit trail to PostgreSQL. DB schema fixed (5 missing columns added). 7/7 tests passing. Phase 7 can begin.
+Last activity: 2026-03-07 — Phase 07-01 completed; self-improvement loop end-to-end: PerformanceReviewAgent + RuleGenerator with lazy LLM init, SelfLearningPipeline, memory injection (MemoryRegistry + MEMORY.md dual-source), --review CLI flag. 4/4 tests passing.
 
 ## Progress
 
@@ -43,9 +43,10 @@ Phase 11: Explainability & Decision Cards — Not started
 ## Health
 
 Status: Green
-- Phase 6 complete: ATR stop_loss enforced end-to-end (QuantModeler → OrderRouter gate → TradeLogger → PostgreSQL).
-- 183 tests passing (176 + 7 new phase 6 stop-loss enforcement tests).
-- DB schema extended with atr_at_entry, stop_loss_multiplier, stop_loss_method, trade_risk_score, portfolio_heat columns.
+- Phase 7 complete: self-improvement loop end-to-end (PerformanceReviewAgent → RuleGenerator → SelfLearningPipeline → memory injection in orchestrator).
+- 187 tests passing (183 + 4 new phase 7 self-improvement tests).
+- Lazy LLM init pattern applied to all new agents (PerformanceReviewAgent, RuleGenerator).
+- Dual-source memory loading: MemoryRegistry JSON + data/MEMORY.md.
 - Architecture stable: LangGraph + Gemini + psycopg3.
 
 ## Project Reference
@@ -88,6 +89,9 @@ See: `.planning/PROJECT.md` (updated 2026-03-06 — Milestone v1.1 started)
 - quant_alpha_intelligence handle() result keys are {name}_{period} (e.g. rsi_14, atr_14, bb_20) — Phase 6 order_router must use keyed form when reading indicator results (2026-03-07)
 - RSI handle() result is {"value": float, "state": "overbought"|"oversold"|"neutral"} — not plain float (2026-03-07)
 - Error codes: INSUFFICIENT_DATA (series too short), INVALID_INPUT (bad params/schema) — INVALID_PARAMETER retired (2026-03-07)
+- Lazy LLM property pattern: _llm field + @property getter calling _get_llm() singleton + @llm.setter for test injection — applied to PerformanceReviewAgent and RuleGenerator (2026-03-07)
+- _load_institutional_memory() reads both MemoryRegistry JSON (governed rules) and data/MEMORY.md (pipeline-written rules) — dual-source injection into agent prompts (2026-03-07)
+- test_rule_generator_logic: generate_rules() returns List[MemoryRule] not List[str]; mock must return valid JSON list matching MemoryRule schema (2026-03-07)
 
 ## v1.1 Phase Dependency Chain
 
