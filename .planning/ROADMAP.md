@@ -66,7 +66,7 @@ phases:
   milestone: v1.2
   started: ''
   completed: ''
-updated: '2026-03-07'
+updated: '2026-03-08'
 ---
 
 # Roadmap: Quantum Swarm
@@ -198,7 +198,11 @@ Plans:
 **Success Criteria**:
   1. A validation run compares performance with and without a proposed rule.
   2. Rules only transition to 'active' if they pass the evaluation harness.
-**Plans**: TBD
+**Plans**: 3 plans
+Plans:
+- [ ] 10-01-PLAN.md — TDD RED: write test stubs (11 methods), add get_proposed_rules() to MemoryRegistry, add validation YAML config keys
+- [ ] 10-02-PLAN.md — Implement RuleValidator class (two-run backtester, 2-of-3 metric check, audit writes) — turn 9 unit tests GREEN
+- [ ] 10-03-PLAN.md — Wire persist_rules() -> validate_proposed_rules() and turn 2 integration tests GREEN
 
 ### Phase 11: Explainability & Decision Cards
 **Goal**: Generate a compact, immutable "decision card" for every trade containing the full cognitive trace.
