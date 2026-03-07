@@ -1,6 +1,6 @@
 # Requirements: Quantum Swarm
 
-**Defined:** 2026-03-06 (v1.0), updated 2026-03-06 (v1.1)
+**Defined:** 2026-03-06 (v1.0), updated 2026-03-06 (v1.1), updated 2026-03-07 (v1.2)
 **Core Value:** Institutional-quality trade signal generation through adversarial AI debate, with immutable audit trails and hard compliance guardrails
 
 ## Validated Requirements (v1.0 — Shipped 2026-03-06)
@@ -57,9 +57,20 @@ Requirements for the Self-Improvement Loop milestone. Each maps to roadmap phase
 
 ---
 
+## v1.2 Requirements
+
+Requirements for the Structured Memory Registry milestone. Each maps to roadmap phases.
+
+### Memory / Self-Improvement (MEM)
+
+- [ ] **MEM-04**: Structured JSON registry (`data/memory_registry.json`) serves as the primary machine-readable rule store, superseding the flat MEMORY.md format. Rules are Pydantic-validated with id, type, condition, action, evidence, status, version, and timestamps.
+- [ ] **MEM-05**: Lifecycle controls enforce one-way status transitions (proposed → active → deprecated/rejected) with version incrementing and INFO-level audit logging on every transition. Terminal states (deprecated, rejected) cannot be reversed.
+
+---
+
 ## Future Requirements
 
-Deferred from current scope. Tracked but not in v1.1 roadmap.
+Deferred from current scope. Tracked but not in v1.2 roadmap.
 
 ### Analytics
 - **ANALY-05**: Reinforcement Learning optimization for order flow — post v1.1
@@ -68,7 +79,7 @@ Deferred from current scope. Tracked but not in v1.1 roadmap.
 - **SEC-03**: System-wide circuit breakers for API degradation or anomalous strategy behavior — post v1.1
 
 ### Memory
-- **MEM-04**: Regime-aware vector memory for recognizing long-term historical parallels — v2.0
+- **MEM-07**: Regime-aware vector memory for recognizing long-term historical parallels — v2.0
 
 ### Orchestration
 - **ORCH-06**: Multi-modal input support (chart image analysis) — v2.0
@@ -109,6 +120,18 @@ All v1.0 requirements covered by Phases 1-4 (shipped 2026-03-06).
 - Mapped to phases: 6
 - Unmapped: 0 ✓
 
+### v1.2 Requirements
+
+| Requirement | Phase | Status |
+|-------------|-------|--------|
+| MEM-04 | Phase 9 | In Progress |
+| MEM-05 | Phase 9 | In Progress |
+
+**Coverage:**
+- v1.2 requirements: 2 total
+- Mapped to phases: 2
+- Unmapped: 0 ✓
+
 ---
 *Requirements defined: 2026-03-06 (v1.0)*
-*Last updated: 2026-03-06 — v1.1 traceability mapped (phases 5-7)*
+*Last updated: 2026-03-07 — v1.2 added (MEM-04, MEM-05); former MEM-04 (regime-aware vector memory) renumbered to MEM-07*
