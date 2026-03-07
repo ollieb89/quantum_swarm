@@ -53,7 +53,7 @@ Previous: v1.1 Self-Improvement Loop — SHIPPED 2026-03-06 (169 tests, 3 phases
 Phase: 10 — Rule Validation Harness
 Plan: TBD
 Status: Not started
-Last activity: 2026-03-07 — Phase 04-02 completed; KnowledgeBase lazy init refactor (get_kb() getter, no module-level singleton).
+Last activity: 2026-03-07 — Phase 04-03 completed; trades DDL exit_time fix + InstitutionalGuard test rewrite (asyncio.run/AsyncMock). 53 tests passing.
 
 ## Progress
 
@@ -107,6 +107,8 @@ See: `.planning/PROJECT.md` (updated 2026-03-06 — Milestone v1.1 started)
 - ccxt package broken in env; chromadb and pytest-asyncio missing — known env issues, not regressions
 - KnowledgeBase lazy init: chromadb/duckdb imported inside __init__; get_kb() getter replaces module-level singleton (2026-03-07)
 - psycopg3 async throughout (not psycopg2)
+- AsyncMock pattern for DB tests: patch.object(Class, '_async_method', new_callable=AsyncMock, return_value=[...]) avoids live PostgreSQL (2026-03-07)
+- trades DDL has exit_time TIMESTAMPTZ column; existing DBs need: ALTER TABLE trades ADD COLUMN IF NOT EXISTS exit_time TIMESTAMPTZ (2026-03-07)
 
 ## v1.1 Phase Dependency Chain
 
