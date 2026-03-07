@@ -3,13 +3,13 @@ gsd_state_version: 1.0
 milestone: v1.1
 milestone_name: Self-Improvement
 status: completed
-last_updated: "2026-03-07T20:51:00.000Z"
-last_activity: "2026-03-07 — Phase 07-01 completed; self-improvement loop end-to-end: PerformanceReviewAgent, RuleGenerator, SelfLearningPipeline, memory injection via _load_institutional_memory (MemoryRegistry + MEMORY.md), --review CLI flag. Lazy LLM init fixed. 4/4 phase 7 tests passing."
+last_updated: "2026-03-07T21:07:54.222Z"
+last_activity: "2026-03-07 — Phase 07-02 completed; gap-closure: SQL column fix (position_size/entry_price) in review_agent.py, MEMORY.md write path in persist_rules(), 5/5 self-improvement tests passing. MEM-02 and MEM-03 requirements satisfied."
 progress:
   total_phases: 7
-  completed_phases: 1
-  total_plans: 2
-  completed_plans: 4
+  completed_phases: 2
+  total_plans: 3
+  completed_plans: 5
 ---
 
 # Project State
@@ -26,9 +26,9 @@ Previous: v1.1 Self-Improvement Loop — SHIPPED 2026-03-06 (169 tests, 3 phases
 ## Current Phase
 
 Phase: 07 — Self-Improvement Loop
-Plan: 01 (complete)
-Status: Phase complete
-Last activity: 2026-03-07 — Phase 07-01 completed; self-improvement loop end-to-end: PerformanceReviewAgent + RuleGenerator with lazy LLM init, SelfLearningPipeline, memory injection (MemoryRegistry + MEMORY.md dual-source), --review CLI flag. 4/4 tests passing.
+Plan: 02 (complete)
+Status: Phase complete (all 2 plans done)
+Last activity: 2026-03-07 — Phase 07-02 completed; SQL column fix + persist_rules() MEMORY.md write path. MEM-02, MEM-03 satisfied. 5/5 self-improvement tests passing.
 
 ## Progress
 
@@ -43,9 +43,10 @@ Phase 11: Explainability & Decision Cards — Not started
 ## Health
 
 Status: Green
-- Phase 7 complete: self-improvement loop end-to-end (PerformanceReviewAgent → RuleGenerator → SelfLearningPipeline → memory injection in orchestrator).
-- 187 tests passing (183 + 4 new phase 7 self-improvement tests).
-- Lazy LLM init pattern applied to all new agents (PerformanceReviewAgent, RuleGenerator).
+- Phase 7 complete (07-01 + 07-02): self-improvement loop end-to-end + MEM-02/MEM-03 gap closure.
+- 188 tests passing (187 + 1 new test_persist_rules_writes_memory_md).
+- SQL fix: review_agent.py uses t.position_size / t.entry_price (Phase 06 schema).
+- persist_rules() writes PREFER/AVOID/CAUTION timestamped lines to data/MEMORY.md.
 - Dual-source memory loading: MemoryRegistry JSON + data/MEMORY.md.
 - Architecture stable: LangGraph + Gemini + psycopg3.
 
@@ -92,6 +93,8 @@ See: `.planning/PROJECT.md` (updated 2026-03-06 — Milestone v1.1 started)
 - Lazy LLM property pattern: _llm field + @property getter calling _get_llm() singleton + @llm.setter for test injection — applied to PerformanceReviewAgent and RuleGenerator (2026-03-07)
 - _load_institutional_memory() reads both MemoryRegistry JSON (governed rules) and data/MEMORY.md (pipeline-written rules) — dual-source injection into agent prompts (2026-03-07)
 - test_rule_generator_logic: generate_rules() returns List[MemoryRule] not List[str]; mock must return valid JSON list matching MemoryRule schema (2026-03-07)
+- review_agent.py SQL uses t.position_size and t.entry_price — NOT t.quantity / t.execution_price (Phase 06 schema rename 2026-03-07)
+- RuleGenerator.memory_md_path instance attribute redirectable in tests; persist_rules() appends "- PREFER:/AVOID:/CAUTION: {title}" lines with ISO timestamp comment to data/MEMORY.md (2026-03-07)
 
 ## v1.1 Phase Dependency Chain
 
