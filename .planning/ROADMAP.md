@@ -44,10 +44,10 @@ phases:
   completed: 2026-03-06
 - number: 8
   name: Portfolio Risk Governance
-  status: complete
+  status: in_progress
   milestone: v1.2
-  started: 2026-03-06
-  completed: 2026-03-06
+  started: 2026-03-07
+  completed: ''
 - number: 9
   name: Structured Memory Registry
   status: complete
@@ -151,7 +151,7 @@ See: `.planning/milestones/v1.0-ROADMAP.md` for full archive
 | 5. Quant Alpha Intelligence | 2/3 | In Progress|  |
 | 6. Stop-Loss Enforcement | 1/1 | Complete   | 2026-03-07 |
 | 7. Self-Improvement Loop | 2/2 | Complete   | 2026-03-07 |
-| 8. Portfolio Risk Governance | v1.2 | Complete | 2026-03-06 |
+| 8. Portfolio Risk Governance | v1.2 | In Progress | — |
 | 9. Structured Memory Registry | v1.2 | Complete | 2026-03-06 |
 | 10. Rule Validation Harness | v1.2 | Not started | — |
 | 11. Explainability & Decision Cards | v1.2 | Not started | — |
@@ -166,8 +166,14 @@ Institutional hardening of risk controls and verification of self-improvement ru
 **Requirements**: RISK-07, RISK-08
 **Success Criteria**:
   1. Orders exceeding max notional exposure or asset concentration are rejected.
-  2. Portfolio-level risk score is calculated and recorded for every trade.
-**Plans**: [PLAN.md](phases/08-portfolio-risk-governance/PLAN.md)
+  2. Drawdown circuit breaker rejects orders when daily or cumulative loss exceeds configured thresholds.
+  3. Portfolio-level risk score is calculated and recorded for every trade via state["metadata"].
+  4. _get_open_positions() SQL uses Phase 6 column names (position_size, entry_price).
+  5. idx_trades_exit_time index exists on trades table.
+**Plans**: 2 plans
+Plans:
+- [ ] 08-01-PLAN.md — Write failing test stubs (TDD RED): SQL column check, index check, drawdown rejection, metadata propagation
+- [ ] 08-02-PLAN.md — Fix SQL bug, add exit_time index, implement drawdown circuit breaker (TDD GREEN)
 
 ### Phase 9: Structured Memory Registry
 **Goal**: Transition MEMORY.md to a machine-readable JSON registry with lifecycle controls.
