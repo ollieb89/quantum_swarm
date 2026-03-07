@@ -57,6 +57,8 @@ async def setup_persistence():
             """)
 
         # 3. Trade Warehouse
+        # Migration note: for existing DBs run:
+        # ALTER TABLE trades ADD COLUMN IF NOT EXISTS exit_time TIMESTAMPTZ;
         async with pool.connection() as conn:
             await conn.execute("""
             CREATE TABLE IF NOT EXISTS trades (
@@ -68,7 +70,9 @@ async def setup_persistence():
                 side VARCHAR(16) NOT NULL,
                 quantity NUMERIC NOT NULL,
                 execution_price NUMERIC NOT NULL,
+                stop_loss_level NUMERIC,
                 execution_time TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+                exit_time TIMESTAMPTZ,
                 execution_mode VARCHAR(16) NOT NULL,
                 strategy_context JSONB,
                 pnl NUMERIC,
