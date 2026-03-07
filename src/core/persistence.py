@@ -57,8 +57,13 @@ async def setup_persistence():
             """)
 
         # 3. Trade Warehouse
-        # Migration note: for existing DBs run:
+        # Migration notes for existing DBs:
         # ALTER TABLE trades ADD COLUMN IF NOT EXISTS exit_time TIMESTAMPTZ;
+        # ALTER TABLE trades ADD COLUMN IF NOT EXISTS atr_at_entry NUMERIC;
+        # ALTER TABLE trades ADD COLUMN IF NOT EXISTS stop_loss_multiplier NUMERIC;
+        # ALTER TABLE trades ADD COLUMN IF NOT EXISTS stop_loss_method VARCHAR(32);
+        # ALTER TABLE trades ADD COLUMN IF NOT EXISTS trade_risk_score NUMERIC;
+        # ALTER TABLE trades ADD COLUMN IF NOT EXISTS portfolio_heat NUMERIC;
         async with pool.connection() as conn:
             await conn.execute("""
             CREATE TABLE IF NOT EXISTS trades (
@@ -71,6 +76,11 @@ async def setup_persistence():
                 quantity NUMERIC NOT NULL,
                 execution_price NUMERIC NOT NULL,
                 stop_loss_level NUMERIC,
+                atr_at_entry NUMERIC,
+                stop_loss_multiplier NUMERIC,
+                stop_loss_method VARCHAR(32),
+                trade_risk_score NUMERIC,
+                portfolio_heat NUMERIC,
                 execution_time TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
                 exit_time TIMESTAMPTZ,
                 execution_mode VARCHAR(16) NOT NULL,

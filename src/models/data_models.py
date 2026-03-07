@@ -54,6 +54,12 @@ class TradeRecord(BaseModel):
     symbol: str
     side: str                       # "buy" | "sell"
     entry_price: float
+    stop_loss_level: Optional[float] = None
+    atr_at_entry: Optional[float] = None
+    stop_loss_multiplier: Optional[float] = None
+    stop_loss_method: str = "atr"
+    trade_risk_score: Optional[float] = None
+    portfolio_heat: Optional[float] = None
     exit_price: Optional[float] = None
     quantity: float
     pnl: Optional[float] = None
