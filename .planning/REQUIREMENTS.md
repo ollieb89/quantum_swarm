@@ -155,4 +155,4 @@ All v1.0 requirements covered by Phases 1-4 (shipped 2026-03-06).
 
 ---
 *Requirements defined: 2026-03-06 (v1.0)*
-*Last updated: 2026-03-07 — v1.2 added (MEM-04, MEM-05); former MEM-04 (regime-aware vector memory) renumbered to MEM-07*
+*Last updated: 2026-03-08 — v1.3 added (MEM-06: Rule Validation Harness, Phase 10 Complete)*
