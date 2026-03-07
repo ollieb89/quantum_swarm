@@ -2,14 +2,14 @@
 gsd_state_version: 1.0
 milestone: v1.1
 milestone_name: Self-Improvement
-status: completed
-last_updated: "2026-03-07T23:19:00Z"
-last_activity: 2026-03-08 — Phase 10-01 completed; TDD RED scaffold written (11 stubs), MemoryRegistry.get_proposed_rules() added, YAML validation config keys added. MEM-06 satisfied. 14/14 structured memory tests still passing.
+status: executing
+last_updated: "2026-03-07T23:24:08.592Z"
+last_activity: 2026-03-08 — Phase 10-02 completed; RuleValidator implemented (2-of-3 backtest gating, MiFID II audit events). Phase 10 complete. 23/23 tests passing (9 TestRuleValidator + 14 TestStructuredMemory).
 progress:
   total_phases: 7
   completed_phases: 4
   total_plans: 10
-  completed_plans: 10
+  completed_plans: 11
 ---
 
 # Project State
@@ -26,17 +26,17 @@ Previous: v1.1 Self-Improvement Loop — SHIPPED 2026-03-06 (169 tests, 3 phases
 ## Current Phase
 
 Phase: 10 — Rule Validation Harness
-Plan: 01 (complete)
-Status: In progress (1/2 plans done)
-Last activity: 2026-03-08 — Phase 10-01 completed; TDD RED scaffold (11 stubs), MemoryRegistry.get_proposed_rules() added, YAML validation config keys added. MEM-06 satisfied.
+Plan: 02 (complete)
+Status: Complete (2/2 plans done)
+Last activity: 2026-03-08 — Phase 10-02 completed; RuleValidator implemented (2-of-3 backtest gating, MiFID II audit events). Phase 10 fully complete.
 
 ## Progress
 
 ```
-v1.2: [=====     ] 2/4 phases complete
+v1.2: [=======   ] 3/4 phases complete
 Phase 8: Portfolio Risk Governance     — Complete (2026-03-06)
 Phase 9: Structured Memory Registry    — Complete (2026-03-06)
-Phase 10: Rule Validation Harness      — In progress (1/2 plans)
+Phase 10: Rule Validation Harness      — Complete (2026-03-08)
 Phase 11: Explainability & Decision Cards — Not started
 ```
 
@@ -111,6 +111,12 @@ See: `.planning/PROJECT.md` (updated 2026-03-06 — Milestone v1.1 started)
 - get_proposed_rules() mirrors get_active_rules() one-liner filter: status == "proposed"; no other changes to MemoryRegistry (10-01)
 - Wave 0 TDD RED scaffold: tests/test_rule_validator.py imports fail with ModuleNotFoundError until Plan 02 creates src/agents/rule_validator.py (10-01)
 - config/swarm_config.yaml self_improvement: validation_lookback_days: 90, validation_min_trades: 10 — read by RuleValidator.__init__ (10-01)
+- RuleValidator.validate_proposed_rules() is synchronous; uses asyncio.run(asyncio.to_thread(_run_nautilus_backtest, ...)) twice per rule — avoids nested event loop issues from synchronous call site (10-02)
+- drawdown improvement direction: treatment_drawdown > baseline_drawdown = improvement (less negative is better); 2-of-3 majority vote: Sharpe, drawdown, win_rate (10-02)
+- Evidence dict populated on live registry object after update_status(), then registry.save() — six keys: baseline_sharpe, treatment_sharpe, baseline_drawdown, treatment_drawdown, baseline_win_rate, treatment_win_rate (10-02)
+- Backtest exceptions caught silently in RuleValidator — rule stays proposed; no re-raise to prevent batch abort (10-02)
+- Registry stale-read prevention: self.registry.schema = self.registry._load() at entry of validate_proposed_rules() (10-02)
+- Audit events written to data/audit.jsonl with fields: timestamp, event, rule_id, before_status, after_status, six metric values, three deltas (10-02)
 
 ## v1.1 Phase Dependency Chain
 
