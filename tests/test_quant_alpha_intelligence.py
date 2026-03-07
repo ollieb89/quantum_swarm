@@ -60,23 +60,25 @@ class TestQuantAlphaIntelligence(unittest.TestCase):
         self.assertIsInstance(atr, float)
         self.assertTrue(atr > 0)
 
-    def test_safe_range_validation(self):
+    def test_invalid_input_safe_range(self):
+        """Period outside safe range [2, 250] returns INVALID_INPUT at key rsi_300."""
         state = {
             "series": {"close": self.prices},
             "indicators": [{"name": "rsi", "params": {"period": 300}}]
         }
         result = handle(state)
-        self.assertEqual(result["results"]["rsi"]["error"]["code"], "INVALID_PARAMETER")
-        self.assertIn("safe range", result["results"]["rsi"]["error"]["message"])
+        self.assertEqual(result["results"]["rsi_300"]["error"]["code"], "INVALID_INPUT")
+        self.assertIn("safe range", result["results"]["rsi_300"]["error"]["message"])
 
     def test_insufficient_data(self):
+        """Too-short series returns INSUFFICIENT_DATA at key rsi_14."""
         state = {
             "series": {"close": [100.0, 101.0]},
             "indicators": [{"name": "rsi", "params": {"period": 14}}]
         }
         result = handle(state)
-        self.assertEqual(result["results"]["rsi"]["error"]["code"], "INVALID_PARAMETER")
-        self.assertIn("requires at least", result["results"]["rsi"]["error"]["message"])
+        self.assertEqual(result["results"]["rsi_14"]["error"]["code"], "INSUFFICIENT_DATA")
+        self.assertIn("requires at least", result["results"]["rsi_14"]["error"]["message"])
 
     def test_skill_registry_discovery(self):
         registry = SkillRegistry()
