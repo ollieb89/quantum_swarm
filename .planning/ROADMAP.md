@@ -152,7 +152,7 @@ See: `.planning/milestones/v1.0-ROADMAP.md` for full archive
 | 6. Stop-Loss Enforcement | 1/1 | Complete   | 2026-03-07 |
 | 7. Self-Improvement Loop | 2/2 | Complete   | 2026-03-07 |
 | 8. Portfolio Risk Governance | 2/2 | Complete   | 2026-03-07 |
-| 9. Structured Memory Registry | v1.2 | Complete | 2026-03-06 |
+| 9. Structured Memory Registry | 2/2 | Planned   | — |
 | 10. Rule Validation Harness | v1.2 | Not started | — |
 | 11. Explainability & Decision Cards | v1.2 | Not started | — |
 
@@ -183,7 +183,12 @@ Plans:
 **Success Criteria**:
   1. Memory is stored in a versioned JSON format with status (proposed, active, deprecated).
   2. Agents load rules based on their lifecycle status.
-**Plans**: [PLAN.md](phases/09-structured-memory-registry/PLAN.md)
+  3. update_status() enforces one-way lifecycle transitions with version incrementing.
+  4. Full round-trip verified: RuleGenerator writes proposed -> update_status promotes to active -> orchestrator injects it.
+**Plans**: 2 plans
+Plans:
+- [ ] 09-01-PLAN.md — Add update_status() lifecycle method and atomic save() to MemoryRegistry; expand unit tests (MEM-05)
+- [ ] 09-02-PLAN.md — Integration tests: RuleGenerator persist_rules() + orchestrator injection round-trip (MEM-04, MEM-05)
 
 ### Phase 10: Rule Validation Harness
 **Goal**: Backtest or replay newly generated memory rules before promoting them to 'active'.
