@@ -1,8 +1,5 @@
 """
-tests/test_rule_validator.py — TDD RED stubs for RuleValidator.
-
-Wave 0: All tests fail (ImportError or NotImplementedError) until Plan 02
-creates src/agents/rule_validator.py. This is intentional RED state.
+tests/test_rule_validator.py — Unit and integration tests for RuleValidator.
 """
 
 import asyncio
@@ -16,7 +13,6 @@ from unittest.mock import patch, MagicMock
 from src.core.memory_registry import MemoryRegistry
 from src.models.memory import MemoryRule
 
-# This import will fail (RED) until Plan 02 creates the module:
 from src.agents.rule_validator import RuleValidator
 
 
@@ -98,7 +94,12 @@ class TestRuleValidator(unittest.TestCase):
 
     def test_fetches_proposed_rules(self):
         """validate_proposed_rules() returns a count matching proposed rules."""
-        raise NotImplementedError("RED: implement RuleValidator first")
+        with patch(
+            "src.agents.rule_validator._run_nautilus_backtest",
+            side_effect=[_BASELINE_RESULT, _TREATMENT_IMPROVED],
+        ):
+            count = self.validator.validate_proposed_rules()
+        self.assertEqual(count, 1)
 
     # ------------------------------------------------------------------
     # 2. Backtest call count
@@ -106,7 +107,12 @@ class TestRuleValidator(unittest.TestCase):
 
     def test_two_backtest_calls_per_rule(self):
         """_run_nautilus_backtest is called exactly twice per proposed rule."""
-        raise NotImplementedError("RED: implement RuleValidator first")
+        with patch(
+            "src.agents.rule_validator._run_nautilus_backtest",
+            side_effect=[_BASELINE_RESULT, _TREATMENT_IMPROVED],
+        ) as mock_bt:
+            self.validator.validate_proposed_rules()
+        self.assertEqual(mock_bt.call_count, 2)
 
     # ------------------------------------------------------------------
     # 3. Promotion to active
@@ -114,7 +120,14 @@ class TestRuleValidator(unittest.TestCase):
 
     def test_pass_promotes_to_active(self):
         """When 2+ metrics improve, rule status in registry becomes 'active'."""
-        raise NotImplementedError("RED: implement RuleValidator first")
+        with patch(
+            "src.agents.rule_validator._run_nautilus_backtest",
+            side_effect=[_BASELINE_RESULT, _TREATMENT_IMPROVED],
+        ):
+            self.validator.validate_proposed_rules()
+
+        updated = self.validator.registry.get_rule(self.rule.id)
+        self.assertEqual(updated.status, "active")
 
     # ------------------------------------------------------------------
     # 4. Rejection when metrics regress
@@ -122,7 +135,14 @@ class TestRuleValidator(unittest.TestCase):
 
     def test_fail_rejects_rule(self):
         """When fewer than 2 metrics improve, rule status becomes 'rejected'."""
-        raise NotImplementedError("RED: implement RuleValidator first")
+        with patch(
+            "src.agents.rule_validator._run_nautilus_backtest",
+            side_effect=[_BASELINE_RESULT, _TREATMENT_WORSE],
+        ):
+            self.validator.validate_proposed_rules()
+
+        updated = self.validator.registry.get_rule(self.rule.id)
+        self.assertEqual(updated.status, "rejected")
 
     # ------------------------------------------------------------------
     # 5. Insufficient trade count guard
@@ -130,7 +150,17 @@ class TestRuleValidator(unittest.TestCase):
 
     def test_insufficient_trades_skipped(self):
         """When baseline total_trades < validation_min_trades, rule stays 'proposed'."""
-        raise NotImplementedError("RED: implement RuleValidator first")
+        low_trade_baseline = dict(_BASELINE_RESULT, total_trades=2)
+        with patch(
+            "src.agents.rule_validator._run_nautilus_backtest",
+            side_effect=[low_trade_baseline, _TREATMENT_IMPROVED],
+        ):
+            count = self.validator.validate_proposed_rules()
+
+        # Rule should stay proposed, processed count = 0 (skipped)
+        self.assertEqual(count, 0)
+        rule = self.validator.registry.get_rule(self.rule.id)
+        self.assertEqual(rule.status, "proposed")
 
     # ------------------------------------------------------------------
     # 6. Backtest error leaves rule in proposed
@@ -138,7 +168,16 @@ class TestRuleValidator(unittest.TestCase):
 
     def test_backtest_error_leaves_proposed(self):
         """When _run_nautilus_backtest raises, rule stays 'proposed' and no exception propagates."""
-        raise NotImplementedError("RED: implement RuleValidator first")
+        with patch(
+            "src.agents.rule_validator._run_nautilus_backtest",
+            side_effect=RuntimeError("yfinance unavailable"),
+        ):
+            # Should not raise
+            count = self.validator.validate_proposed_rules()
+
+        self.assertEqual(count, 0)
+        rule = self.validator.registry.get_rule(self.rule.id)
+        self.assertEqual(rule.status, "proposed")
 
     # ------------------------------------------------------------------
     # 7. Audit event on promotion
@@ -146,7 +185,19 @@ class TestRuleValidator(unittest.TestCase):
 
     def test_audit_event_on_promotion(self):
         """audit.jsonl contains a line with rule_id, before_status='proposed', after_status='active'."""
-        raise NotImplementedError("RED: implement RuleValidator first")
+        with patch(
+            "src.agents.rule_validator._run_nautilus_backtest",
+            side_effect=[_BASELINE_RESULT, _TREATMENT_IMPROVED],
+        ):
+            self.validator.validate_proposed_rules()
+
+        self.assertTrue(self.test_audit_file.exists())
+        lines = self.test_audit_file.read_text().strip().splitlines()
+        self.assertEqual(len(lines), 1)
+        event = json.loads(lines[0])
+        self.assertEqual(event["rule_id"], self.rule.id)
+        self.assertEqual(event["before_status"], "proposed")
+        self.assertEqual(event["after_status"], "active")
 
     # ------------------------------------------------------------------
     # 8. Audit event on rejection
@@ -154,7 +205,19 @@ class TestRuleValidator(unittest.TestCase):
 
     def test_audit_event_on_rejection(self):
         """audit.jsonl contains a line with rule_id, before_status='proposed', after_status='rejected'."""
-        raise NotImplementedError("RED: implement RuleValidator first")
+        with patch(
+            "src.agents.rule_validator._run_nautilus_backtest",
+            side_effect=[_BASELINE_RESULT, _TREATMENT_WORSE],
+        ):
+            self.validator.validate_proposed_rules()
+
+        self.assertTrue(self.test_audit_file.exists())
+        lines = self.test_audit_file.read_text().strip().splitlines()
+        self.assertEqual(len(lines), 1)
+        event = json.loads(lines[0])
+        self.assertEqual(event["rule_id"], self.rule.id)
+        self.assertEqual(event["before_status"], "proposed")
+        self.assertEqual(event["after_status"], "rejected")
 
     # ------------------------------------------------------------------
     # 9. Evidence written to rule
@@ -164,7 +227,19 @@ class TestRuleValidator(unittest.TestCase):
         """After validation, rule.evidence contains all six required keys."""
         # Expected keys: baseline_sharpe, treatment_sharpe, baseline_drawdown,
         # treatment_drawdown, baseline_win_rate, treatment_win_rate
-        raise NotImplementedError("RED: implement RuleValidator first")
+        with patch(
+            "src.agents.rule_validator._run_nautilus_backtest",
+            side_effect=[_BASELINE_RESULT, _TREATMENT_IMPROVED],
+        ):
+            self.validator.validate_proposed_rules()
+
+        rule = self.validator.registry.get_rule(self.rule.id)
+        required_keys = {
+            "baseline_sharpe", "treatment_sharpe",
+            "baseline_drawdown", "treatment_drawdown",
+            "baseline_win_rate", "treatment_win_rate",
+        }
+        self.assertTrue(required_keys.issubset(set(rule.evidence.keys())))
 
 
 class TestRuleValidatorIntegration(unittest.TestCase):
@@ -203,7 +278,15 @@ class TestRuleValidatorIntegration(unittest.TestCase):
         After RuleGenerator.persist_rules([rule]) and validator.validate_proposed_rules(),
         the rule is active or rejected in registry (not proposed).
         """
-        raise NotImplementedError("RED: implement RuleValidator first")
+        with patch(
+            "src.agents.rule_validator._run_nautilus_backtest",
+            side_effect=[_BASELINE_RESULT, _TREATMENT_IMPROVED],
+        ):
+            self.validator.validate_proposed_rules()
+
+        rule = self.validator.registry.get_rule(self.rule.id)
+        self.assertIn(rule.status, ("active", "rejected"))
+        self.assertNotEqual(rule.status, "proposed")
 
     # ------------------------------------------------------------------
     # 11. Full audit trail
@@ -215,7 +298,23 @@ class TestRuleValidatorIntegration(unittest.TestCase):
         with all required fields: rule_id, before_status, after_status,
         baseline_sharpe, treatment_sharpe, sharpe_delta.
         """
-        raise NotImplementedError("RED: implement RuleValidator first")
+        with patch(
+            "src.agents.rule_validator._run_nautilus_backtest",
+            side_effect=[_BASELINE_RESULT, _TREATMENT_IMPROVED],
+        ):
+            self.validator.validate_proposed_rules()
+
+        self.assertTrue(self.test_audit_file.exists())
+        lines = self.test_audit_file.read_text().strip().splitlines()
+        self.assertEqual(len(lines), 1)
+        event = json.loads(lines[0])
+
+        required_fields = {
+            "rule_id", "before_status", "after_status",
+            "baseline_sharpe", "treatment_sharpe", "sharpe_delta",
+        }
+        for field in required_fields:
+            self.assertIn(field, event, f"Missing field: {field}")
 
 
 if __name__ == "__main__":
