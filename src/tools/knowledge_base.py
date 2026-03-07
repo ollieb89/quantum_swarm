@@ -6,9 +6,6 @@ Queries local ChromaDB for sentiment and DuckDB for historical price data.
 
 import logging
 from typing import Any
-import chromadb
-from chromadb.utils import embedding_functions
-import duckdb
 
 logger = logging.getLogger(__name__)
 
@@ -17,12 +14,15 @@ DUCKDB_PATH = "data/market_data.duckdb"
 
 class KnowledgeBase:
     """Interface to local financial knowledge stores."""
-    
+
     def __init__(self):
+        import chromadb
+        from chromadb.utils import embedding_functions
+        import duckdb
         self.chroma_client = chromadb.PersistentClient(path=CHROMA_PATH)
         self.embedding_function = embedding_functions.SentenceTransformerEmbeddingFunction(model_name="all-MiniLM-L6-v2")
         self.collection = self.chroma_client.get_or_create_collection(
-            name="financial_sentiment", 
+            name="financial_sentiment",
             embedding_function=self.embedding_function
         )
         self.duck_con = duckdb.connect(DUCKDB_PATH)
@@ -44,7 +44,7 @@ class KnowledgeBase:
         try:
             # Query for stats over the available history
             res = self.duck_con.execute(f"""
-                SELECT 
+                SELECT
                     COUNT(*) as data_points,
                     AVG(close) as avg_price,
                     MIN(low) as 5y_low,
@@ -53,17 +53,26 @@ class KnowledgeBase:
                 FROM historical_ohlcv
                 WHERE symbol = '{symbol.upper()}'
             """).df()
-            
+
             if res.empty or res.iloc[0]['data_points'] == 0:
                 return {"error": f"No historical data for {symbol}"}
-                
+
             return res.iloc[0].to_dict()
         except Exception as e:
             logger.error("Error querying DuckDB: %s", e)
             return {"error": str(e)}
 
     def __del__(self):
-        self.duck_con.close()
+        if hasattr(self, 'duck_con'):
+            self.duck_con.close()
 
-# Global singleton
-kb = KnowledgeBase()
+
+_kb: "KnowledgeBase | None" = None
+
+
+def get_kb() -> "KnowledgeBase":
+    """Return the module-level KnowledgeBase singleton, creating it on first call."""
+    global _kb
+    if _kb is None:
+        _kb = KnowledgeBase()
+    return _kb
