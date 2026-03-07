@@ -3,13 +3,13 @@ gsd_state_version: 1.0
 milestone: v1.1
 milestone_name: Self-Improvement
 status: completed
-last_updated: "2026-03-07T22:17:29.066Z"
-last_activity: 2026-03-07 — Phase 09-02 completed; 4 integration tests added proving RuleGenerator->MemoryRegistry->Orchestrator wiring. MEM-04 + MEM-05 fully verified. 14/14 structured memory tests passing.
+last_updated: "2026-03-07T23:19:00Z"
+last_activity: 2026-03-08 — Phase 10-01 completed; TDD RED scaffold written (11 stubs), MemoryRegistry.get_proposed_rules() added, YAML validation config keys added. MEM-06 satisfied. 14/14 structured memory tests still passing.
 progress:
   total_phases: 7
   completed_phases: 4
-  total_plans: 7
-  completed_plans: 9
+  total_plans: 10
+  completed_plans: 10
 ---
 
 # Project State
@@ -25,10 +25,10 @@ Previous: v1.1 Self-Improvement Loop — SHIPPED 2026-03-06 (169 tests, 3 phases
 
 ## Current Phase
 
-Phase: 09 — Structured Memory Registry
-Plan: 02 (complete)
-Status: Complete (2/2 plans done)
-Last activity: 2026-03-07 — Phase 09-02 completed; 4 integration tests added proving RuleGenerator->MemoryRegistry->Orchestrator wiring. MEM-04 + MEM-05 fully verified. 14/14 structured memory tests passing.
+Phase: 10 — Rule Validation Harness
+Plan: 01 (complete)
+Status: In progress (1/2 plans done)
+Last activity: 2026-03-08 — Phase 10-01 completed; TDD RED scaffold (11 stubs), MemoryRegistry.get_proposed_rules() added, YAML validation config keys added. MEM-06 satisfied.
 
 ## Progress
 
@@ -36,7 +36,7 @@ Last activity: 2026-03-07 — Phase 09-02 completed; 4 integration tests added p
 v1.2: [=====     ] 2/4 phases complete
 Phase 8: Portfolio Risk Governance     — Complete (2026-03-06)
 Phase 9: Structured Memory Registry    — Complete (2026-03-06)
-Phase 10: Rule Validation Harness      — Not started
+Phase 10: Rule Validation Harness      — In progress (1/2 plans)
 Phase 11: Explainability & Decision Cards — Not started
 ```
 
@@ -107,6 +107,10 @@ See: `.planning/PROJECT.md` (updated 2026-03-06 — Milestone v1.1 started)
 - LangGraphOrchestrator.__new__() pattern avoids __init__ side effects (YAML load, MemoryService, LangGraph compilation) for testing internal methods (09-02)
 - Orchestrator _load_institutional_memory() tested by patching src.graph.orchestrator.MemoryRegistry + Path — no live registry or file system required (09-02)
 - RuleGenerator test isolation: redirect .registry and .memory_md_path instance attributes to temp paths — no mock needed (09-02)
+- RuleValidator test isolation: redirect .registry and .audit_path instance attributes to temp paths — same pattern as RuleGenerator (10-01)
+- get_proposed_rules() mirrors get_active_rules() one-liner filter: status == "proposed"; no other changes to MemoryRegistry (10-01)
+- Wave 0 TDD RED scaffold: tests/test_rule_validator.py imports fail with ModuleNotFoundError until Plan 02 creates src/agents/rule_validator.py (10-01)
+- config/swarm_config.yaml self_improvement: validation_lookback_days: 90, validation_min_trades: 10 — read by RuleValidator.__init__ (10-01)
 
 ## v1.1 Phase Dependency Chain
 
