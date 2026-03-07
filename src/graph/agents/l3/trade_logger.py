@@ -78,6 +78,23 @@ async def trade_logger_node(state: SwarmState) -> dict[str, Any]:
     side: str = quant_proposal.get("side", "buy")
     quantity: float = float(quant_proposal.get("quantity", 1.0))
     execution_price: float = float(execution_result.get("execution_price", 0.0) or 0.0)
+    stop_loss: float | None = quant_proposal.get("stop_loss")
+    if stop_loss is not None:
+        stop_loss = float(stop_loss)
+    
+    atr_at_entry: float | None = quant_proposal.get("atr_at_entry")
+    if atr_at_entry is not None:
+        atr_at_entry = float(atr_at_entry)
+    
+    stop_loss_multiplier: float | None = quant_proposal.get("stop_loss_multiplier", 2.0)
+    if stop_loss_multiplier is not None:
+        stop_loss_multiplier = float(stop_loss_multiplier)
+
+    # Phase 8: Risk metrics from metadata
+    meta = state.get("metadata", {})
+    trade_risk_score = meta.get("trade_risk_score")
+    portfolio_heat = meta.get("portfolio_heat")
+
     execution_mode: str = state.get("execution_mode", "paper")
     trade_id: str = execution_result.get("order_id", f"trade_{task_id}_{datetime.now(timezone.utc).timestamp()}")
 
@@ -86,6 +103,12 @@ async def trade_logger_node(state: SwarmState) -> dict[str, Any]:
         symbol=symbol,
         side=side,
         entry_price=execution_price,
+        stop_loss_level=stop_loss,
+        atr_at_entry=atr_at_entry,
+        stop_loss_multiplier=stop_loss_multiplier,
+        stop_loss_method="atr",
+        trade_risk_score=trade_risk_score,
+        portfolio_heat=portfolio_heat,
         exit_price=None,
         quantity=quantity,
         pnl=None,
@@ -111,8 +134,13 @@ async def trade_logger_node(state: SwarmState) -> dict[str, Any]:
 
                 await cur.execute(
                     """
-                    INSERT INTO trades (trade_id, task_id, audit_log_id, symbol, side, quantity, execution_price, execution_mode, strategy_context)
-                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
+                    INSERT INTO trades (
+                        trade_id, task_id, audit_log_id, symbol, side, quantity, 
+                        execution_price, stop_loss_level, atr_at_entry, 
+                        stop_loss_multiplier, stop_loss_method, trade_risk_score, 
+                        portfolio_heat, execution_mode, strategy_context
+                    )
+                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
                     ON CONFLICT (trade_id) DO NOTHING;
                     """,
                     (
@@ -123,6 +151,12 @@ async def trade_logger_node(state: SwarmState) -> dict[str, Any]:
                         side,
                         quantity,
                         execution_price,
+                        stop_loss,
+                        atr_at_entry,
+                        stop_loss_multiplier,
+                        "atr",
+                        trade_risk_score,
+                        portfolio_heat,
                         execution_mode,
                         json.dumps(dict(quant_proposal))
                     )
