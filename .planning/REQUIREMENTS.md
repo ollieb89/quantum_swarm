@@ -142,6 +142,17 @@ All v1.0 requirements covered by Phases 1-4 (shipped 2026-03-06).
 - Mapped to phases: 2
 - Unmapped: 0 ✓
 
+### v1.3 Requirements
+
+| Requirement | Phase | Status |
+|-------------|-------|--------|
+| MEM-06 | Phase 10 | Complete |
+
+**Coverage:**
+- v1.3 requirements: 1 total
+- Mapped to phases: 1
+- Unmapped: 0 ✓
+
 ---
 *Requirements defined: 2026-03-06 (v1.0)*
 *Last updated: 2026-03-07 — v1.2 added (MEM-04, MEM-05); former MEM-04 (regime-aware vector memory) renumbered to MEM-07*
