@@ -25,6 +25,8 @@ from src.tools.analyst_tools import (
     fetch_economic_data,
     fetch_market_data,
     run_backtest,
+    calculate_indicators,
+    fetch_historical_data,
 )
 
 logger = logging.getLogger(__name__)
@@ -45,14 +47,18 @@ def _get_macro_agent():
     if _macro_agent is None:
         _macro_agent = create_react_agent(
             model=ChatGoogleGenerativeAI(model=_MODEL_ID),
-            tools=[fetch_market_data, fetch_economic_data],
+            tools=[fetch_market_data, fetch_economic_data, calculate_indicators, fetch_historical_data],
             name="MacroAnalyst",
             prompt=(
                 "You are MacroAnalyst, an expert in global macro-economics and market regime "
                 "identification. Your job is to assess the current macroeconomic environment "
                 "and produce a structured market report. "
-                "Use the fetch_market_data and fetch_economic_data tools to gather evidence "
-                "before forming your conclusion. "
+                "IMPORTANT: Review the 'INSTITUTIONAL MEMORY' provided in the message history. "
+                "Always adhere to the PREFER/AVOID/CAUTION rules derived from past performance. "
+                "Use the fetch_market_data and fetch_economic_data tools to gather evidence. "
+                "Use fetch_historical_data to get price series if you need to calculate indicators. "
+                "Use calculate_indicators to compute technical indicators (RSI, MACD, etc.) if needed "
+                "for regime identification before forming your conclusion. "
                 "Return your final assessment as a JSON object with keys: "
                 "phase, risk_on, confidence, sentiment, outlook, indicators."
             ),
@@ -65,15 +71,26 @@ def _get_quant_agent():
     if _quant_agent is None:
         _quant_agent = create_react_agent(
             model=ChatGoogleGenerativeAI(model=_MODEL_ID),
-            tools=[fetch_market_data, run_backtest],
+            tools=[fetch_market_data, run_backtest, calculate_indicators, fetch_historical_data],
             name="QuantModeler",
             prompt=(
                 "You are QuantModeler, an expert in quantitative finance and technical analysis. "
                 "Your job is to identify precise entry and exit signals for a given symbol. "
-                "Use the fetch_market_data tool to get current price data and run_backtest "
-                "to validate the strategy's historical performance before recommending a trade. "
+                "IMPORTANT: Review the 'INSTITUTIONAL MEMORY' provided in the message history. "
+                "Always adhere to the PREFER/AVOID/CAUTION rules derived from past performance. "
+                "Use the fetch_market_data tool to get current price data. "
+                "Use fetch_historical_data to retrieve the required price series for indicators. "
+                "ALWAYS use calculate_indicators to compute RSI, MACD, Bollinger Bands, and ATR "
+                "to justify your signals. "
+                "MANDATORY: Every trade proposal MUST include a calculated stop_loss. "
+                "Calculate the stop_loss using the ATR: "
+                "For LONG: stop_loss = entry_price - (ATR * 2.0). "
+                "For SHORT: stop_loss = entry_price + (ATR * 2.0). "
+                "Use run_backtest to validate the strategy's historical performance "
+                "before recommending a trade. "
                 "Return your final recommendation as a JSON object with keys: "
-                "signal, confidence, symbol, entry_price, stop_loss, take_profit, "
+                "signal, confidence, symbol, entry_price, stop_loss, "
+                "atr_at_entry, stop_loss_multiplier, take_profit, "
                 "position_size, rationale."
             ),
         )
