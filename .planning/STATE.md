@@ -53,7 +53,7 @@ Previous: v1.1 Self-Improvement Loop — SHIPPED 2026-03-06 (169 tests, 3 phases
 Phase: 10 — Rule Validation Harness
 Plan: TBD
 Status: Not started
-Last activity: 2026-03-07 — Phase 04-03 completed; trades DDL exit_time fix + InstitutionalGuard test rewrite (asyncio.run/AsyncMock). 53 tests passing.
+Last activity: 2026-03-07 — Phase 05-01 completed; RSI state annotation, INSUFFICIENT_DATA/INVALID_INPUT error codes, {name}_{period} result keying. 12 quant-alpha-intelligence tests passing.
 
 ## Progress
 
@@ -109,6 +109,9 @@ See: `.planning/PROJECT.md` (updated 2026-03-06 — Milestone v1.1 started)
 - psycopg3 async throughout (not psycopg2)
 - AsyncMock pattern for DB tests: patch.object(Class, '_async_method', new_callable=AsyncMock, return_value=[...]) avoids live PostgreSQL (2026-03-07)
 - trades DDL has exit_time TIMESTAMPTZ column; existing DBs need: ALTER TABLE trades ADD COLUMN IF NOT EXISTS exit_time TIMESTAMPTZ (2026-03-07)
+- quant_alpha_intelligence handle() result keys are {name}_{period} (e.g. rsi_14, atr_14, bb_20) — Phase 6 order_router must use keyed form when reading indicator results (2026-03-07)
+- RSI handle() result is {"value": float, "state": "overbought"|"oversold"|"neutral"} — not plain float (2026-03-07)
+- Error codes: INSUFFICIENT_DATA (series too short), INVALID_INPUT (bad params/schema) — INVALID_PARAMETER retired (2026-03-07)
 
 ## v1.1 Phase Dependency Chain
 

@@ -148,7 +148,7 @@ See: `.planning/milestones/v1.0-ROADMAP.md` for full archive
 | 2. Cognitive Analysis & Risk Gating | v1.0 | Complete | 2026-03-06 |
 | 3. Market Execution & Data | v1.0 | Complete | 2026-03-06 |
 | 4. Memory & Institutional Compliance | 3/3 | Complete   | 2026-03-07 |
-| 5. Quant Alpha Intelligence | v1.1 | Complete | 2026-03-06 |
+| 5. Quant Alpha Intelligence | 1/3 | In Progress|  |
 | 6. Stop-Loss Enforcement | v1.1 | Complete | 2026-03-06 |
 | 7. Self-Improvement Loop | v1.1 | Complete | 2026-03-06 |
 | 8. Portfolio Risk Governance | v1.2 | Complete | 2026-03-06 |
