@@ -139,8 +139,8 @@ class TestTradeLoggerPersistence(unittest.TestCase):
         self.assertIsNotNone(insert_params, "No INSERT params captured — DB was not called")
 
         # stop_loss_level is positional index 7 in the INSERT VALUES tuple:
-        # (trade_id, task_id, audit_log_id, symbol, side, quantity,
-        #  execution_price, stop_loss_level, ...)
+        # (trade_id, task_id, audit_log_id, symbol, side, position_size,
+        #  entry_price, stop_loss_level, ...)
         stop_loss_level_index = 7
         self.assertEqual(
             insert_params[stop_loss_level_index],

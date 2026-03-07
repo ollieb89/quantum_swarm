@@ -110,7 +110,7 @@ async def trade_logger_node(state: SwarmState) -> dict[str, Any]:
         trade_risk_score=trade_risk_score,
         portfolio_heat=portfolio_heat,
         exit_price=None,
-        quantity=quantity,
+        position_size=quantity,
         pnl=None,
         pnl_pct=None,
         entry_time=datetime.now(timezone.utc),
@@ -135,8 +135,8 @@ async def trade_logger_node(state: SwarmState) -> dict[str, Any]:
                 await cur.execute(
                     """
                     INSERT INTO trades (
-                        trade_id, task_id, audit_log_id, symbol, side, quantity, 
-                        execution_price, stop_loss_level, atr_at_entry, 
+                        trade_id, task_id, audit_log_id, symbol, side, position_size, 
+                        entry_price, stop_loss_level, atr_at_entry, 
                         stop_loss_multiplier, stop_loss_method, trade_risk_score, 
                         portfolio_heat, execution_mode, strategy_context
                     )

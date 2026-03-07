@@ -61,7 +61,7 @@ class TradeRecord(BaseModel):
     trade_risk_score: Optional[float] = None
     portfolio_heat: Optional[float] = None
     exit_price: Optional[float] = None
-    quantity: float
+    position_size: float
     pnl: Optional[float] = None
     pnl_pct: Optional[float] = None
     entry_time: datetime
