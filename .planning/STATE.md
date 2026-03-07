@@ -2,12 +2,12 @@
 gsd_state_version: 1.0
 milestone: v1.1
 milestone_name: Self-Improvement
-status: completed
-last_updated: "2026-03-07T22:12:00.000Z"
-last_activity: 2026-03-07 — Phase 09-01 completed; update_status() lifecycle controls + atomic save() added to MemoryRegistry. MEM-05 satisfied. 10/10 structured memory tests passing.
+status: executing
+last_updated: "2026-03-07T22:14:30.000Z"
+last_activity: 2026-03-07 — Phase 09-02 completed; 4 integration tests added proving RuleGenerator->MemoryRegistry->Orchestrator wiring. MEM-04 + MEM-05 fully verified. 14/14 structured memory tests passing.
 progress:
   total_phases: 7
-  completed_phases: 3
+  completed_phases: 4
   total_plans: 7
   completed_plans: 9
 ---
@@ -26,9 +26,9 @@ Previous: v1.1 Self-Improvement Loop — SHIPPED 2026-03-06 (169 tests, 3 phases
 ## Current Phase
 
 Phase: 09 — Structured Memory Registry
-Plan: 01 (complete)
-Status: In progress (1/1 plans done)
-Last activity: 2026-03-07 — Phase 09-01 completed; update_status() lifecycle controls + atomic save() added to MemoryRegistry. MEM-05 satisfied. 10/10 structured memory tests passing.
+Plan: 02 (complete)
+Status: Complete (2/2 plans done)
+Last activity: 2026-03-07 — Phase 09-02 completed; 4 integration tests added proving RuleGenerator->MemoryRegistry->Orchestrator wiring. MEM-04 + MEM-05 fully verified. 14/14 structured memory tests passing.
 
 ## Progress
 
@@ -43,10 +43,10 @@ Phase 11: Explainability & Decision Cards — Not started
 ## Health
 
 Status: Green
-- Phase 9 plan 01 complete (09-01): update_status() + atomic save(); MEM-05 lifecycle controls verified; 10/10 tests.
+- Phase 9 complete (09-01 + 09-02): MemoryRegistry models + lifecycle controls + integration tests; MEM-04 + MEM-05 fully verified; 14/14 structured memory tests.
 - Phase 8 complete (08-01 + 08-02): TDD stubs written then turned GREEN; RISK-07 + RISK-08 fully satisfied.
 - Phase 7 complete (07-01 + 07-02): self-improvement loop end-to-end + MEM-02/MEM-03 gap closure.
-- 201 tests passing (196 passing + 5 known pre-existing failures in test_order_router + test_persistence).
+- 207 tests passing (193 passing in broader suite + 14 structured memory tests; 5 known pre-existing failures in test_order_router + test_persistence).
 - InstitutionalGuard enforces: restricted assets, max concurrent trades, max notional exposure, asset concentration, daily drawdown.
 - Architecture stable: LangGraph + Gemini + psycopg3.
 
@@ -104,6 +104,9 @@ See: `.planning/PROJECT.md` (updated 2026-03-06 — Milestone v1.1 started)
 - MemoryRegistry.update_status() enforces VALID_TRANSITIONS dict; terminal states (deprecated, rejected) have empty allowed lists (09-01)
 - MemoryRegistry.save() uses os.replace(tmp, final) for atomic POSIX rename — no partial-write corruption (09-01)
 - test_transition_logged uses self.assertLogs('src.core.memory_registry', level='INFO') to verify logger.info() is called with rule_id (09-01)
+- LangGraphOrchestrator.__new__() pattern avoids __init__ side effects (YAML load, MemoryService, LangGraph compilation) for testing internal methods (09-02)
+- Orchestrator _load_institutional_memory() tested by patching src.graph.orchestrator.MemoryRegistry + Path — no live registry or file system required (09-02)
+- RuleGenerator test isolation: redirect .registry and .memory_md_path instance attributes to temp paths — no mock needed (09-02)
 
 ## v1.1 Phase Dependency Chain
 

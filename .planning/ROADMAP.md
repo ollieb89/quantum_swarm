@@ -152,7 +152,7 @@ See: `.planning/milestones/v1.0-ROADMAP.md` for full archive
 | 6. Stop-Loss Enforcement | 1/1 | Complete   | 2026-03-07 |
 | 7. Self-Improvement Loop | 2/2 | Complete   | 2026-03-07 |
 | 8. Portfolio Risk Governance | 2/2 | Complete   | 2026-03-07 |
-| 9. Structured Memory Registry | 2/2 | Planned   | — |
+| 9. Structured Memory Registry | 2/2 | Complete   | 2026-03-07 |
 | 10. Rule Validation Harness | v1.2 | Not started | — |
 | 11. Explainability & Decision Cards | v1.2 | Not started | — |
 
