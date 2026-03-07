@@ -26,20 +26,44 @@ phases:
   completed: 2026-03-06
 - number: 5
   name: Quant Alpha Intelligence
-  status: not_started
+  status: complete
   milestone: v1.1
-  started: ''
-  completed: ''
+  started: 2026-03-06
+  completed: 2026-03-06
 - number: 6
   name: Stop-Loss Enforcement
-  status: not_started
+  status: complete
   milestone: v1.1
-  started: ''
-  completed: ''
+  started: 2026-03-06
+  completed: 2026-03-06
 - number: 7
   name: Self-Improvement Loop
-  status: not_started
+  status: complete
   milestone: v1.1
+  started: 2026-03-06
+  completed: 2026-03-06
+- number: 8
+  name: Portfolio Risk Governance
+  status: complete
+  milestone: v1.2
+  started: 2026-03-06
+  completed: 2026-03-06
+- number: 9
+  name: Structured Memory Registry
+  status: complete
+  milestone: v1.2
+  started: 2026-03-06
+  completed: 2026-03-06
+- number: 10
+  name: Rule Validation Harness
+  status: not_started
+  milestone: v1.2
+  started: ''
+  completed: ''
+- number: 11
+  name: Explainability & Decision Cards
+  status: not_started
+  milestone: v1.2
   started: ''
   completed: ''
 updated: '2026-03-06'
@@ -86,9 +110,10 @@ See: `.planning/milestones/v1.0-ROADMAP.md` for full archive
 **Success Criteria** (what must be TRUE):
   1. Calling the `quant-alpha-intelligence` skill with a price series returns RSI, MACD, and Bollinger Band values without error
   2. The skill is registered in the YAML skill registry and discoverable by the L1 orchestrator via progressive disclosure
-  3. QuantModeler can invoke the skill via its tool interface and receive structured indicator output it uses in analysis
+  3. QuantModeler can invoke the skill via its tool interface and receive structured output it uses in analysis
   4. Unit tests cover each indicator calculation and pass against known reference values
-**Plans**: TBD
+**Plans**: [PLAN.md](phases/05-quant-alpha-intelligence/PLAN.md)
+
 
 ### Phase 6: Stop-Loss Enforcement
 **Goal**: Every trade the swarm submits has an ATR-derived stop-loss calculated before submission, is rejected at the OrderRouter if that stop-loss is missing, and has the stop-loss level written to the PostgreSQL audit record.
@@ -100,7 +125,7 @@ See: `.planning/milestones/v1.0-ROADMAP.md` for full archive
   2. A trade submitted through the normal flow has an ATR-based stop-loss value present in the order payload
   3. After a trade is logged, the PostgreSQL audit record for that trade contains stop_loss_level, entry_price, and position_size columns populated
   4. Attempting to bypass the gate (e.g., empty or null stop-loss) is caught and logged as a compliance violation, not silently ignored
-**Plans**: TBD
+**Plans**: [PLAN.md](phases/06-stop-loss-enforcement/PLAN.md)
 
 ### Phase 7: Self-Improvement Loop
 **Goal**: The swarm reviews its own live-vs-backtested performance weekly and automatically writes PREFER/AVOID/CAUTION rules to MEMORY.md that future sessions load as context.
@@ -113,7 +138,7 @@ See: `.planning/milestones/v1.0-ROADMAP.md` for full archive
   3. Running the rule generator after a review produces at least one PREFER, AVOID, or CAUTION entry appended to MEMORY.md
   4. Rules written to MEMORY.md follow a consistent, parseable format that future swarm sessions can load as context
   5. The full pipeline (review → rule generation → MEMORY.md append) can be triggered as a single command and completes without manual intervention
-**Plans**: TBD
+**Plans**: [PLAN.md](phases/07-self-improvement-loop/PLAN.md)
 
 ## Progress
 
@@ -123,6 +148,53 @@ See: `.planning/milestones/v1.0-ROADMAP.md` for full archive
 | 2. Cognitive Analysis & Risk Gating | v1.0 | Complete | 2026-03-06 |
 | 3. Market Execution & Data | v1.0 | Complete | 2026-03-06 |
 | 4. Memory & Institutional Compliance | v1.0 | Complete | 2026-03-06 |
-| 5. Quant Alpha Intelligence | v1.1 | Not started | — |
-| 6. Stop-Loss Enforcement | v1.1 | Not started | — |
-| 7. Self-Improvement Loop | v1.1 | Not started | — |
+| 5. Quant Alpha Intelligence | v1.1 | Complete | 2026-03-06 |
+| 6. Stop-Loss Enforcement | v1.1 | Complete | 2026-03-06 |
+| 7. Self-Improvement Loop | v1.1 | Complete | 2026-03-06 |
+| 8. Portfolio Risk Governance | v1.2 | Complete | 2026-03-06 |
+| 9. Structured Memory Registry | v1.2 | Complete | 2026-03-06 |
+| 10. Rule Validation Harness | v1.2 | Not started | — |
+| 11. Explainability & Decision Cards | v1.2 | Not started | — |
+
+## Milestone v1.2: Risk Governance and Rule Validation
+Institutional hardening of risk controls and verification of self-improvement rules.
+
+### Phase 8: Portfolio Risk Governance
+**Goal**: Enforce aggregate portfolio constraints (exposure, concentration, drawdown) at the InstitutionalGuard gate.
+**Depends on**: Phase 6
+**Milestone**: v1.2
+**Requirements**: RISK-07, RISK-08
+**Success Criteria**:
+  1. Orders exceeding max notional exposure or asset concentration are rejected.
+  2. Portfolio-level risk score is calculated and recorded for every trade.
+**Plans**: [PLAN.md](phases/08-portfolio-risk-governance/PLAN.md)
+
+### Phase 9: Structured Memory Registry
+**Goal**: Transition MEMORY.md to a machine-readable JSON registry with lifecycle controls.
+**Depends on**: Phase 7
+**Milestone**: v1.2
+**Requirements**: MEM-04, MEM-05
+**Success Criteria**:
+  1. Memory is stored in a versioned JSON format with status (proposed, active, deprecated).
+  2. Agents load rules based on their lifecycle status.
+**Plans**: [PLAN.md](phases/09-structured-memory-registry/PLAN.md)
+
+### Phase 10: Rule Validation Harness
+**Goal**: Backtest or replay newly generated memory rules before promoting them to 'active'.
+**Depends on**: Phase 9, Phase 3 (Backtester)
+**Milestone**: v1.2
+**Requirements**: MEM-06
+**Success Criteria**:
+  1. A validation run compares performance with and without a proposed rule.
+  2. Rules only transition to 'active' if they pass the evaluation harness.
+**Plans**: TBD
+
+### Phase 11: Explainability & Decision Cards
+**Goal**: Generate a compact, immutable "decision card" for every trade containing the full cognitive trace.
+**Depends on**: Phase 4, Phase 8
+**Milestone**: v1.2
+**Requirements**: EXEC-04
+**Success Criteria**:
+  1. Every execution result is accompanied by a JSON decision card in the audit log.
+  2. Decision card identifies which memory rules and risk scores influenced the trade.
+**Plans**: TBD

@@ -1,18 +1,18 @@
 ---
 phase:
-  current: 5
-  name: Quant Alpha Intelligence
+  current: 10
+  name: Rule Validation Harness
   status: not_started
   started: ''
   completed: ''
   blockers: []
 milestone:
-  current: v1.1
-  name: Self-Improvement Loop
+  current: v1.2
+  name: Risk Governance and Rule Validation
   status: active
   started: 2026-03-06
-  previous: v1.0
-  previous_name: MVP
+  previous: v1.1
+  previous_name: Self-Improvement Loop
 health:
   status: green
   risks: []
@@ -34,7 +34,7 @@ paths:
   orchestrator: src/graph/orchestrator.py
   planning: .planning/
   data: data/
-updated: '2026-03-06'
+updated: '2026-03-07'
 ---
 
 # Project State
@@ -44,33 +44,34 @@ updated: '2026-03-06'
 
 ## Milestone
 
-**v1.1 Self-Improvement Loop** — ACTIVE (started 2026-03-06)
+**v1.2 Risk Governance and Rule Validation** — ACTIVE (started 2026-03-06)
 
-Previous: v1.0 MVP — SHIPPED 2026-03-06 (155 tests, 4 phases, ~14,600 LOC)
+Previous: v1.1 Self-Improvement Loop — SHIPPED 2026-03-06 (169 tests, 3 phases)
 
 ## Current Phase
 
-Phase: 5 — Quant Alpha Intelligence
+Phase: 10 — Rule Validation Harness
 Plan: TBD
 Status: Not started
-Last activity: 2026-03-06 — v1.1 roadmap defined (phases 5-7)
+Last activity: 2026-03-07 — Phase 04-02 completed; KnowledgeBase lazy init refactor (get_kb() getter, no module-level singleton).
 
 ## Progress
 
 ```
-v1.1: [          ] 0/3 phases complete
-Phase 5: Quant Alpha Intelligence  — Not started
-Phase 6: Stop-Loss Enforcement     — Not started
-Phase 7: Self-Improvement Loop     — Not started
+v1.2: [=====     ] 2/4 phases complete
+Phase 8: Portfolio Risk Governance     — Complete (2026-03-06)
+Phase 9: Structured Memory Registry    — Complete (2026-03-06)
+Phase 10: Rule Validation Harness      — Not started
+Phase 11: Explainability & Decision Cards — Not started
 ```
 
 ## Health
 
 Status: Green
-- v1.0 shipped: 155 tests passing, all 4 phases complete
-- PostgreSQL infrastructure operational (Port 5433)
-- Architecture stable: LangGraph + Gemini + psycopg3
-- v1.1 roadmap defined: 3 phases, 6 requirements, 100% coverage
+- v1.2 Phase 9 complete: Freeform memory replaced by governed JSON registry.
+- 176 tests passing (including 4 new phase 9 tests).
+- RuleGenerator now produces structured, validated rules with lifecycle states.
+- Architecture stable: LangGraph + Gemini + psycopg3.
 
 ## Project Reference
 
@@ -104,6 +105,7 @@ See: `.planning/PROJECT.md` (updated 2026-03-06 — Milestone v1.1 started)
 - pytest binary missing from venv — use `.venv/bin/python3.12 -m pytest`
 - Python 3.12: use `asyncio.run()` not `asyncio.get_event_loop().run_until_complete()`
 - ccxt package broken in env; chromadb and pytest-asyncio missing — known env issues, not regressions
+- KnowledgeBase lazy init: chromadb/duckdb imported inside __init__; get_kb() getter replaces module-level singleton (2026-03-07)
 - psycopg3 async throughout (not psycopg2)
 
 ## v1.1 Phase Dependency Chain
