@@ -52,8 +52,8 @@ class PerformanceReviewAgent:
         trades = []
         
         query = """
-            SELECT 
-                t.trade_id, t.symbol, t.side, t.quantity, t.execution_price, 
+            SELECT
+                t.trade_id, t.symbol, t.side, t.position_size, t.entry_price,
                 t.stop_loss_level, t.pnl, t.pnl_pct, t.strategy_context,
                 a.input_data->'macro_report' as macro_report,
                 a.output_data->'rationale' as rationale
@@ -75,8 +75,8 @@ class PerformanceReviewAgent:
                             "trade_id": row[0],
                             "symbol": row[1],
                             "side": row[2],
-                            "quantity": float(row[3]) if row[3] else 0,
-                            "execution_price": float(row[4]) if row[4] else 0,
+                            "position_size": float(row[3]) if row[3] else 0,
+                            "entry_price": float(row[4]) if row[4] else 0,
                             "stop_loss": float(row[5]) if row[5] else 0,
                             "pnl": float(row[6]) if row[6] else 0,
                             "pnl_pct": float(row[7]) if row[7] else 0,
