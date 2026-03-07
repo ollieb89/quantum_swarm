@@ -1,58 +1,46 @@
 # Phase 5: Quant Alpha Intelligence - Context
 
-**Gathered:** 2026-03-06
+**Gathered:** 2026-03-07
 **Status:** Ready for planning
 
 <domain>
 ## Phase Boundary
 
-Register a single `quant-alpha-intelligence` skill that any agent in the swarm can call to compute RSI, MACD, Bollinger Bands, and ATR — eliminating duplicate implementations. Phase 5 delivers the skill module and its registration. QuantModeler integration is in scope. Stop-loss logic that consumes ATR is Phase 6.
+Centralized technical indicator skill available to any agent in the swarm. Provides RSI, MACD, Bollinger Bands, and ATR through a single registered `calculate_indicators` tool, eliminating duplicate implementations. Does NOT fetch its own data — callers provide the raw series. Timeframe interpretation and data sourcing belong to the calling agent.
 
 </domain>
 
 <decisions>
 ## Implementation Decisions
 
-### Module architecture
-- Create a new standalone `src/skills/quant_alpha.py` with `SKILL_INTENT = "quant-alpha-intelligence"`
-- Do NOT wrap or import from `market_analysis.py` — fully self-contained
-- Remove `TechnicalIndicators` class from `market_analysis.py` (it is only used internally there); update `generate_market_report()` in `market_analysis.py` to import from `quant_alpha` instead
-- `market_analysis.py` retains all its other classes (MarketHours, PatternRecognition, MarketEnvironment, etc.) unchanged
+### Indicator coverage
+- RSI, MACD, Bollinger Bands, and ATR are all formally in Phase 5 scope
+- ATR is included here (not deferred to Phase 6) because Phase 6 stop-loss calculation depends on it
+- Bollinger Bands always returns `bandwidth` as part of its output — not optional
+- `quant_alpha_intelligence.py` is the permanent home for all technical indicators; any future indicator (Stochastic, VWAP, etc.) is added here, not in a new file or phase
 
-### Indicator accuracy — MACD
-- Implement proper EMA-of-MACD-line signal line (9-period EMA of the MACD line, NOT simplified)
-- Histogram = MACD line - signal line (will be non-zero)
-- Minimum data required: raise `ValueError` with clear message if fewer prices than needed (e.g. `"Need at least 50 prices for reliable MACD"`)
-- Output dict: `{macd: float, signal: float, histogram: float, trend: "bullish"|"bearish"}`
+### Tool schema & multi-instance
+- Tool accepts: `series: {close: [...], high: [...], low: [...]}` + `indicators: [{name, params}, ...]`
+- Multiple entries with the same indicator name but different params are valid and return separate labeled results
+- Result keys follow `{name}_{period}` convention: `rsi_14`, `rsi_28`, `macd_12_26_9`, `bb_20`
+- `full_series: true` flag is part of the public contract — agents can request the full calculated series (not just latest value) for trend analysis
+- ATR requires `high` and `low` series in addition to `close`; agents always provide full OHLC when requesting ATR; tool validates and returns `INVALID_INPUT` if high/low missing
 
-### Indicator accuracy — RSI, Bollinger Bands
-- RSI: raise `ValueError` if fewer than `period + 1` prices (no silent fallback to 50.0)
-- Bollinger Bands: raise `ValueError` if fewer than `period` prices
+### Error handling
+- Agents see structured error dicts only — no exceptions propagate through the tool boundary
+- Error format: `{"error": {"code": "INSUFFICIENT_DATA", "message": "RSI(14) requires at least 15 data points; received 9."}}`
+- Two formal error codes: `INSUFFICIENT_DATA` (series too short), `INVALID_INPUT` (bad params, missing required series, invalid values)
+- Batch requests return partial results: each indicator fails or succeeds independently; a failure in one does not cancel others
 
-### ATR — included in Phase 5
-- ATR is included in Phase 5 (not deferred to Phase 6)
-- Input: `{highs: List[float], lows: List[float], closes: List[float], period: int = 14}`
-- Output: `{atr: float, period: int, suggested_stop_distance: float}` where `suggested_stop_distance = 1.5 * atr`
-- ATR uses full True Range formula: TR = max(high-low, |high-prev_close|, |low-prev_close|)
-- Raise `ValueError` if fewer than `period + 1` candles
+### Agent integration
+- `calculate_indicators` is added explicitly per agent — only MacroAnalyst and QuantModeler currently have it; future agents opt in via code change
+- System prompt contract includes one example call per indicator so agents can reason without needing to infer the schema
+- RSI always returns a machine-readable `state` field alongside the raw value: `overbought` (>70), `oversold` (<30), `neutral` (30–70)
+- No generic confidence score; only indicator-native interpretation fields (RSI state is standard, not novel)
 
-### Skill registry integration
-- `quant_alpha.py` exposes `SKILL_INTENT = "quant-alpha-intelligence"` and `handle(state: dict) -> dict`
-- `handle()` reads `state["prices"]` for close-price indicators and `state["ohlcv"]` for ATR
-- Add `"quant-alpha-intelligence"` to `quant_modeler.skills` list in `config/swarm_config.yaml`
-- SkillRegistry.discover() auto-discovers via the module scan (no manual registration needed)
-
-### QuantModeler tool interface
-- Add a new `@tool`-decorated function `compute_indicators(prices: list[float], indicators: list[str]) -> dict` in `src/tools/analyst_tools.py`
-- This tool is added to QuantModeler's `tools=[]` list alongside `fetch_market_data` and `run_backtest`
-- The tool internally calls `quant_alpha` functions directly (not via skill registry routing)
-- For ATR, a separate `@tool` `compute_atr(highs: list[float], lows: list[float], closes: list[float]) -> dict`
-
-### Claude's Discretion
-- Exact EMA seeding strategy (first value as seed vs Wilder's smoothing)
-- Whether to expose `sma()` and `ema()` as public functions in quant_alpha.py
-- Internal helper structure within quant_alpha.py
-- Docstring depth and parameter validation detail
+### Safe ranges & precision
+- All period parameters validated in range 2–250; requests outside this range return `INVALID_INPUT`
+- All numeric output rounded to 8 decimal places for downstream risk calculation precision
 
 </decisions>
 
@@ -60,29 +48,30 @@ Register a single `quant-alpha-intelligence` skill that any agent in the swarm c
 ## Existing Code Insights
 
 ### Reusable Assets
-- `src/skills/market_analysis.py` → `TechnicalIndicators`: Has working RSI, Bollinger Bands, ATR, EMA, SMA implementations (good reference). MACD signal line is broken (simplified). Will be removed from this file and superseded by quant_alpha.py.
-- `src/skills/registry.py` → `SkillRegistry`: Auto-discovers `SKILL_INTENT + handle()` from all modules in `src/skills/`. No changes needed.
-- `src/tools/analyst_tools.py` → `fetch_market_data`, `run_backtest`: Pattern to follow for new `@tool` functions (LangChain `@tool` decorator, plain dict return).
+- `src/skills/quant_alpha_intelligence.py`: `TechnicalIndicators` class (RSI via Wilder's EMA smoothing, MACD via EMA, BB with bandwidth, ATR)
+- `src/skills/quant_alpha_intelligence.py`: `handle(state)` function for skill registry dispatch
+- `src/tools/analyst_tools.py`: `calculate_indicators` @tool wrapping `TechnicalIndicators`; module-level singleton `_indicators = TechnicalIndicators()`
+- `src/skills/registry.py`: skill discovery via `SKILL_INTENT` attribute
 
 ### Established Patterns
-- Skill registry: module exports `SKILL_INTENT: str` + `handle(state: dict) -> dict`. Scanned at startup.
-- QuantModeler tools: `@tool`-decorated functions passed in `tools=[]` to `create_react_agent()`. Returns plain dicts the LLM reasons over.
-- Lazy LLM init: required for all module-level LLM instances (no LLM needed for quant_alpha — pure math).
-- Error handling: `ValueError` with clear messages (not silent fallbacks).
+- `@tool` decorator (langchain_core.tools) — consistent with all other analyst tools
+- Skill registered via `SKILL_INTENT = "quant-alpha-intelligence"` — L1 progressive disclosure picks it up automatically
+- Pure Python math, no LLM dependency — no lazy init needed here
+- `TechnicalIndicators` is stateless — safe as module-level singleton
 
 ### Integration Points
-- `src/graph/agents/analysts.py` → `QuantModeler` node: add new tools to its `tools=[]` list
-- `src/skills/market_analysis.py` → `generate_market_report()`: update to call `quant_alpha` functions after `TechnicalIndicators` is removed
-- `config/swarm_config.yaml` → `agents.quant_modeler.skills`: add `"quant-alpha-intelligence"`
+- `src/graph/agents/analysts.py`: MacroAnalyst and QuantModeler tool lists — where new agents would be added
+- `src/skills/registry.py`: auto-discovers the skill on import via `SKILL_INTENT`
+- Phase 6 (`src/graph/agents/l3/order_router.py`): calls `calculate_indicators` with ATR request for stop-loss calculation
 
 </code_context>
 
 <specifics>
 ## Specific Ideas
 
-- ATR `suggested_stop_distance = 1.5 * atr` — multiplier explicitly decided (1.5x)
-- Raise `ValueError` (not silent fallback) for all insufficient-data cases
-- MACD must produce non-zero histograms — test against reference values is explicit in success criteria
+- "All new indicators go into `quant_alpha_intelligence.py`" — single authoritative home, no splitting across files
+- ATR added proactively for Phase 6 dependency rather than having Phase 6 add it mid-flight
+- RSI state annotation (`overbought`/`oversold`/`neutral`) kept minimal and indicator-native — no invented confidence scores
 
 </specifics>
 
@@ -96,4 +85,4 @@ Register a single `quant-alpha-intelligence` skill that any agent in the swarm c
 ---
 
 *Phase: 05-quant-alpha-intelligence*
-*Context gathered: 2026-03-06*
+*Context gathered: 2026-03-07*
