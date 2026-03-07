@@ -41,6 +41,7 @@ import uuid
 from typing import Any
 
 from src.graph.state import SwarmState
+from src.agents.l3_executor import OrderRouter as Executor
 
 logger = logging.getLogger(__name__)
 
@@ -91,6 +92,16 @@ async def order_router_node(state: SwarmState) -> dict[str, Any]:
     side: str = quant_proposal.get("side", "buy")
     quantity: float = float(quant_proposal.get("quantity", 1.0))
     asset_class: str = quant_proposal.get("asset_class", "equity")
+    
+    # Required for executor compliance checks
+    order_params = {
+        "symbol": symbol,
+        "side": side,
+        "quantity": quantity,
+        "asset_class": asset_class,
+        "entry_price": quant_proposal.get("entry_price"),
+        "stop_loss": quant_proposal.get("stop_loss"),
+    }
 
     logger.info(
         "OrderRouter: mode=%s symbol=%s side=%s qty=%.2f asset_class=%s",
@@ -102,25 +113,37 @@ async def order_router_node(state: SwarmState) -> dict[str, Any]:
     )
 
     # ------------------------------------------------------------------
-    # 3. Dispatch to appropriate execution path
+    # 3. Dispatch to appropriate execution path via Executor
     # ------------------------------------------------------------------
+    executor = Executor(config={"trading": {"default_mode": execution_mode}})
+    
     try:
-        if execution_mode == "paper":
-            result = await _execute_paper(symbol, side, quantity)
-        elif execution_mode == "live" and asset_class in ("crypto", "futures"):
-            result = await _execute_live_crypto(symbol, side, quantity)
-        elif execution_mode == "live":
-            # Covers asset_class="equity" and any unrecognised asset_class
-            result = await _execute_live_equity(symbol, side, quantity)
-        else:
-            # Fallback: treat unknown modes as paper
-            logger.warning("OrderRouter: unknown execution_mode=%s — falling back to paper", execution_mode)
-            result = await _execute_paper(symbol, side, quantity)
+        # Delegate to the hardened executor which now handles compliance rejections
+        result_obj = executor.execute(order_params)
+        result = {
+            "success": result_obj.success,
+            "order_id": result_obj.order_id,
+            "execution_price": result_obj.execution_price,
+            "mode": execution_mode,
+            "message": result_obj.message,
+            "metadata": result_obj.metadata
+        }
+    except ValueError as compliance_err:
+        # MANDATORY: Capture compliance rejections (stop-loss errors) in audit logs
+        logger.error("OrderRouter Compliance Rejection: %s", compliance_err)
+        result = {
+            "success": False,
+            "order_id": None,
+            "reason": "compliance_rejection",
+            "error": str(compliance_err),
+            "mode": execution_mode,
+        }
     except Exception as exc:  # noqa: BLE001
         logger.error("OrderRouter unhandled error for %s: %s", symbol, exc)
         result = {
             "success": False,
             "order_id": None,
+            "reason": "execution_failure",
             "error": str(exc),
             "mode": execution_mode,
         }
@@ -142,7 +165,7 @@ async def order_router_node(state: SwarmState) -> dict[str, Any]:
                 "role": "assistant",
                 "content": (
                     f"OrderRouter: {symbol} {side} x{quantity} via {execution_mode} "
-                    f"— success={result.get('success')}"
+                    f"— success={result.get('success')} | reason={result.get('reason', 'ok')}"
                 ),
             }
         ],

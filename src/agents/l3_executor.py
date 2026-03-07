@@ -286,13 +286,37 @@ class OrderRouter(BaseExecutor):
         Execute trade order.
 
         Args:
-            order_params: Order parameters (symbol, side, quantity, etc.)
+            order_params: Order parameters (symbol, side, quantity, stop_loss, etc.)
             broker: Broker/exchange name
 
         Returns:
             Execution result with order ID
         """
         logger.info(f"Routing order to {broker}: {order_params}")
+
+        # MANDATORY: Compliance check for stop_loss
+        stop_loss = order_params.get("stop_loss")
+        entry_price = order_params.get("entry_price")
+        side = order_params.get("side", "buy").lower()
+
+        if stop_loss is None:
+            logger.error("Order rejected: missing mandatory stop_loss calculation.")
+            raise ValueError("Compliance Error: Every order must include a calculated stop_loss.")
+
+        if entry_price is not None:
+            # Directional validation
+            if side in ["buy", "long"] and stop_loss >= entry_price:
+                logger.error(f"Order rejected: LONG stop_loss ({stop_loss}) must be below entry ({entry_price}).")
+                raise ValueError("Compliance Error: LONG stop_loss must be strictly below entry price.")
+            
+            if side in ["sell", "short"] and stop_loss <= entry_price:
+                logger.error(f"Order rejected: SHORT stop_loss ({stop_loss}) must be above entry ({entry_price}).")
+                raise ValueError("Compliance Error: SHORT stop_loss must be strictly above entry price.")
+
+            # Numerical validity
+            if abs(entry_price - stop_loss) < 1e-8:
+                logger.error(f"Order rejected: stop_loss distance from entry is too small.")
+                raise ValueError("Compliance Error: stop_loss must have a non-zero distance from entry price.")
 
         if self.mode == "paper":
             return self._execute_paper(order_params)
