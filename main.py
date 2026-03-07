@@ -18,7 +18,7 @@ from src.core.cli_wrapper import OpenClawCLI, FileProtocol
 from src.graph.orchestrator import LangGraphOrchestrator
 from src.agents import MacroAnalyst, QuantModeler, RiskManager
 from src.agents.l3_executor import DataFetcher, Backtester, OrderRouter
-from src.skills.crypto_learning import SelfLearningPipeline
+from src.agents.self_learning import SelfLearningPipeline
 
 
 # Configure logging
@@ -57,11 +57,7 @@ class QuantumSwarm:
         self.order_router = OrderRouter(self.config)
 
         # Self-learning
-        self.self_learning = SelfLearningPipeline(
-            prefer_threshold=self.config.get("self_improvement", {}).get("prefer_threshold", 0.75),
-            avoid_threshold=self.config.get("self_improvement", {}).get("avoid_threshold", 0.35),
-            min_trades=self.config.get("self_improvement", {}).get("min_trades_for_analysis", 10)
-        )
+        self.self_learning = SelfLearningPipeline(self.config)
 
     def _load_config(self) -> Dict:
         """Load configuration from YAML file"""
@@ -149,11 +145,7 @@ class QuantumSwarm:
     def run_weekly_review(self) -> Dict:
         """Run weekly self-improvement review"""
         logger.info("Running weekly review")
-        return self.self_learning.run_weekly_review()
-
-    def log_trade(self, trade_data: Dict) -> str:
-        """Log trade for self-learning"""
-        return self.self_learning.log_and_analyze(trade_data)
+        return self.self_learning.run_review()
 
 
 def main():
@@ -162,6 +154,7 @@ def main():
     parser.add_argument("--config", default="config/swarm_config.yaml", help="Config file path")
     parser.add_argument("--mode", choices=["interactive", "daemon", "test"], default="interactive")
     parser.add_argument("--task", help="Single task to execute")
+    parser.add_argument("--review", action="store_true", help="Run weekly self-improvement review pipeline")
 
     args = parser.parse_args()
 
@@ -191,6 +184,13 @@ def main():
         logger.info(f"✓ Risk approval: {approval.get('approved', False)}")
 
         logger.info("All tests passed!")
+        return
+
+    if args.review:
+        # Run the self-improvement review pipeline (/review CLI command)
+        logger.info("Running weekly self-improvement review...")
+        result = swarm.run_weekly_review()
+        print(json.dumps(result, indent=2))
         return
 
     if args.task:
