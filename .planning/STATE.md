@@ -2,14 +2,14 @@
 gsd_state_version: 1.0
 milestone: v1.1
 milestone_name: Self-Improvement
-status: executing
-last_updated: "2026-03-07T23:24:08.592Z"
-last_activity: 2026-03-08 — Phase 10-02 completed; RuleValidator implemented (2-of-3 backtest gating, MiFID II audit events). Phase 10 complete. 23/23 tests passing (9 TestRuleValidator + 14 TestStructuredMemory).
+status: completed
+last_updated: "2026-03-07T23:28:32.822Z"
+last_activity: 2026-03-08 — Phase 10-03 completed; persist_rules() wired to auto-call validate_proposed_rules(); integration tests verify full chain; 30/30 tests green; MEM-06 fully satisfied.
 progress:
   total_phases: 7
-  completed_phases: 4
+  completed_phases: 5
   total_plans: 10
-  completed_plans: 11
+  completed_plans: 12
 ---
 
 # Project State
@@ -26,9 +26,9 @@ Previous: v1.1 Self-Improvement Loop — SHIPPED 2026-03-06 (169 tests, 3 phases
 ## Current Phase
 
 Phase: 10 — Rule Validation Harness
-Plan: 02 (complete)
-Status: Complete (2/2 plans done)
-Last activity: 2026-03-08 — Phase 10-02 completed; RuleValidator implemented (2-of-3 backtest gating, MiFID II audit events). Phase 10 fully complete.
+Plan: 03 (complete)
+Status: Complete (3/3 plans done)
+Last activity: 2026-03-08 — Phase 10-03 completed; persist_rules() wired to auto-call validate_proposed_rules(); integration tests verify full chain; 30/30 tests green; MEM-06 fully satisfied.
 
 ## Progress
 
@@ -117,6 +117,8 @@ See: `.planning/PROJECT.md` (updated 2026-03-06 — Milestone v1.1 started)
 - Backtest exceptions caught silently in RuleValidator — rule stays proposed; no re-raise to prevent batch abort (10-02)
 - Registry stale-read prevention: self.registry.schema = self.registry._load() at entry of validate_proposed_rules() (10-02)
 - Audit events written to data/audit.jsonl with fields: timestamp, event, rule_id, before_status, after_status, six metric values, three deltas (10-02)
+- persist_rules() auto-calls RuleValidator.validate_proposed_rules() after every registry write; validator.registry = self.registry shares instance to see in-flight rules without disk round-trip (10-03)
+- Integration tests for RuleValidator drive chain through rg.persist_rules([rule]) not validate_proposed_rules() directly — verifies auto-wiring is real; audit_path redirected via patched __init__ wrapper (10-03)
 
 ## v1.1 Phase Dependency Chain
 
