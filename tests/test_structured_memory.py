@@ -1,8 +1,10 @@
 import unittest
 import json
 from pathlib import Path
+from unittest.mock import MagicMock, patch
 from src.models.memory import MemoryRule, MemoryRegistrySchema
 from src.core.memory_registry import MemoryRegistry
+from src.agents.rule_generator import RuleGenerator
 
 class TestStructuredMemory(unittest.TestCase):
 
@@ -106,6 +108,103 @@ class TestStructuredMemory(unittest.TestCase):
             self.registry.update_status(rule.id, "active")
         log_output = "\n".join(cm.output)
         self.assertIn(rule.id, log_output)
+
+
+class TestRuleGeneratorIntegration(unittest.TestCase):
+    """Integration tests: RuleGenerator.persist_rules() stores proposed rules in registry."""
+
+    def setUp(self):
+        self.test_registry_file = Path("tests/temp_integration_registry.json")
+        self.test_memory_md = Path("tests/temp_MEMORY.md")
+        if self.test_registry_file.exists():
+            self.test_registry_file.unlink()
+        if self.test_memory_md.exists():
+            self.test_memory_md.unlink()
+
+    def tearDown(self):
+        if self.test_registry_file.exists():
+            self.test_registry_file.unlink()
+        if self.test_memory_md.exists():
+            self.test_memory_md.unlink()
+
+    def test_persist_rules_stores_proposed(self):
+        """persist_rules() writes rule as proposed; not returned by get_active_rules()."""
+        rg = RuleGenerator()
+        rg.registry = MemoryRegistry(str(self.test_registry_file))
+        rg.memory_md_path = self.test_memory_md
+        rule = MemoryRule(title="Integration Rule", type="risk_adjustment")
+        rg.persist_rules([rule])
+        # Assert rule in registry
+        reloaded = MemoryRegistry(str(self.test_registry_file))
+        self.assertEqual(len(reloaded.schema.rules), 1)
+        self.assertEqual(reloaded.schema.rules[0].status, "proposed")
+        # Assert NOT in active rules
+        self.assertEqual(len(reloaded.get_active_rules()), 0)
+        # Assert MEMORY.md was written
+        self.assertTrue(self.test_memory_md.exists())
+
+    def test_promote_rule_appears_in_active(self):
+        """After update_status(active), rule is returned by get_active_rules()."""
+        rg = RuleGenerator()
+        rg.registry = MemoryRegistry(str(self.test_registry_file))
+        rg.memory_md_path = self.test_memory_md
+        rule = MemoryRule(title="Promotable Rule", type="strategy_preference")
+        rg.persist_rules([rule])
+        # Now promote
+        reloaded = MemoryRegistry(str(self.test_registry_file))
+        stored_rule = reloaded.schema.rules[0]
+        reloaded.update_status(stored_rule.id, "active")
+        # Assert now active
+        active = reloaded.get_active_rules()
+        self.assertEqual(len(active), 1)
+        self.assertEqual(active[0].title, "Promotable Rule")
+
+
+class TestOrchestratorMemoryInjection(unittest.TestCase):
+    """Integration tests: _load_institutional_memory() injects only active rules."""
+
+    def setUp(self):
+        self.test_registry_file = Path("tests/temp_orch_registry.json")
+        if self.test_registry_file.exists():
+            self.test_registry_file.unlink()
+
+    def tearDown(self):
+        if self.test_registry_file.exists():
+            self.test_registry_file.unlink()
+
+    def test_empty_registry_returns_fallback_message(self):
+        """Empty registry with no MEMORY.md returns fallback string."""
+        from src.graph.orchestrator import LangGraphOrchestrator
+        orch = LangGraphOrchestrator.__new__(LangGraphOrchestrator)
+        orch._yaml_config = {}
+        with patch("src.graph.orchestrator.MemoryRegistry") as mock_reg_cls:
+            mock_reg = MagicMock()
+            mock_reg.get_active_rules.return_value = []
+            mock_reg_cls.return_value = mock_reg
+            with patch("src.graph.orchestrator.Path") as mock_path_cls:
+                mock_path_instance = MagicMock()
+                mock_path_instance.exists.return_value = False
+                mock_path_cls.return_value = mock_path_instance
+                result = orch._load_institutional_memory()
+        self.assertEqual(result, "No active institutional rules.")
+
+    def test_active_rule_appears_in_injection(self):
+        """Active rule title and id appear in the injection string."""
+        from src.graph.orchestrator import LangGraphOrchestrator
+        active_rule = MemoryRule(title="Buy on breakout", type="strategy_preference", status="active")
+        with patch("src.graph.orchestrator.MemoryRegistry") as mock_reg_cls:
+            mock_reg = MagicMock()
+            mock_reg.get_active_rules.return_value = [active_rule]
+            mock_reg_cls.return_value = mock_reg
+            with patch("src.graph.orchestrator.Path") as mock_path_cls:
+                mock_path_instance = MagicMock()
+                mock_path_instance.exists.return_value = False
+                mock_path_cls.return_value = mock_path_instance
+                orch = LangGraphOrchestrator.__new__(LangGraphOrchestrator)
+                orch._yaml_config = {}
+                result = orch._load_institutional_memory()
+        self.assertIn("Buy on breakout", result)
+        self.assertIn(active_rule.id, result)
 
 
 if __name__ == "__main__":
