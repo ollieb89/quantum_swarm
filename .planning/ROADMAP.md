@@ -151,7 +151,7 @@ See: `.planning/milestones/v1.0-ROADMAP.md` for full archive
 | 5. Quant Alpha Intelligence | 2/3 | In Progress|  |
 | 6. Stop-Loss Enforcement | 1/1 | Complete   | 2026-03-07 |
 | 7. Self-Improvement Loop | 2/2 | Complete   | 2026-03-07 |
-| 8. Portfolio Risk Governance | v1.2 | In Progress | — |
+| 8. Portfolio Risk Governance | 1/2 | In Progress|  |
 | 9. Structured Memory Registry | v1.2 | Complete | 2026-03-06 |
 | 10. Rule Validation Harness | v1.2 | Not started | — |
 | 11. Explainability & Decision Cards | v1.2 | Not started | — |
