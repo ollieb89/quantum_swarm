@@ -244,67 +244,92 @@ class TestRuleValidator(unittest.TestCase):
 
 class TestRuleValidatorIntegration(unittest.TestCase):
     """
-    Integration tests for RuleValidator.
+    Integration tests verifying the full persist_rules() -> validate_proposed_rules() chain.
 
-    setUp creates isolated temp registry + audit files and a proposed rule,
-    then wires the validator to them.
+    RuleGenerator.persist_rules() is called with a proposed rule; we assert that
+    validation fires automatically (no manual call needed) and that the rule
+    transitions out of 'proposed' state.
     """
 
     def setUp(self):
         self.tmp_dir = tempfile.mkdtemp()
         self.test_registry_file = Path(self.tmp_dir) / "registry.json"
         self.test_audit_file = Path(self.tmp_dir) / "audit.jsonl"
-
-        # Seed registry with one proposed rule
-        self.registry = MemoryRegistry(str(self.test_registry_file))
-        self.rule = _make_proposed_rule(rule_id="mem_integ0001")
-        self.registry.add_rule(self.rule)
-
-        # Create validator with redirected file paths
-        self.validator = RuleValidator()
-        self.validator.registry = MemoryRegistry(str(self.test_registry_file))
-        self.validator.audit_path = Path(str(self.test_audit_file))
+        self.test_memory_md = Path(self.tmp_dir) / "MEMORY.md"
 
     def tearDown(self):
         import shutil
         shutil.rmtree(self.tmp_dir, ignore_errors=True)
 
     # ------------------------------------------------------------------
-    # 10. Persist then validate
+    # 10. Persist then validate (auto-wiring)
     # ------------------------------------------------------------------
 
     def test_persist_then_validate(self):
         """
-        After RuleGenerator.persist_rules([rule]) and validator.validate_proposed_rules(),
-        the rule is active or rejected in registry (not proposed).
+        After rg.persist_rules([rule]), validation fires automatically.
+        No rule should remain in 'proposed' state.
         """
+        from src.agents.rule_generator import RuleGenerator
+        from src.agents.rule_validator import RuleValidator
+
+        rule = MemoryRule(title="Integration Test Rule", type="general")
+
+        rg = RuleGenerator()
+        rg.registry = MemoryRegistry(str(self.test_registry_file))
+        rg.memory_md_path = self.test_memory_md
+
+        original_init = RuleValidator.__init__
+
+        def patched_init(self_v, **kwargs):
+            original_init(self_v)
+            self_v.audit_path = self.test_audit_file
+
         with patch(
             "src.agents.rule_validator._run_nautilus_backtest",
             side_effect=[_BASELINE_RESULT, _TREATMENT_IMPROVED],
         ):
-            self.validator.validate_proposed_rules()
+            with patch.object(RuleValidator, "__init__", patched_init):
+                rg.persist_rules([rule])
 
-        rule = self.validator.registry.get_rule(self.rule.id)
-        self.assertIn(rule.status, ("active", "rejected"))
-        self.assertNotEqual(rule.status, "proposed")
+        # Rule must no longer be proposed after persist_rules() fires validator
+        fresh_reg = MemoryRegistry(str(self.test_registry_file))
+        proposed = fresh_reg.get_proposed_rules()
+        self.assertEqual(len(proposed), 0, "No rule should remain proposed after persist_rules()")
 
     # ------------------------------------------------------------------
-    # 11. Full audit trail
+    # 11. Full audit trail (auto-wiring)
     # ------------------------------------------------------------------
 
     def test_full_audit_trail(self):
         """
-        After validate_proposed_rules(), audit.jsonl contains one event line
-        with all required fields: rule_id, before_status, after_status,
-        baseline_sharpe, treatment_sharpe, sharpe_delta.
+        After persist_rules(), audit.jsonl contains one event line with all
+        required fields: rule_id, before_status, after_status, baseline_sharpe,
+        treatment_sharpe, sharpe_delta.
         """
+        from src.agents.rule_generator import RuleGenerator
+        from src.agents.rule_validator import RuleValidator
+
+        rule = MemoryRule(title="Audit Trail Test Rule", type="general")
+
+        rg = RuleGenerator()
+        rg.registry = MemoryRegistry(str(self.test_registry_file))
+        rg.memory_md_path = self.test_memory_md
+
+        original_init = RuleValidator.__init__
+
+        def patched_init(self_v, **kwargs):
+            original_init(self_v)
+            self_v.audit_path = self.test_audit_file
+
         with patch(
             "src.agents.rule_validator._run_nautilus_backtest",
             side_effect=[_BASELINE_RESULT, _TREATMENT_IMPROVED],
         ):
-            self.validator.validate_proposed_rules()
+            with patch.object(RuleValidator, "__init__", patched_init):
+                rg.persist_rules([rule])
 
-        self.assertTrue(self.test_audit_file.exists())
+        self.assertTrue(self.test_audit_file.exists(), "audit.jsonl must be created")
         lines = self.test_audit_file.read_text().strip().splitlines()
         self.assertEqual(len(lines), 1)
         event = json.loads(lines[0])
@@ -315,6 +340,8 @@ class TestRuleValidatorIntegration(unittest.TestCase):
         }
         for field in required_fields:
             self.assertIn(field, event, f"Missing field: {field}")
+        self.assertEqual(event["before_status"], "proposed")
+        self.assertIn(event["after_status"], ("active", "rejected"))
 
 
 if __name__ == "__main__":
