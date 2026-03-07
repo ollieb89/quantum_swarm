@@ -15,6 +15,7 @@ from langchain_core.messages import HumanMessage
 
 from src.core.memory_registry import MemoryRegistry
 from src.models.memory import MemoryRule
+from src.agents.rule_validator import RuleValidator
 
 logger = logging.getLogger(__name__)
 
@@ -114,3 +115,7 @@ class RuleGenerator:
         with open(self.memory_md_path, "a") as f:
             f.write("\n".join(lines) + "\n")
         logger.info("Appended %d rules to %s", len(rules), self.memory_md_path)
+        # Validate proposed rules through the backtest harness (Phase 10 — MEM-06)
+        validator = RuleValidator()
+        validator.registry = self.registry  # share registry so validator sees the just-added rules
+        validator.validate_proposed_rules()
