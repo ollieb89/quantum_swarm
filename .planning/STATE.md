@@ -53,7 +53,7 @@ Previous: v1.1 Self-Improvement Loop — SHIPPED 2026-03-06 (169 tests, 3 phases
 Phase: 10 — Rule Validation Harness
 Plan: TBD
 Status: Not started
-Last activity: 2026-03-07 — Phase 05-01 completed; RSI state annotation, INSUFFICIENT_DATA/INVALID_INPUT error codes, {name}_{period} result keying. 12 quant-alpha-intelligence tests passing.
+Last activity: 2026-03-07 — Phase 05-02 completed; full integration chain verified: 12/12 tests pass, SkillRegistry discovers quant-alpha-intelligence, calculate_indicators tool wired in MacroAnalyst and QuantModeler. Phase 5 complete. Phase 6 can begin.
 
 ## Progress
 
