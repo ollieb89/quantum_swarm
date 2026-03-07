@@ -90,6 +90,7 @@ async def setup_persistence():
             );
             CREATE INDEX IF NOT EXISTS idx_trades_task_id ON trades(task_id);
             CREATE INDEX IF NOT EXISTS idx_trades_symbol ON trades(symbol);
+            CREATE INDEX IF NOT EXISTS idx_trades_exit_time ON trades(exit_time);
             """)
             
     logger.info("PostgreSQL schemas initialized.")
