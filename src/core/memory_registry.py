@@ -4,12 +4,23 @@ src.core.memory_registry — Persistence and logic for structured memory rules.
 
 import json
 import logging
+import os
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import List, Optional
 
 from src.models.memory import MemoryRule, MemoryRegistrySchema
 
 logger = logging.getLogger(__name__)
+
+# Valid one-way lifecycle transitions (terminal states have empty lists)
+VALID_TRANSITIONS = {
+    "proposed": ["active", "rejected"],
+    "active": ["deprecated", "rejected"],
+    "deprecated": [],   # terminal
+    "rejected": [],     # terminal
+}
+
 
 class MemoryRegistry:
     """
@@ -24,7 +35,7 @@ class MemoryRegistry:
         """Load registry from JSON or initialize empty."""
         if not self.file_path.exists():
             return MemoryRegistrySchema(rules=[])
-        
+
         try:
             with open(self.file_path, "r") as f:
                 data = json.load(f)
@@ -34,11 +45,13 @@ class MemoryRegistry:
             return MemoryRegistrySchema(rules=[])
 
     def save(self):
-        """Persist registry to JSON."""
+        """Persist registry to JSON using an atomic write (write to .tmp then rename)."""
         try:
             self.file_path.parent.mkdir(parents=True, exist_ok=True)
-            with open(self.file_path, "w") as f:
+            tmp_path = self.file_path.with_suffix(".tmp")
+            with open(tmp_path, "w") as f:
                 f.write(self.schema.model_dump_json(indent=2))
+            os.replace(tmp_path, self.file_path)
         except Exception as e:
             logger.error("Failed to save memory registry to %s: %s", self.file_path, e)
 
@@ -58,3 +71,40 @@ class MemoryRegistry:
             if r.id == rule_id:
                 return r
         return None
+
+    def update_status(self, rule_id: str, new_status: str) -> MemoryRule:
+        """
+        Transition a rule's status following the governed lifecycle.
+
+        Valid transitions:
+            proposed  -> active | rejected
+            active    -> deprecated | rejected
+            deprecated -> (terminal, no transitions)
+            rejected   -> (terminal, no transitions)
+
+        Raises ValueError if the rule is not found or the transition is invalid.
+        """
+        rule = self.get_rule(rule_id)
+        if rule is None:
+            raise ValueError(f"Rule not found: {rule_id}")
+
+        allowed = VALID_TRANSITIONS.get(rule.status, [])
+        if new_status not in allowed:
+            raise ValueError(
+                f"Invalid transition: {rule.status} -> {new_status} "
+                f"(allowed from '{rule.status}': {allowed})"
+            )
+
+        old_status = rule.status
+        rule.status = new_status  # type: ignore[assignment]
+        rule.version += 1
+        rule.updated_at = datetime.now(timezone.utc)
+
+        self.save()
+
+        logger.info(
+            "Rule %s transitioned %s -> %s (v%d)",
+            rule_id, old_status, new_status, rule.version,
+        )
+
+        return rule
