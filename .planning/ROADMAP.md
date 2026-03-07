@@ -97,7 +97,7 @@ See: `.planning/milestones/v1.0-ROADMAP.md` for full archive
 ### v1.1 Self-Improvement (Planned)
 
 - [ ] **Phase 5: Quant Alpha Intelligence** — Centralized technical indicator skill available to all agents
-- [ ] **Phase 6: Stop-Loss Enforcement** — ATR-based stop-loss calculated, gated, and audited on every trade
+- [x] **Phase 6: Stop-Loss Enforcement** — ATR-based stop-loss calculated, gated, and audited on every trade (completed 2026-03-07)
 - [ ] **Phase 7: Self-Improvement Loop** — Weekly review and automated rule generation from live performance
 
 ## Phase Details
@@ -149,7 +149,7 @@ See: `.planning/milestones/v1.0-ROADMAP.md` for full archive
 | 3. Market Execution & Data | v1.0 | Complete | 2026-03-06 |
 | 4. Memory & Institutional Compliance | 3/3 | Complete   | 2026-03-07 |
 | 5. Quant Alpha Intelligence | 2/3 | In Progress|  |
-| 6. Stop-Loss Enforcement | v1.1 | Complete | 2026-03-06 |
+| 6. Stop-Loss Enforcement | 1/1 | Complete   | 2026-03-07 |
 | 7. Self-Improvement Loop | v1.1 | Complete | 2026-03-06 |
 | 8. Portfolio Risk Governance | v1.2 | Complete | 2026-03-06 |
 | 9. Structured Memory Registry | v1.2 | Complete | 2026-03-06 |
