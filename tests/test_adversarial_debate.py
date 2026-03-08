@@ -416,3 +416,124 @@ def test_debate_synthesizer_strength_field_is_merit():
     assert strength == pytest.approx(0.72), (
         f"strength must be the merit composite (0.72), got {strength}"
     )
+
+
+# ---------------------------------------------------------------------------
+# Phase 21: Soul-Sync Context in Debate
+# ---------------------------------------------------------------------------
+
+
+def test_soul_context_enriches_debate_history():
+    """soul_sync_context present with both summaries -> entries get opponent's peer_soul_summary."""
+    state = _make_base_state(
+        soul_sync_context={
+            "MOMENTUM": "Bull persona summary",
+            "CASSANDRA": "Bear persona summary",
+        },
+        messages=[
+            {"role": "assistant", "name": "bullish_research", "content": "Bullish thesis."},
+            {"role": "assistant", "name": "bearish_research", "content": "Bearish thesis."},
+        ],
+    )
+
+    result = DebateSynthesizer(state)
+    history = result["debate_history"]
+
+    bullish_entry = next(e for e in history if e["source"] == "bullish_research")
+    bearish_entry = next(e for e in history if e["source"] == "bearish_research")
+
+    # Bullish entry's opponent is CASSANDRA
+    assert bullish_entry["peer_soul_summary"] == "Bear persona summary"
+    # Bearish entry's opponent is MOMENTUM
+    assert bearish_entry["peer_soul_summary"] == "Bull persona summary"
+
+
+def test_soul_context_absent_no_peer_summary():
+    """soul_sync_context is None -> no entry has peer_soul_summary key."""
+    state = _make_base_state(
+        soul_sync_context=None,
+        messages=[
+            {"role": "assistant", "name": "bullish_research", "content": "Bullish thesis."},
+            {"role": "assistant", "name": "bearish_research", "content": "Bearish thesis."},
+        ],
+    )
+
+    result = DebateSynthesizer(state)
+    history = result["debate_history"]
+
+    for entry in history:
+        assert "peer_soul_summary" not in entry, (
+            f"Entry from '{entry['source']}' should NOT have peer_soul_summary when "
+            f"soul_sync_context is None"
+        )
+
+
+def test_soul_context_partial_empty():
+    """One opponent summary empty -> that entry omits peer_soul_summary, other has it."""
+    state = _make_base_state(
+        soul_sync_context={
+            "MOMENTUM": "Bull summary",
+            "CASSANDRA": "",  # empty -> bullish entry should NOT get peer_soul_summary
+        },
+        messages=[
+            {"role": "assistant", "name": "bullish_research", "content": "Bullish thesis."},
+            {"role": "assistant", "name": "bearish_research", "content": "Bearish thesis."},
+        ],
+    )
+
+    result = DebateSynthesizer(state)
+    history = result["debate_history"]
+
+    bullish_entry = next(e for e in history if e["source"] == "bullish_research")
+    bearish_entry = next(e for e in history if e["source"] == "bearish_research")
+
+    # Bullish opponent is CASSANDRA which is empty -> omit
+    assert "peer_soul_summary" not in bullish_entry, (
+        "Bullish entry should NOT have peer_soul_summary when opponent (CASSANDRA) summary is empty"
+    )
+    # Bearish opponent is MOMENTUM which has content -> include
+    assert bearish_entry["peer_soul_summary"] == "Bull summary"
+
+
+def test_soul_context_does_not_change_score():
+    """weighted_consensus_score identical with and without soul_sync_context."""
+    merit = {
+        "MOMENTUM": {"composite": 0.7},
+        "CASSANDRA": {"composite": 0.4},
+    }
+    msgs = [
+        {"role": "assistant", "name": "bullish_research", "content": "Bullish thesis."},
+        {"role": "assistant", "name": "bearish_research", "content": "Bearish thesis."},
+    ]
+
+    result_without = DebateSynthesizer(_make_base_state(
+        merit_scores=merit, messages=msgs, soul_sync_context=None,
+    ))
+    result_with = DebateSynthesizer(_make_base_state(
+        merit_scores=merit, messages=msgs,
+        soul_sync_context={"MOMENTUM": "Bull", "CASSANDRA": "Bear"},
+    ))
+
+    assert result_with["weighted_consensus_score"] == result_without["weighted_consensus_score"], (
+        "Soul sync context must NOT change the weighted_consensus_score"
+    )
+
+
+def test_neutral_placeholder_no_soul_context():
+    """Neutral placeholder (no researchers ran) never gets peer_soul_summary."""
+    state = _make_base_state(
+        soul_sync_context={
+            "MOMENTUM": "Bull summary",
+            "CASSANDRA": "Bear summary",
+        },
+        messages=[],  # no researcher messages -> placeholder
+    )
+
+    result = DebateSynthesizer(state)
+    history = result["debate_history"]
+
+    assert len(history) == 1
+    assert history[0]["source"] == "synthesizer"
+    assert "peer_soul_summary" not in history[0], (
+        "Neutral placeholder must NOT have peer_soul_summary even when soul_sync_context is present"
+    )
