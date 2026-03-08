@@ -5,7 +5,7 @@ promotes or rejects them based on 2-of-3 metric improvement (Sharpe, drawdown, w
 Writes MiFID II-style audit events to data/audit.jsonl.
 """
 
-import asyncio
+import concurrent.futures
 import json
 import logging
 import yaml
@@ -77,16 +77,15 @@ class RuleValidator:
 
             # --- Run both backtests ---
             try:
-                baseline = asyncio.run(
-                    asyncio.to_thread(_run_nautilus_backtest, instrument, {})
-                )
-                treatment = asyncio.run(
-                    asyncio.to_thread(
+                with concurrent.futures.ThreadPoolExecutor() as pool:
+                    baseline = pool.submit(
+                        _run_nautilus_backtest, instrument, {}
+                    ).result()
+                    treatment = pool.submit(
                         _run_nautilus_backtest,
                         instrument,
                         {"rule_id": rule.id, "rule_title": rule.title},
-                    )
-                )
+                    ).result()
             except Exception as exc:  # noqa: BLE001
                 logger.error(
                     "Backtest error for rule %s — leaving proposed: %s", rule.id, exc
