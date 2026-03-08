@@ -3,13 +3,13 @@ gsd_state_version: 1.0
 milestone: v1.3
 milestone_name: MBS Persona System
 status: completed
-last_updated: "2026-03-08T11:19:28.544Z"
+last_updated: "2026-03-08T11:26:32.892Z"
 last_activity: "2026-03-08 — 16-02 complete: merit_loader_node (session-start DB read, idempotency guard) + merit_updater_node (EMA update for Recovery/Consensus/Fidelity, DB-first persist), orchestrator rewired (merit_loader entry point, merit_updater between decision_card_writer→trade_logger); 9 new tests, 333 total passing"
 progress:
   total_phases: 5
-  completed_phases: 1
+  completed_phases: 2
   total_plans: 6
-  completed_plans: 5
+  completed_plans: 6
 ---
 
 # Project State
@@ -44,6 +44,8 @@ Last activity: 2026-03-08 — 16-02 complete: merit_loader_node (session-start D
 - [Phase 16-02]: merit_updater returns {} on DB failure — DB and SwarmState merit_scores kept strictly in sync
 - [Phase 16-02]: Accuracy dimension is never updated in-cycle — deferred to post-trade resolution in a later phase
 - [Phase 16-02]: merit_loader is new graph entry point replacing classify_intent — merit scores loaded before any analysis
+- [Phase 16-kami-merit-index]: Character-length proxy (len(text)) fully removed from DebateSynthesizer — merit composite is the only strength signal
+- [Phase 16-03]: Accuracy dimension deferred — thesis_records/ stub established for future reconciliation process (Phase 17+)
 
 ## Progress
 
