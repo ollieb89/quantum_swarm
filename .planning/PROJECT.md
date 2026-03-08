@@ -8,6 +8,17 @@ A production-grade hierarchical multi-agent financial analysis swarm built on La
 
 Institutional-quality trade signal generation through adversarial AI debate, with self-improving memory rules validated by backtesting, hard compliance guardrails, and immutable per-trade audit trails — from market data ingestion to PostgreSQL-persisted execution records.
 
+## Current Milestone: v1.4 Beta: Observable Swarm
+
+**Goal:** Make the institution observable — fully populate all personas, run end-to-end against real market data, persist cycles, and replay the swarm's thinking.
+
+**Target features:**
+- Fully populate all 5 agent personas (MOMENTUM, CASSANDRA, SIGMA, GUARDIAN)
+- End-to-end pipeline execution with real market data
+- Per-cycle artifact persistence (agent memos, debate, consensus, merit scores, decision cards)
+- Cycle replay CLI for stepping through and comparing swarm cognition
+- Observable output: merit weights, debate tension, drift flags visible across runs
+
 ## Current State (v1.3 shipped)
 
 - **Runtime:** Python 3.12, LangGraph StateGraph, uv-managed
@@ -174,4 +185,4 @@ Known env issues: broken `ccxt`, missing `chromadb` and `pytest-asyncio` (~13 te
 Tech debt from v1.3: skeleton agents have no YAML drift_guard block, Nyquist VALIDATION.md partial/missing for phases 15-22, thesis_records/ stub for deferred Accuracy dimension.
 
 ---
-*Last updated: 2026-03-08 after v1.3 milestone*
+*Last updated: 2026-03-08 after v1.4 milestone started*

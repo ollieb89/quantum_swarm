@@ -1,15 +1,15 @@
 ---
 gsd_state_version: 1.0
-milestone: v1.3
-milestone_name: MBS Persona System
-status: shipped
-last_updated: "2026-03-08T22:00:00.000Z"
-last_activity: "2026-03-08 — v1.3 milestone archived"
+milestone: v1.4
+milestone_name: "Beta: Observable Swarm"
+status: active
+last_updated: "2026-03-08T23:00:00.000Z"
+last_activity: "2026-03-08 — Milestone v1.4 started"
 progress:
-  total_phases: 8
-  completed_phases: 8
-  total_plans: 18
-  completed_plans: 18
+  total_phases: 0
+  completed_phases: 0
+  total_plans: 0
+  completed_plans: 0
 ---
 
 # Project State
@@ -19,20 +19,23 @@ progress:
 
 ## Milestone
 
-**v1.3 MBS Persona System** — SHIPPED 2026-03-08
+**v1.4 Beta: Observable Swarm** — ACTIVE
 
-Previous: v1.2 Risk Governance — SHIPPED 2026-03-08 (260+ tests, 6 phases)
+Previous: v1.3 MBS Persona System — SHIPPED 2026-03-08 (300+ tests, 8 phases)
 
 ## Current Phase
 
-All phases complete. Milestone archived.
+Phase: Not started (defining requirements)
+Plan: —
+Status: Defining requirements
+Last activity: 2026-03-08 — Milestone v1.4 started
 
 ## Project Reference
 
 See: `.planning/PROJECT.md` (updated 2026-03-08)
 
 **Core value:** Institutional-quality trade signal generation through adversarial AI debate, with self-improving memory rules validated by backtesting, hard compliance guardrails, and immutable per-trade audit trails
-**Current focus:** Planning next milestone
+**Current focus:** Making the institution observable — fully populated personas, end-to-end pipeline, cycle replay
 
 ## Architecture
 
@@ -60,3 +63,9 @@ Status: Green
 - v1.3 shipped: 300+ tests passing, 0 failures (excluding pre-existing env files)
 - Full MBS persona system live: SoulLoader, KAMI, Agent Church, Soul-Sync, ARS
 - Architecture stable: LangGraph + Gemini + psycopg3
+
+## Accumulated Context
+
+- Known env issues: broken `ccxt`, missing `chromadb` and `pytest-asyncio` (~13 tests affected, not regressions)
+- Tech debt from v1.3: skeleton agents have no YAML drift_guard block, Nyquist VALIDATION.md partial/missing for phases 15-22, thesis_records/ stub for deferred Accuracy dimension
+- 4 of 5 agent personas are skeletons (only AXIOM fully populated)
