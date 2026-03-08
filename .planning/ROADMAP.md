@@ -200,6 +200,6 @@ Plans:
 | 17. MEMORY.md Evolution + Agent Church | 3/3 | Complete    | 2026-03-08 | - |
 | 18. Theory of Mind Soul-Sync | 2/2 | Complete    | 2026-03-08 | - |
 | 19. ARS Drift Auditor | 2/2 | Complete    | 2026-03-08 | - |
-| 20. Wire Drift Flags Pipeline | 2/2 | Complete   | 2026-03-08 | - |
+| 20. Wire Drift Flags Pipeline | 2/2 | Complete    | 2026-03-08 | - |
 | 21. Consume Soul-Sync Context in Debate | v1.3 | 0/0 | Planned | - |
 | 22. Failure Path KAMI + Memory Logging | v1.3 | 0/0 | Planned | - |

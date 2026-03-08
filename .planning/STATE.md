@@ -3,7 +3,7 @@ gsd_state_version: 1.0
 milestone: v1.3
 milestone_name: MBS Persona System
 status: completed
-last_updated: "2026-03-08T17:55:55.147Z"
+last_updated: "2026-03-08T17:58:49.424Z"
 last_activity: "2026-03-08 — 20-02 complete: drift eval wired into memory_writer, DRIFT_STREAK + ARS end-to-end"
 progress:
   total_phases: 8
