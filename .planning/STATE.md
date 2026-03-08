@@ -2,14 +2,14 @@
 gsd_state_version: 1.0
 milestone: v1.1
 milestone_name: Self-Improvement
-status: verifying
-last_updated: "2026-03-08T03:48:03.740Z"
-last_activity: 2026-03-08 — Phase 13-01 completed; TDD RED scaffold for institutional guard graph wiring; test_institutional_guard_wired_in_graph FAILS (RED), test_institutional_guard_metadata_propagation PASSES; Phase 8 tests unaffected.
+status: executing
+last_updated: "2026-03-08T04:29:36.611Z"
+last_activity: 2026-03-08 — Phase 13-02 completed; institutional_guard_node wired into live graph; RISK-07 + RISK-08 closed; 244 tests passing; both graph wiring tests GREEN.
 progress:
   total_phases: 10
-  completed_phases: 7
+  completed_phases: 8
   total_plans: 17
-  completed_plans: 18
+  completed_plans: 19
 ---
 
 # Project State
@@ -26,9 +26,9 @@ Previous: v1.1 Self-Improvement Loop — SHIPPED 2026-03-06 (169 tests, 3 phases
 ## Current Phase
 
 Phase: 13 — Wire Institutional Guard
-Plan: 01 (complete)
-Status: In Progress (1/2 plans done — TDD RED scaffold committed)
-Last activity: 2026-03-08 — Phase 13-01 completed; TDD RED scaffold for institutional guard graph wiring; test_institutional_guard_wired_in_graph FAILS (RED), test_institutional_guard_metadata_propagation PASSES; Phase 8 tests unaffected.
+Plan: 02 (complete)
+Status: Complete (2/2 plans done — RISK-07 + RISK-08 closed)
+Last activity: 2026-03-08 — Phase 13-02 completed; institutional_guard_node wired into live graph; 244 tests passing; both graph wiring tests GREEN.
 
 ## Progress
 
@@ -46,8 +46,9 @@ Status: Green
 - Phase 9 complete (09-01 + 09-02): MemoryRegistry models + lifecycle controls + integration tests; MEM-04 + MEM-05 fully verified; 14/14 structured memory tests.
 - Phase 8 complete (08-01 + 08-02): TDD stubs written then turned GREEN; RISK-07 + RISK-08 fully satisfied.
 - Phase 7 complete (07-01 + 07-02): self-improvement loop end-to-end + MEM-02/MEM-03 gap closure.
-- 225 tests passing (225 excluding 2 known-broken test files: test_order_router + test_persistence); 21/21 decision card tests passing.
+- 244 tests passing (excluding 2 known-broken test files: test_order_router + test_persistence); 21/21 decision card tests passing; 2 graph wiring tests GREEN.
 - InstitutionalGuard enforces: restricted assets, max concurrent trades, max notional exposure, asset concentration, daily drawdown.
+- Phase 13 complete: institutional_guard_node wired into live execution graph; RISK-07 + RISK-08 closed.
 - Architecture stable: LangGraph + Gemini + psycopg3.
 
 ## Project Reference
@@ -133,6 +134,10 @@ See: `.planning/PROJECT.md` (updated 2026-03-08 — Phase 5 complete)
 - MC-02 fix: MacroAnalyst() and QuantModeler() extract state["messages"][0] dict, convert to HumanMessage, prepend to invoke() call — LLM receives institutional memory before query (12-02)
 - Stale test pattern: tests asserting old broken behavior (status=="proposed" after persist_rules) must be updated when production behavior changes; use patch.object(RuleValidator, "validate_proposed_rules", return_value=0) for isolation (12-02)
 - RuleValidator audit trail test isolation: use RuleValidator.__new__() + direct attribute injection to bypass __init__; call validate_proposed_rules() on registry with hand-crafted proposed rule (12-02)
+- route_after_institutional_guard uses 'is False' identity check (not falsy) to distinguish explicit rejection from not-yet-evaluated (None) (13-02)
+- LangGraph conditional edges stored in workflow.branches not workflow.edges — edge inspection tests must check both (13-02)
+- Rejected trades route to 'synthesize' for explanatory summary rather than silently ending at END (13-02)
+- test_l3_chain_order stale assertion pattern: when a direct edge is replaced by a guarded chain, any test asserting the old edge must be updated (13-02)
 
 ## v1.1 Phase Dependency Chain
 
