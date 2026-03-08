@@ -78,14 +78,6 @@ def route_after_debate(state: SwarmState) -> str:
     return "hold"
 
 
-def route_after_order_router(state: SwarmState) -> str:
-    """Route to decision_card_writer only for successful trade executions."""
-    result = state.get("execution_result") or {}
-    if result.get("success") is True:
-        return "decision_card_writer"
-    return "trade_logger"
-
-
 def route_after_institutional_guard(state: SwarmState) -> str:
     """Conditional routing after InstitutionalGuard.
 
@@ -345,11 +337,7 @@ def create_orchestrator_graph(config: Dict, checkpointer: Any = None, memory: An
     workflow.add_edge("write_external_memory", "knowledge_base")
     workflow.add_edge("knowledge_base", "backtester")
     workflow.add_edge("backtester", "order_router")
-    workflow.add_conditional_edges(
-        "order_router",
-        route_after_order_router,
-        {"decision_card_writer": "decision_card_writer", "trade_logger": "trade_logger"},
-    )
+    workflow.add_edge("order_router", "decision_card_writer")
     workflow.add_edge("decision_card_writer", "merit_updater")
     workflow.add_edge("merit_updater", "memory_writer")
     workflow.add_edge("memory_writer", "trade_logger")

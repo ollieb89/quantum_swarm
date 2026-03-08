@@ -284,3 +284,131 @@ class TestProcessAgentCycleStatus:
         _process_agent("AXIOM", state)
         content = (tmp_path / "macro_analyst" / "MEMORY.md").read_text()
         assert "[CYCLE_STATUS:] success" in content
+
+
+# ---------------------------------------------------------------------------
+# Phase 22 Plan 02: Orchestrator rewiring + failure-aware decision_card_writer
+# ---------------------------------------------------------------------------
+
+
+class TestOrchestratorDirectEdge:
+    """Graph topology: order_router -> decision_card_writer is a direct (unconditional) edge."""
+
+    def test_order_router_has_direct_edge_to_decision_card_writer(self) -> None:
+        """After compilation, order_router's next node is always decision_card_writer —
+        no conditional routing function in the path."""
+        from src.graph.orchestrator import create_orchestrator_graph
+        graph = create_orchestrator_graph({})
+        # The compiled graph exposes its structure. Walk the graph to confirm
+        # order_router has a direct edge to decision_card_writer.
+        # In LangGraph, compiled graph.graph stores the underlying StateGraph.
+        # We check that no conditional edge map exists for order_router.
+        g = graph.get_graph()
+        # Find the edge from order_router
+        order_router_edges = [
+            e for e in g.edges if e.source == "order_router"
+        ]
+        assert len(order_router_edges) == 1, (
+            f"Expected exactly 1 edge from order_router, got {len(order_router_edges)}: {order_router_edges}"
+        )
+        assert order_router_edges[0].target == "decision_card_writer"
+
+    def test_route_after_order_router_deleted(self) -> None:
+        """The route_after_order_router function must not exist in orchestrator module."""
+        import src.graph.orchestrator as orch_mod
+        assert not hasattr(orch_mod, "route_after_order_router"), (
+            "route_after_order_router should be deleted from orchestrator.py"
+        )
+
+
+class TestDecisionCardWriterFailure:
+    """decision_card_writer_node produces valid cards for failed executions."""
+
+    def test_failure_card_returns_written_status(self) -> None:
+        """decision_card_writer_node with execution_result.success=False should
+        still call build_decision_card and return decision_card_status='written'."""
+        from src.graph.orchestrator import decision_card_writer_node
+
+        state = {
+            "task_id": "fail-test-001",
+            "execution_result": {
+                "success": False,
+                "failure_cause": "RISK_RULE_VIOLATION",
+                "error": "Position limit exceeded",
+            },
+            "consensus_score": 0.0,
+            "weighted_consensus_score": None,
+            "compliance_flags": [],
+            "risk_approval": {},
+            "macro_report": None,
+            "quant_proposal": None,
+            "bullish_thesis": None,
+            "bearish_thesis": None,
+            "debate_resolution": None,
+            "metadata": {},
+        }
+        result = asyncio.run(decision_card_writer_node(state))
+        assert result["decision_card_status"] == "written"
+        assert result["decision_card_audit_ref"] is not None
+
+    def test_build_decision_card_handles_failure(self) -> None:
+        """build_decision_card produces a valid card when execution_result.success=False."""
+        from src.core.decision_card import build_decision_card, verify_decision_card
+
+        state = {
+            "task_id": "fail-card-001",
+            "execution_result": {
+                "success": False,
+                "failure_cause": "BAD_PARAMETERS",
+                "error": "Invalid quantity",
+            },
+            "consensus_score": 0.7,
+            "compliance_flags": [],
+            "risk_approval": {},
+            "metadata": {},
+        }
+        card = build_decision_card(state)
+        assert card.task_id == "fail-card-001"
+        assert card.execution_result["success"] is False
+        assert card.content_hash  # non-empty hash
+        assert verify_decision_card(card.model_dump(mode="json"))
+
+
+class TestMeritUpdaterFailurePath:
+    """merit_updater_node processes failed execution_results (does not early-return)."""
+
+    @patch("src.graph.nodes.merit_updater._persist_merit")
+    def test_merit_updater_processes_failed_execution(self, mock_persist) -> None:
+        """When execution_result.success=False, merit_updater should still run
+        (execution_result is truthy dict), not skip via the aborted-cycle guard."""
+        from src.graph.nodes.merit_updater import merit_updater_node
+
+        # Make persist a no-op async
+        async def noop(*a, **kw):
+            pass
+        mock_persist.side_effect = noop
+
+        state = {
+            "execution_result": {
+                "success": False,
+                "failure_cause": "RISK_RULE_VIOLATION",
+            },
+            "active_persona": "AXIOM",
+            "merit_scores": {
+                "AXIOM": {
+                    "accuracy": 0.5,
+                    "recovery": 0.5,
+                    "consensus": 0.5,
+                    "fidelity": 0.5,
+                    "composite": 0.5,
+                },
+            },
+            "weighted_consensus_score": 0.7,
+        }
+        result = asyncio.run(merit_updater_node(state))
+        # Should NOT return {} (aborted cycle guard)
+        assert result != {}, "merit_updater should process failed execution_result, not skip it"
+        assert "merit_scores" in result
+        # Recovery should be penalised (self-induced cause -> 0.0 signal)
+        updated = result["merit_scores"]["AXIOM"]
+        assert updated["recovery"] < 0.5, "Recovery should decrease for self-induced failure"
