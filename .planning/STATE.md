@@ -3,8 +3,8 @@ gsd_state_version: 1.0
 milestone: v1.3
 milestone_name: MBS Persona System
 status: completed
-last_updated: "2026-03-08T15:04:08.004Z"
-last_activity: "2026-03-08 — 18-02 complete: soul_sync_handshake_node (sync barrier, zero LLM calls) + orchestrator rewire + USER.md few-shots; 16/16 soul_sync tests GREEN; Phase 18 TOM-01 + TOM-02 fully satisfied"
+last_updated: "2026-03-08T16:03:02.000Z"
+last_activity: "2026-03-08 — 19-01 complete: standalone ARS auditor with 5 drift metrics, flag-then-suspend, CLI, 65 tests GREEN; ARS-01 satisfied"
 progress:
   total_phases: 5
   completed_phases: 4
@@ -25,10 +25,10 @@ Previous: v1.2 Risk Governance — SHIPPED 2026-03-08 (260+ tests, 6 phases)
 
 ## Current Phase
 
-Phase: 18 of 19 (Theory of Mind Soul-Sync — COMPLETE)
-Plan: 02/02 complete
-Status: Phase 18 complete — soul_sync_handshake_node wired as barrier between researchers and debate_synthesizer; USER.md empathetic refutation authored for MOMENTUM and CASSANDRA; 16/16 tests GREEN; TOM-01 + TOM-02 satisfied; next: Phase 19 (ARS Drift Auditor)
-Last activity: 2026-03-08 — 18-02 complete: soul_sync_handshake_node (sync barrier, zero LLM calls) + orchestrator rewire + USER.md few-shots; 16/16 soul_sync tests GREEN; Phase 18 TOM-01 + TOM-02 fully satisfied
+Phase: 19 of 19 (ARS Drift Auditor — IN PROGRESS)
+Plan: 01/01 complete
+Status: Phase 19 Plan 01 complete — ARS drift auditor with 5 stdlib-only metrics, 30-cycle warm-up, flag-then-suspend escalation, CLI, ars_state DDL, 65 tests GREEN; ARS-01 satisfied
+Last activity: 2026-03-08 — 19-01 complete: standalone ARS auditor (proposal_rejection_rate, drift_flag_frequency, kami_variance, alignment_mutations, sentiment_shift, role_boundary_violations); context-aware violation counting; breach persistence in ars_state table
 
 ## Decisions
 
@@ -61,6 +61,11 @@ Last activity: 2026-03-08 — 18-02 complete: soul_sync_handshake_node (sync bar
 - [Phase 18-01]: public_soul_summary() uses re.split on H2 boundaries with _PEER_VISIBLE_SECTIONS frozenset filter; falls back to raw soul[:300] if no matching sections found
 - [Phase 18]: soul_sync_handshake_node implemented as synchronous (not async) — all reads are lru_cache hits via warmup_soul_cache(), no I/O needed; with_audit_logging handles sync nodes via asyncio.to_thread
 - [Phase 18]: TestNoLLMCalls patch fixed with create=True — module correctly never imports ChatGoogleGenerativeAI; patch target needs create=True when testing absence of an import
+- [Phase 19-01]: Counter-based cosine distance for sentiment shift — stdlib only, no numpy dependency needed
+- [Phase 19-01]: Context-aware role boundary counting: forbidden terms only count near assertion markers and NOT near negation markers — prevents false flags on rebuttal context
+- [Phase 19-01]: Sentiment shift requires BOTH distance AND polarity delta to exceed thresholds — prevents false flags on minor wording drift
+- [Phase 19-01]: ars_state is a separate table from agent_merit_scores — merit = learned performance, ARS = control/safety state machine
+- [Phase 19-01]: _load_merit_dimensions lazy-imports from src.core.db to avoid DB connection at import time
 
 ## Progress
 
