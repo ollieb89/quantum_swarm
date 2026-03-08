@@ -1,14 +1,17 @@
-"""Unit tests for memory_writer_node (EVOL-01).
+"""Unit tests for memory_writer_node (EVOL-01 + Plan 19-02 suspension gate).
 
 Tests use tmp_path to isolate all MEMORY.md I/O from real souls/ directories.
 """
 from __future__ import annotations
 
 import asyncio
+import inspect
+import logging
 import re
 import stat
 import textwrap
 from pathlib import Path
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
@@ -200,3 +203,93 @@ def test_memory_writer_nonblocking(tmp_path):
     finally:
         # Restore permissions so tmp_path cleanup can succeed
         agent_dir.chmod(stat.S_IRWXU)
+
+
+# ---------------------------------------------------------------------------
+# Test 7: evolution_suspended=True skips MEMORY.md write and proposal emission
+# ---------------------------------------------------------------------------
+
+class TestEvolutionSuspendedGate:
+    """Plan 19-02: memory_writer_node checks evolution_suspended from DB."""
+
+    @pytest.fixture(autouse=True)
+    def _mock_db(self, monkeypatch):
+        """Mock _check_evolution_suspended for suspension gate tests."""
+        # Default: no agents suspended (tests override per-case)
+        self._suspended_handles: set = set()
+
+        async def _fake_check(handle: str) -> bool:
+            return handle in self._suspended_handles
+
+        monkeypatch.setattr(mw_mod, "_check_evolution_suspended", _fake_check)
+
+    def test_suspended_agent_skips_memory_write(self, tmp_path):
+        """When evolution_suspended=True for AXIOM, no MEMORY.md is written."""
+        self._suspended_handles.add("AXIOM")
+        state = _make_state(macro_report={"content": "Should be skipped."})
+        asyncio.run(mw_mod.memory_writer_node(state))
+
+        memory_path = tmp_path / "macro_analyst" / "MEMORY.md"
+        assert not memory_path.exists(), (
+            "MEMORY.md should NOT be created for a suspended agent"
+        )
+
+    def test_non_suspended_agent_writes_normally(self, tmp_path):
+        """When evolution_suspended=False, MEMORY.md write proceeds."""
+        # _suspended_handles is empty → all agents are non-suspended
+        state = _make_state(macro_report={"content": "Should be written."})
+        asyncio.run(mw_mod.memory_writer_node(state))
+
+        memory_path = tmp_path / "macro_analyst" / "MEMORY.md"
+        assert memory_path.exists(), (
+            "MEMORY.md should be created for a non-suspended agent"
+        )
+        content = memory_path.read_text()
+        assert "Should be written." in content
+
+    def test_absent_suspension_key_proceeds_normally(self, tmp_path):
+        """Backward compat: if _check_evolution_suspended returns False
+        (default/absent), memory write proceeds normally."""
+        state = _make_state(macro_report={"content": "Backward compat."})
+        asyncio.run(mw_mod.memory_writer_node(state))
+
+        memory_path = tmp_path / "macro_analyst" / "MEMORY.md"
+        assert memory_path.exists()
+
+    def test_suspended_agent_logs_warning(self, tmp_path, caplog):
+        """Suspended agent produces a log line containing
+        'memory_writer skipped due to evolution_suspended'."""
+        self._suspended_handles.add("AXIOM")
+        state = _make_state(macro_report={"content": "Should be skipped."})
+        with caplog.at_level(logging.WARNING):
+            asyncio.run(mw_mod.memory_writer_node(state))
+
+        assert any(
+            "memory_writer skipped due to evolution_suspended" in rec.message
+            for rec in caplog.records
+        ), f"Expected suspension log line; got: {[r.message for r in caplog.records]}"
+
+
+# ---------------------------------------------------------------------------
+# Test 8: Negative assertions — evolution_suspended NOT in trade paths
+# ---------------------------------------------------------------------------
+
+class TestTradePathIsolation:
+    """ARS-02: evolution_suspended must NEVER appear in trade execution code."""
+
+    def test_order_router_no_evolution_suspended(self):
+        """order_router.py source does NOT contain 'evolution_suspended'."""
+        source_path = Path(__file__).parents[2] / "src" / "graph" / "agents" / "l3" / "order_router.py"
+        source = source_path.read_text()
+        assert "evolution_suspended" not in source, (
+            "order_router.py must NOT reference evolution_suspended"
+        )
+
+    def test_route_after_institutional_guard_no_evolution_suspended(self):
+        """route_after_institutional_guard function does NOT contain
+        'evolution_suspended'."""
+        from src.graph.orchestrator import route_after_institutional_guard
+        source = inspect.getsource(route_after_institutional_guard)
+        assert "evolution_suspended" not in source, (
+            "route_after_institutional_guard must NOT reference evolution_suspended"
+        )
