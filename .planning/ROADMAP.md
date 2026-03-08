@@ -9,7 +9,7 @@ updated: '2026-03-08'
 - ✅ **v1.0 MVP** — Phases 1-4 (shipped 2026-03-06)
 - ✅ **v1.1 Self-Improvement** — Phases 5-7, 12 (shipped 2026-03-08)
 - ✅ **v1.2 Risk Governance** — Phases 8-11, 13-14 (shipped 2026-03-08)
-- 📋 **v1.3** — TBD (planned)
+- 🚧 **v1.3 MBS Persona System** — Phases 15-19 (in progress)
 
 ## Phases
 
@@ -51,14 +51,76 @@ See: `.planning/milestones/v1.2-ROADMAP.md` for full archive
 
 </details>
 
-### 📋 v1.3 (Planned)
+### 🚧 v1.3 MBS Persona System (In Progress)
 
-- [ ] Phase 15: TBD
+**Milestone Goal:** Give every L2 agent a persistent, character-consistent identity via the Mind-Body-Soul architecture — covering foundation (SoulLoader, soul files, LangGraph wiring), merit-based reward scoring (KAMI), agent self-evolution (MEMORY.md + Agent Church), Theory of Mind debate layer, and ARS drift auditing.
+
+- [ ] **Phase 15: Soul Foundation** - SoulLoader, soul files, SwarmState wiring, audit exclusion, deterministic test suite
+- [ ] **Phase 16: KAMI Merit Index** - Multi-dimensional merit formula, EMA decay, SwarmState + PostgreSQL persistence, DebateSynthesizer rewiring
+- [ ] **Phase 17: MEMORY.md Evolution + Agent Church** - Structured self-reflection log, SOUL.md diff proposals, standalone Agent Church approval gate
+- [ ] **Phase 18: Theory of Mind Soul-Sync** - Pre-debate soul handshake node, public soul summaries, Empathetic Refutation few-shots
+- [ ] **Phase 19: ARS Drift Auditor** - Five drift metrics from MEMORY.md logs, evolution_suspended column, warm-up period, strict scope boundary
+
+## Phase Details
+
+### Phase 15: Soul Foundation
+**Goal**: Every L2 agent has a persistent, file-backed identity that is injected into its LLM system prompt at execution time — without corrupting the MiFID II audit trail or the test suite
+**Depends on**: Phase 14
+**Requirements**: SOUL-01, SOUL-02, SOUL-03, SOUL-04, SOUL-05, SOUL-06, SOUL-07
+**Success Criteria** (what must be TRUE):
+  1. `SoulLoader.load_soul("macro_analyst")` returns a populated `AgentSoul` frozen dataclass with all five soul-file fields; a path-traversal attempt (e.g., `"../etc/passwd"`) raises `ValueError` without touching the filesystem
+  2. `macro_analyst_node` writes `system_prompt` and `active_persona` into `SwarmState` before invoking the LLM, and neither field appears in any hash-chained audit record captured by `AuditLogger`
+  3. `warmup_soul_cache()` completes without error with all five soul directories present (macro_analyst fully populated, four skeletons with minimum viable content)
+  4. The deterministic test suite passes with zero LLM calls; an `autouse` fixture calls `load_soul.cache_clear()` before and after every test so no cached soul leaks between tests
+**Plans**: TBD
+
+### Phase 16: KAMI Merit Index
+**Goal**: Agent reliability is measured by a multi-dimensional merit score that decays with time, persists across sessions, and replaces the character-length proxy in DebateSynthesizer consensus weighting
+**Depends on**: Phase 15
+**Requirements**: KAMI-01, KAMI-02, KAMI-03, KAMI-04
+**Success Criteria** (what must be TRUE):
+  1. `compute_merit(agent_id, signals)` returns a float in `[0.1, 1.0]` using the formula `α·Accuracy + β·Recovery + γ·Consensus + δ·Fidelity` with weights read from `swarm_config.yaml`; a self-induced `INVALID_INPUT` error decreases the Recovery dimension rather than rewarding it
+  2. An agent's merit score starts at 0.5 (cold start), updates via EMA with configurable λ (default 0.9), and persists to the `agent_merit_scores` PostgreSQL table after each cycle; the value loaded at session start matches the last persisted value
+  3. `DebateSynthesizer` uses KAMI merit scores from `SwarmState["merit_scores"]` for consensus weighting; a skeleton agent with an empty `IDENTITY.md` receives `weight_multiplier=0.0` and cannot dominate consensus
+  4. `SwarmState` carries `merit_scores: Dict[str, float]` as a dedicated field; the field survives a full LangGraph cycle without accumulation or duplication
+**Plans**: TBD
+
+### Phase 17: MEMORY.md Evolution + Agent Church
+**Goal**: Each agent maintains a capped structured self-reflection log after every task cycle, can propose edits to its own SOUL.md, and those proposals are reviewed by a standalone out-of-band Agent Church script before any soul file is mutated
+**Depends on**: Phase 16
+**Requirements**: EVOL-01, EVOL-02, EVOL-03
+**Success Criteria** (what must be TRUE):
+  1. After each task cycle, the active agent's `src/core/souls/{agent_id}/MEMORY.md` gains one new structured entry containing `[KAMI_DELTA:]` and `[MERIT_SCORE:]` machine-readable markers; the file is capped at 50 entries (oldest removed when limit is exceeded)
+  2. An agent-proposed SOUL.md diff is written to `data/soul_proposals/{agent_id}.json` with the Pydantic-validated schema (agent_id, section, diff, rationale, proposed_at, status); the file is created atomically and does not block trade execution
+  3. Running `python -m src.core.agent_church` reviews pending proposals, applies approved diffs and calls `load_soul.cache_clear()` + `warmup_soul_cache()`, logs rejected diffs with reason, and raises `RequiresHumanApproval` for any L1 Orchestrator self-proposal rather than auto-approving
+**Plans**: TBD
+
+### Phase 18: Theory of Mind Soul-Sync
+**Goal**: BullishResearcher and BearishResearcher exchange public soul summaries before the debate begins, enabling each agent to address its opponent's persona logic rather than arguing past it
+**Depends on**: Phase 17
+**Requirements**: TOM-01, TOM-02
+**Success Criteria** (what must be TRUE):
+  1. `soul_sync_handshake_node` runs as a barrier node before `DebateSynthesizer`; it reads peer soul summaries from `lru_cache` into `SwarmState["soul_sync_context"]` without making any LLM calls and without disrupting the parallel BullishResearcher/BearishResearcher fan-out topology
+  2. `AgentSoul.public_soul_summary()` returns a truncated soul view that excludes Drift Guard triggers and Core Wounds; the excluded fields are not present in any audit record or debate message logged to `state["messages"]`
+  3. Researcher `USER.md` files contain Empathetic Refutation few-shot examples that reference peer soul context, and the examples are loaded by `SoulLoader` as part of the agent's normal soul injection
+**Plans**: TBD
+
+### Phase 19: ARS Drift Auditor
+**Goal**: A scheduled out-of-band auditor detects ego-hijacking and persona drift across agent evolution logs, suspends evolution for flagged agents, and never gates trade execution
+**Depends on**: Phase 17
+**Requirements**: ARS-01, ARS-02
+**Success Criteria** (what must be TRUE):
+  1. `src/core/ars_auditor.py` computes all five drift metrics (Diff Rejection Rate, KAMI Dimension Variance, Alignment Section Mutation Count, Self-Reflection Sentiment Shift, Role Boundary Vocabulary Violations) from MEMORY.md evolution logs using stdlib regex and Counter cosine only; no LLM calls and no external dependencies beyond the project's existing `pyproject.toml`
+  2. An agent that has accumulated 30+ evolution cycles and exceeds the drift threshold is flagged with an ops alert and has its `evolution_suspended` column set to `True` in the `agent_merit_scores` PostgreSQL table; no code path connects this suspension flag to `order_router_node` or `route_after_institutional_guard`
+  3. Agents with fewer than 30 MEMORY.md entries do not trigger alerts regardless of metric values (warm-up period enforced); the auditor integrates with the existing systemd timer or responds to a `/ars:audit` CLI invocation
+**Plans**: TBD
 
 ## Progress
 
+**Execution Order:** 15 → 16 → 17 → 18 → 19
+
 | Phase | Milestone | Plans Complete | Status | Completed |
-|-------|-----------|---------------|--------|-----------|
+|-------|-----------|----------------|--------|-----------|
 | 1. Foundation & Orchestration | v1.0 | — | Complete | 2026-03-06 |
 | 2. Cognitive Analysis & Risk Gating | v1.0 | — | Complete | 2026-03-06 |
 | 3. Market Execution & Data | v1.0 | — | Complete | 2026-03-06 |
@@ -73,4 +135,8 @@ See: `.planning/milestones/v1.2-ROADMAP.md` for full archive
 | 12. Wire MEM-03 End-to-End | v1.1 | 2/2 | Complete | 2026-03-08 |
 | 13. Wire InstitutionalGuard | v1.2 | 2/2 | Complete | 2026-03-08 |
 | 14. Fix MEM-06 Validation Gate | v1.2 | 2/2 | Complete | 2026-03-08 |
-| 15. TBD | v1.3 | 0/0 | Not started | - |
+| 15. Soul Foundation | v1.3 | 0/TBD | Not started | - |
+| 16. KAMI Merit Index | v1.3 | 0/TBD | Not started | - |
+| 17. MEMORY.md Evolution + Agent Church | v1.3 | 0/TBD | Not started | - |
+| 18. Theory of Mind Soul-Sync | v1.3 | 0/TBD | Not started | - |
+| 19. ARS Drift Auditor | v1.3 | 0/TBD | Not started | - |
