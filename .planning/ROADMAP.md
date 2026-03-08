@@ -103,7 +103,12 @@ Plans:
   1. After each task cycle, the active agent's `src/core/souls/{agent_id}/MEMORY.md` gains one new structured entry containing `[KAMI_DELTA:]` and `[MERIT_SCORE:]` machine-readable markers; the file is capped at 50 entries (oldest removed when limit is exceeded)
   2. An agent-proposed SOUL.md diff is written to `data/soul_proposals/{agent_id}.json` with the Pydantic-validated schema (agent_id, section, diff, rationale, proposed_at, status); the file is created atomically and does not block trade execution
   3. Running `python -m src.core.agent_church` reviews pending proposals, applies approved diffs and calls `load_soul.cache_clear()` + `warmup_soul_cache()`, logs rejected diffs with reason, and raises `RequiresHumanApproval` for any L1 Orchestrator self-proposal rather than auto-approving
-**Plans**: TBD
+**Plans**: 3 plans
+
+Plans:
+- [ ] 17-01-PLAN.md — memory_writer node: MEMORY.md file I/O, entry parse/cap, KAMI delta, phase17 config, RequiresHumanApproval
+- [ ] 17-02-PLAN.md — SoulProposal Pydantic model, atomic write, proposal trigger logic (KAMI spike / drift streak / merit floor)
+- [ ] 17-03-PLAN.md — Agent Church standalone script, H2 section replacement, cache refresh, orchestrator wiring
 
 ### Phase 18: Theory of Mind Soul-Sync
 **Goal**: BullishResearcher and BearishResearcher exchange public soul summaries before the debate begins, enabling each agent to address its opponent's persona logic rather than arguing past it
