@@ -21,9 +21,9 @@ Requirements for the MBS Persona System milestone. Each maps to roadmap phases s
 
 ### KAMI Merit Index (Tier 2a)
 
-- [ ] **KAMI-01**: Agent merit is computed using a multi-dimensional formula (Accuracy + Recovery + Consensus + Fidelity) with configurable weights (default α=0.30, β=0.35, γ=0.25, δ=0.10) stored in swarm_config.yaml
-- [ ] **KAMI-02**: Merit score uses EMA decay (configurable λ, default 0.9), cold start 0.5, and is bounded to [0.1, 1.0]; self-induced tool failures (INVALID_INPUT) penalise rather than reward Recovery dimension
-- [ ] **KAMI-03**: `merit_scores: Dict[str, float]` field exists in SwarmState; scores are loaded from `agent_merit_scores` PostgreSQL table at session start and persisted after each cycle
+- [x] **KAMI-01**: Agent merit is computed using a multi-dimensional formula (Accuracy + Recovery + Consensus + Fidelity) with configurable weights (default α=0.30, β=0.35, γ=0.25, δ=0.10) stored in swarm_config.yaml
+- [x] **KAMI-02**: Merit score uses EMA decay (configurable λ, default 0.9), cold start 0.5, and is bounded to [0.1, 1.0]; self-induced tool failures (INVALID_INPUT) penalise rather than reward Recovery dimension
+- [x] **KAMI-03**: `merit_scores: Dict[str, float]` field exists in SwarmState; scores are loaded from `agent_merit_scores` PostgreSQL table at session start and persisted after each cycle
 - [ ] **KAMI-04**: DebateSynthesizer uses KAMI merit scores for consensus weighting (replaces character-length proxy); skeleton agents with unpopulated IDENTITY.md receive weight_multiplier=0.0
 
 ### MEMORY.md Evolution + Agent Church (Tier 2b)
@@ -92,9 +92,9 @@ Which phases cover which requirements. Updated during roadmap creation.
 | SOUL-05 | Phase 15 | Complete |
 | SOUL-06 | Phase 15 | Complete |
 | SOUL-07 | Phase 15 | Complete |
-| KAMI-01 | Phase 16 | Pending |
-| KAMI-02 | Phase 16 | Pending |
-| KAMI-03 | Phase 16 | Pending |
+| KAMI-01 | Phase 16 | Complete |
+| KAMI-02 | Phase 16 | Complete |
+| KAMI-03 | Phase 16 | Complete |
 | KAMI-04 | Phase 16 | Pending |
 | EVOL-01 | Phase 17 | Pending |
 | EVOL-02 | Phase 17 | Pending |

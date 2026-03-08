@@ -3,13 +3,13 @@ gsd_state_version: 1.0
 milestone: v1.3
 milestone_name: MBS Persona System
 status: completed
-last_updated: "2026-03-08T09:33:32.700Z"
-last_activity: "2026-03-08 — 15-03 complete: soul wired into all 5 L2 nodes (MacroAnalyst, QuantModeler, BullishResearcher, BearishResearcher); _strip_excluded in audit _calculate_hash; warmup_soul_cache in orchestrator; 292 tests passing (SOUL-04, SOUL-05, SOUL-07 closed)"
+last_updated: "2026-03-08T11:12:58.936Z"
+last_activity: "2026-03-08 — 16-01 complete: KAMI arithmetic core (KAMIDimensions, compute_merit, apply_ema, signal helpers), 23 unit tests, agent_merit_scores DDL, merit_scores SwarmState field, kami: config, Wave 0 test stubs; 323 tests passing (KAMI-01, KAMI-02, KAMI-03 closed)"
 progress:
   total_phases: 5
   completed_phases: 1
-  total_plans: 3
-  completed_plans: 3
+  total_plans: 6
+  completed_plans: 4
 ---
 
 # Project State
@@ -25,10 +25,10 @@ Previous: v1.2 Risk Governance — SHIPPED 2026-03-08 (260+ tests, 6 phases)
 
 ## Current Phase
 
-Phase: 15 of 19 (Soul Foundation — COMPLETE)
-Plan: 03/03 complete
-Status: Phase complete — next: Phase 16 (KAMI Merit Index)
-Last activity: 2026-03-08 — 15-03 complete: soul wired into all 5 L2 nodes (MacroAnalyst, QuantModeler, BullishResearcher, BearishResearcher); _strip_excluded in audit _calculate_hash; warmup_soul_cache in orchestrator; 292 tests passing (SOUL-04, SOUL-05, SOUL-07 closed)
+Phase: 16 of 19 (KAMI Merit Index — In Progress)
+Plan: 01/03 complete
+Status: Plan 01 complete — next: Plan 02 (merit_loader + merit_updater graph nodes)
+Last activity: 2026-03-08 — 16-01 complete: KAMI arithmetic core (KAMIDimensions, compute_merit, apply_ema, signal helpers), 23 unit tests, agent_merit_scores DDL, merit_scores SwarmState field, kami: config, Wave 0 test stubs; 323 tests passing (KAMI-01, KAMI-02, KAMI-03 closed)
 
 ## Decisions
 
@@ -38,6 +38,9 @@ Last activity: 2026-03-08 — 15-03 complete: soul wired into all 5 L2 nodes (Ma
 - [Phase 15-02]: Soul files use free-flowing prose with no YAML frontmatter; H1 for persona name, H2 for canonical sections — locked pattern for Phase 17 Agent Church diff targeting
 - [Phase 15]: _strip_excluded() added as module-level function in audit_logger — _calculate_hash and verify_chain strip soul fields consistently before SHA-256 computation
 - [Phase 15]: soul_system_message added as Optional param to _run_researcher_agent — soul prepended locally to messages list, never written to state['messages']
+- [Phase 16-kami-merit-index]: round(raw, 10) before clamp in compute_merit eliminates IEEE 754 jitter (0.30+0.35+0.25+0.10 != exactly 1.0 in Python float arithmetic)
+- [Phase 16-kami-merit-index]: merit_scores is plain Optional[Dict] in SwarmState with no Annotated reducer — merit_loader overwrites per cycle, not accumulates
+- [Phase 16-kami-merit-index]: evolution_suspended column pre-declared in agent_merit_scores DDL to avoid ALTER TABLE migration in Phase 19 ARS-02
 
 ## Progress
 
