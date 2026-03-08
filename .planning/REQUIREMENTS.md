@@ -21,6 +21,7 @@
 - ✓ **EXEC-01**: L3 DataFetcher (yfinance, ccxt, news, economic calendar) — v1.0
 - ✓ **EXEC-02**: L3 Backtester (NautilusTrader BacktestEngine) — v1.0
 - ✓ **EXEC-03**: L3 OrderRouter (paper, IB equities, Binance crypto) — v1.0
+- ✓ **EXEC-04**: DecisionCard tamper-evident audit trail (canonical JSON, SHA-256 hash, audit.jsonl append) — v1.1
 
 ### Risk & Compliance (RISK)
 - ✓ **RISK-01**: RiskManager mandatory gate (consensus_score > 0.6) — v1.0
@@ -150,6 +151,17 @@ All v1.0 requirements covered by Phases 1-4 (shipped 2026-03-06).
 
 **Coverage:**
 - v1.3 requirements: 1 total
+- Mapped to phases: 1
+- Unmapped: 0 ✓
+
+### v1.4 Requirements
+
+| Requirement | Phase | Status |
+|-------------|-------|--------|
+| EXEC-04 | Phase 11 | Complete |
+
+**Coverage:**
+- v1.4 requirements: 1 total
 - Mapped to phases: 1
 - Unmapped: 0 ✓
 
