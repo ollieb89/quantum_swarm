@@ -3,13 +3,13 @@ gsd_state_version: 1.0
 milestone: v1.1
 milestone_name: Self-Improvement
 status: completed
-last_updated: "2026-03-07T23:45:39.208Z"
-last_activity: 2026-03-08 — Phase 10-04 completed; MEM-06 formally registered in REQUIREMENTS.md under v1.3 section with traceability; Phase 10 documentation gap closed.
+last_updated: "2026-03-08T00:29:43.144Z"
+last_activity: 2026-03-08 — Phase 11-01 completed; DecisionCard Pydantic model, builder, canonical JSON, SHA-256 verifier implemented TDD; 14/14 tests passing.
 progress:
   total_phases: 7
   completed_phases: 5
-  total_plans: 11
-  completed_plans: 13
+  total_plans: 13
+  completed_plans: 14
 ---
 
 # Project State
@@ -25,10 +25,10 @@ Previous: v1.1 Self-Improvement Loop — SHIPPED 2026-03-06 (169 tests, 3 phases
 
 ## Current Phase
 
-Phase: 10 — Rule Validation Harness
-Plan: 04 (complete)
-Status: Complete (4/4 plans done)
-Last activity: 2026-03-08 — Phase 10-04 completed; MEM-06 formally registered in REQUIREMENTS.md under v1.3 section with traceability; Phase 10 documentation gap closed.
+Phase: 11 — Explainability & Decision Cards
+Plan: 01 (complete)
+Status: In Progress (1/2 plans done)
+Last activity: 2026-03-08 — Phase 11-01 completed; DecisionCard Pydantic model, builder, canonical JSON, SHA-256 verifier implemented TDD; 14/14 tests passing.
 
 ## Progress
 
@@ -37,7 +37,7 @@ v1.2: [=======   ] 3/4 phases complete
 Phase 8: Portfolio Risk Governance     — Complete (2026-03-06)
 Phase 9: Structured Memory Registry    — Complete (2026-03-06)
 Phase 10: Rule Validation Harness      — Complete (2026-03-08)
-Phase 11: Explainability & Decision Cards — Not started
+Phase 11: Explainability & Decision Cards — In Progress (1/2 plans done)
 ```
 
 ## Health
@@ -119,6 +119,8 @@ See: `.planning/PROJECT.md` (updated 2026-03-06 — Milestone v1.1 started)
 - Audit events written to data/audit.jsonl with fields: timestamp, event, rule_id, before_status, after_status, six metric values, three deltas (10-02)
 - persist_rules() auto-calls RuleValidator.validate_proposed_rules() after every registry write; validator.registry = self.registry shares instance to see in-flight rules without disk round-trip (10-03)
 - Integration tests for RuleValidator drive chain through rg.persist_rules([rule]) not validate_proposed_rules() directly — verifies auto-wiring is real; audit_path redirected via patched __init__ wrapper (10-03)
+- DecisionCard content_hash excluded from its own SHA-256 payload; model_dump(mode="json") used before hashing so datetimes are ISO strings; verify_decision_card() is a pure function — never mutates card_dict (11-01)
+- portfolio_risk_score in DecisionCard sourced via state.get("metadata", {}).get("trade_risk_score") — not a top-level SwarmState field (11-01)
 
 ## v1.1 Phase Dependency Chain
 
