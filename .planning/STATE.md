@@ -3,13 +3,13 @@ gsd_state_version: 1.0
 milestone: v1.3
 milestone_name: MBS Persona System
 status: completed
-last_updated: "2026-03-08T13:40:00.078Z"
-last_activity: "2026-03-08 — 17-02 complete: SoulProposal model + atomic write, KAMI_SPIKE/DRIFT_STREAK/MERIT_FLOOR triggers, rate-limit guard, proposal ledger at data/soul_proposals/; 7 new tests, 354 total passing"
+last_updated: "2026-03-08T13:46:17.409Z"
+last_activity: "2026-03-08 — 17-03 complete: Agent Church standalone review script (EVOL-03), memory_writer_node wired in orchestrator (merit_updater→memory_writer→trade_logger), 8 new tests, 362 total passing"
 progress:
   total_phases: 5
-  completed_phases: 2
+  completed_phases: 3
   total_plans: 9
-  completed_plans: 8
+  completed_plans: 9
 ---
 
 # Project State
@@ -25,10 +25,10 @@ Previous: v1.2 Risk Governance — SHIPPED 2026-03-08 (260+ tests, 6 phases)
 
 ## Current Phase
 
-Phase: 17 of 19 (MEMORY.md Evolution + Agent Church — In Progress)
-Plan: 02/03 complete
-Status: Plan 02 complete — next: Plan 03 (Agent Church — standalone script reading soul_proposals/ and drafting SOUL.md edits)
-Last activity: 2026-03-08 — 17-02 complete: SoulProposal model + atomic write, KAMI_SPIKE/DRIFT_STREAK/MERIT_FLOOR triggers, rate-limit guard, proposal ledger at data/soul_proposals/; 7 new tests, 354 total passing
+Phase: 17 of 19 (MEMORY.md Evolution + Agent Church — Complete)
+Plan: 03/03 complete
+Status: Phase 17 complete — EVOL-01/EVOL-02/EVOL-03 all satisfied; next: Phase 18 (Theory of Mind Soul-Sync)
+Last activity: 2026-03-08 — 17-03 complete: Agent Church standalone review script (EVOL-03), memory_writer_node wired in orchestrator (merit_updater→memory_writer→trade_logger), 8 new tests, 362 total passing
 
 ## Decisions
 
@@ -52,6 +52,10 @@ Last activity: 2026-03-08 — 17-02 complete: SoulProposal model + atomic write,
 - [Phase 17]: PROPOSALS_DIR is a module-level Path constant — created lazily on first write_proposal_atomic call, not at import time
 - [Phase 17]: agent_id in SoulProposal set to soul HANDLE (not agent directory name) — consistent with Agent Church SOUL.md lookup
 - [Phase 17]: proposed_content in trigger-generated proposals is a sentinel string — memory_writer does not draft soul content; Agent Church generates replacement text in Plan 03
+- [Phase 17-03]: Agent Church is a standalone __main__ script — not a LangGraph node — to avoid deadlock and L1 self-approval conflict-of-interest
+- [Phase 17-03]: RequiresHumanApproval propagates from review_proposals() to caller — not caught internally
+- [Phase 17-03]: HANDLE_TO_AGENT_ID copied into agent_church.py (not imported from src.graph.nodes) to maintain Import Layer Law
+- [Phase 17-03]: memory_writer_node wired between merit_updater and trade_logger in orchestrator — Phase 17 EVOL-01/02/03 complete end-to-end
 
 ## Progress
 
@@ -71,7 +75,7 @@ Status: Green
 See: `.planning/PROJECT.md` (updated 2026-03-08 after v1.3 milestone start)
 
 **Core value:** Institutional-quality trade signal generation through adversarial AI debate, with self-improving memory rules validated by backtesting, hard compliance guardrails, and immutable per-trade audit trails
-**Current focus:** v1.3 Phase 17 — MEMORY.md Evolution + Agent Church (Phase 16 KAMI Merit Index complete 2026-03-08)
+**Current focus:** v1.3 Phase 18 — Theory of Mind Soul-Sync (Phase 17 MEMORY.md Evolution + Agent Church complete 2026-03-08)
 
 ## Architecture
 
