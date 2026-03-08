@@ -150,6 +150,11 @@ Plans:
   1. `memory_writer._build_entry()` evaluates the active agent's SOUL.md Drift Guard section against the current cycle's outputs and writes evaluated drift flags (not hardcoded 'none') to `[DRIFT_FLAGS:]` in the MEMORY.md entry
   2. The DRIFT_STREAK trigger in `SoulProposal` fires when 3+ consecutive entries contain non-empty drift flags
   3. ARS `drift_flag_frequency` metric returns a non-zero value for agents with drift flags present in their MEMORY.md entries
+**Plans**: 2 plans
+
+Plans:
+- [ ] 20-01-PLAN.md — DriftRule dataclass, YAML parser, evaluate_drift function, AgentSoul extension, AXIOM SOUL.md rules, test suite
+- [ ] 20-02-PLAN.md — Wire drift evaluation into memory_writer._build_entry(), DRIFT_STREAK + ARS integration verification, full regression
 
 ### Phase 21: Consume Soul-Sync Context in Debate
 **Goal**: debate_synthesizer reads soul_sync_context from SwarmState so peer soul summaries actually influence debate synthesis, completing the Theory of Mind data flow
@@ -195,6 +200,6 @@ Plans:
 | 17. MEMORY.md Evolution + Agent Church | 3/3 | Complete    | 2026-03-08 | - |
 | 18. Theory of Mind Soul-Sync | 2/2 | Complete    | 2026-03-08 | - |
 | 19. ARS Drift Auditor | 2/2 | Complete    | 2026-03-08 | - |
-| 20. Wire Drift Flags Pipeline | v1.3 | 0/0 | Planned | - |
+| 20. Wire Drift Flags Pipeline | v1.3 | 0/2 | Planned | - |
 | 21. Consume Soul-Sync Context in Debate | v1.3 | 0/0 | Planned | - |
 | 22. Failure Path KAMI + Memory Logging | v1.3 | 0/0 | Planned | - |
