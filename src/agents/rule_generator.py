@@ -105,6 +105,7 @@ class RuleGenerator:
             return
         for rule in rules:
             self.registry.add_rule(rule)
+            self.registry.update_status(rule.id, "active")
         # Append human-readable entries to MEMORY.md for orchestrator injection
         self.memory_md_path.parent.mkdir(parents=True, exist_ok=True)
         timestamp = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
