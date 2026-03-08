@@ -205,5 +205,5 @@ Plans:
 | 18. Theory of Mind Soul-Sync | 2/2 | Complete    | 2026-03-08 | - |
 | 19. ARS Drift Auditor | 2/2 | Complete    | 2026-03-08 | - |
 | 20. Wire Drift Flags Pipeline | 2/2 | Complete    | 2026-03-08 | - |
-| 21. Consume Soul-Sync Context in Debate | 1/1 | Complete   | 2026-03-08 | - |
+| 21. Consume Soul-Sync Context in Debate | 1/1 | Complete    | 2026-03-08 | - |
 | 22. Failure Path KAMI + Memory Logging | v1.3 | 0/0 | Planned | - |

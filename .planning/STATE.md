@@ -3,7 +3,7 @@ gsd_state_version: 1.0
 milestone: v1.3
 milestone_name: MBS Persona System
 status: completed
-last_updated: "2026-03-08T19:23:35.595Z"
+last_updated: "2026-03-08T19:26:14.761Z"
 last_activity: "2026-03-08 — 21-01 complete: peer soul summaries wired into debate_history via _OPPONENT_MAP, INT-02 closed"
 progress:
   total_phases: 8
