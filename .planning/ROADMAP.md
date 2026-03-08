@@ -222,6 +222,10 @@ Plans:
   2. MacroAnalyst and QuantModeler sub-graph invocations receive the institutional memory message as first element in the messages list
   3. A full `python main.py --review` run followed by `python main.py` (dry run) demonstrates rules from the previous review session appearing in the agent context logs
   4. Existing Phase 7 tests continue to pass; new integration tests cover the rule lifecycle round-trip and memory forwarding
+**Plans**: 2 plans
+Plans:
+- [ ] 12-01-PLAN.md — TDD RED scaffold: 5 failing tests for MC-01 (rule lifecycle) and MC-02 (memory forwarding)
+- [ ] 12-02-PLAN.md — Fix persist_rules() promotion (MC-01) and analyst memory forwarding (MC-02); turn all 5 tests GREEN
 
 ### Phase 11: Explainability & Decision Cards
 **Goal**: Generate a compact, immutable "decision card" for every trade containing the full cognitive trace.
