@@ -412,3 +412,83 @@ class TestMeritUpdaterFailurePath:
         # Recovery should be penalised (self-induced cause -> 0.0 signal)
         updated = result["merit_scores"]["AXIOM"]
         assert updated["recovery"] < 0.5, "Recovery should decrease for self-induced failure"
+
+
+# ---------------------------------------------------------------------------
+# End-to-end failure path integration test (Phase 22 Plan 02)
+# ---------------------------------------------------------------------------
+
+
+class TestEndToEndFailurePath:
+    """Integration test: complete failure cycle through decision_card_writer, merit_updater,
+    memory_writer nodes simulating the full chain."""
+
+    @patch("src.graph.nodes.merit_updater._persist_merit")
+    @patch("src.graph.nodes.memory_writer._get_souls_dir")
+    @patch("src.graph.nodes.memory_writer._evaluate_drift_flags", return_value="none")
+    @patch("src.graph.nodes.memory_writer.load_soul")
+    def test_full_failure_chain(self, mock_soul, mock_drift, mock_dir, mock_persist, tmp_path) -> None:
+        """Simulates the failure path: decision_card_writer -> merit_updater -> memory_writer.
+        All three nodes should execute without error for a failed execution_result."""
+        from src.core.decision_card import build_decision_card, verify_decision_card
+        from src.graph.nodes.merit_updater import merit_updater_node
+        from src.graph.nodes.memory_writer import _process_agent
+
+        # Setup mocks
+        mock_dir.return_value = tmp_path
+        (tmp_path / "macro_analyst").mkdir()
+
+        async def noop(*a, **kw):
+            pass
+        mock_persist.side_effect = noop
+
+        # Base state simulating a failed execution
+        base_state = {
+            "task_id": "e2e-fail-001",
+            "execution_result": {
+                "success": False,
+                "failure_cause": "RISK_RULE_VIOLATION",
+                "error": "Position limit exceeded",
+            },
+            "active_persona": "AXIOM",
+            "merit_scores": {
+                "AXIOM": {
+                    "accuracy": 0.5, "recovery": 0.5, "consensus": 0.5,
+                    "fidelity": 0.5, "composite": 0.5,
+                },
+            },
+            "weighted_consensus_score": 0.7,
+            "consensus_score": 0.7,
+            "compliance_flags": [],
+            "risk_approval": {},
+            "macro_report": "Inflation rising.",
+            "quant_proposal": None,
+            "bullish_thesis": None,
+            "bearish_thesis": None,
+            "debate_resolution": None,
+            "metadata": {},
+        }
+
+        # Step 1: decision_card_writer — build failure card (macro_report must be dict for Pydantic)
+        card_state = {**base_state, "macro_report": {"summary": "Inflation rising."}}
+        card = build_decision_card(card_state)
+        assert card.execution_result["success"] is False
+        assert verify_decision_card(card.model_dump(mode="json"))
+
+        # Step 2: merit_updater — processes failure, penalises Recovery
+        merit_result = asyncio.run(merit_updater_node(base_state))
+        assert merit_result != {}, "merit_updater must not skip failed execution_result"
+        assert merit_result["merit_scores"]["AXIOM"]["recovery"] < 0.5
+
+        # Step 3: memory_writer — writes entry with [CYCLE_STATUS:] failed
+        _process_agent("AXIOM", base_state)
+        content = (tmp_path / "macro_analyst" / "MEMORY.md").read_text()
+        assert "[CYCLE_STATUS:] failed" in content
+        assert "[AGENT:] AXIOM" in content
+        assert "[THESIS_SUMMARY:]" in content
+
+    def test_graph_compiles_after_rewiring(self) -> None:
+        """Graph compiles without error after removing conditional routing."""
+        from src.graph.orchestrator import create_orchestrator_graph
+        graph = create_orchestrator_graph({})
+        assert graph is not None

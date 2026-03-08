@@ -203,7 +203,7 @@ def test_execution_mode_from_config():
 
 def test_l3_chain_order():
     """After risk_manager approval, graph visits data_fetcher before backtester before
-    order_router before trade_logger."""
+    order_router before decision_card_writer before trade_logger."""
     from src.graph.orchestrator import create_orchestrator_graph
 
     graph = create_orchestrator_graph({})
@@ -214,7 +214,7 @@ def test_l3_chain_order():
     assert "trade_logger" in nodes
 
     # Verify edge ordering via graph structure:
-    # risk_manager → claw_guard → institutional_guard → data_fetcher → knowledge_base → backtester → ...
+    # risk_manager -> claw_guard -> institutional_guard -> data_fetcher -> knowledge_base -> backtester -> ...
     edges = graph.get_graph().edges
     edge_pairs = [(e[0], e[1]) for e in edges]
     assert ("risk_manager", "claw_guard") in edge_pairs
@@ -225,7 +225,11 @@ def test_l3_chain_order():
     assert ("write_external_memory", "knowledge_base") in edge_pairs
     assert ("knowledge_base", "backtester") in edge_pairs
     assert ("backtester", "order_router") in edge_pairs
-    assert ("order_router", "trade_logger") in edge_pairs
+    # Phase 22-02: direct edge replaces conditional routing (all outcomes go through decision_card_writer)
+    assert ("order_router", "decision_card_writer") in edge_pairs
+    assert ("decision_card_writer", "merit_updater") in edge_pairs
+    assert ("merit_updater", "memory_writer") in edge_pairs
+    assert ("memory_writer", "trade_logger") in edge_pairs
     # Phase 4: write_trade_memory inserted between trade_logger and synthesize
     assert ("trade_logger", "write_trade_memory") in edge_pairs
     assert ("write_trade_memory", "synthesize") in edge_pairs

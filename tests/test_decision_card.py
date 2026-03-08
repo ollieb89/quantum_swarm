@@ -368,29 +368,10 @@ class TestDecisionCardWriter(unittest.TestCase):
         return mock_registry
 
     # ------------------------------------------------------------------
-    # Routing tests (synchronous — no async needed)
+    # Routing tests removed — Phase 22-02 deleted route_after_order_router.
+    # All order_router outcomes now traverse decision_card_writer via direct edge.
+    # See tests/core/test_failure_path.py::TestOrchestratorDirectEdge.
     # ------------------------------------------------------------------
-
-    def test_route_after_order_router_success(self):
-        """State with execution_result.success=True -> route to 'decision_card_writer'."""
-        from src.graph.orchestrator import route_after_order_router
-
-        state = self._make_state(execution_result={"success": True})
-        self.assertEqual(route_after_order_router(state), "decision_card_writer")
-
-    def test_route_after_order_router_failure(self):
-        """State with execution_result.success=False -> route to 'trade_logger'."""
-        from src.graph.orchestrator import route_after_order_router
-
-        state = self._make_state(execution_result={"success": False})
-        self.assertEqual(route_after_order_router(state), "trade_logger")
-
-    def test_route_after_order_router_none(self):
-        """State with execution_result=None -> route to 'trade_logger'."""
-        from src.graph.orchestrator import route_after_order_router
-
-        state = self._make_state(execution_result=None)
-        self.assertEqual(route_after_order_router(state), "trade_logger")
 
     # ------------------------------------------------------------------
     # Node tests (async via asyncio.run)
@@ -431,14 +412,28 @@ class TestDecisionCardWriter(unittest.TestCase):
         self.assertEqual(card_dict["event_type"], "decision_card_created")
         self.assertTrue(verify_decision_card(card_dict))
 
-    def test_card_not_written_for_failed_trade(self):
-        """Route function directs failed trades away from writer -> no card created."""
-        from src.graph.orchestrator import route_after_order_router
+    def test_card_written_for_failed_trade(self):
+        """Phase 22-02: failed trades now produce failure cards (direct edge, no routing skip)."""
+        from src.graph.orchestrator import decision_card_writer_node
 
-        state = self._make_state(execution_result={"success": False, "order_id": "ORD-2"})
-        route = route_after_order_router(state)
-        self.assertEqual(route, "trade_logger")
-        # The node is never called for failed trades (verified by routing alone)
+        state = self._make_state(execution_result={
+            "success": False, "order_id": "ORD-2", "failure_cause": "RISK_RULE_VIOLATION",
+        })
+
+        m = mock_open()
+
+        def patched_open(path, mode="r", *args, **kwargs):
+            if mode == "a":
+                return m(path, mode, *args, **kwargs)
+            return open(path, mode, *args, **kwargs)
+
+        with patch("src.graph.orchestrator.get_pool", return_value=self._make_pool_mock()), \
+             patch("src.graph.orchestrator.MemoryRegistry", return_value=self._make_registry_mock()), \
+             patch("builtins.open", side_effect=patched_open):
+            result = asyncio.run(decision_card_writer_node(state))
+
+        self.assertEqual(result["decision_card_status"], "written")
+        self.assertIsNotNone(result["decision_card_audit_ref"])
 
     def test_retry_behavior(self):
         """First open() raises OSError; second succeeds -> status='written'."""
