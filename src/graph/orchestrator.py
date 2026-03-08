@@ -172,6 +172,7 @@ async def decision_card_writer_node(state: SwarmState) -> dict:
 # --- Graph Construction ---
 
 from src.core.audit_logger import AuditLogger
+from src.core.soul_loader import warmup_soul_cache
 
 # Global instance for the orchestrator session
 audit_logger = AuditLogger()
@@ -341,6 +342,9 @@ def create_orchestrator_graph(config: Dict, checkpointer: Any = None, memory: An
     # Default to memory persistence if none provided
     if checkpointer is None:
         checkpointer = MemorySaver()
+
+    # Phase 15: Warm up soul cache at graph creation time (fast-fail on missing soul dirs)
+    warmup_soul_cache()
 
     return workflow.compile(checkpointer=checkpointer)
 

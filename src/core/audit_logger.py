@@ -21,6 +21,11 @@ AUDIT_EXCLUDED_FIELDS: frozenset[str] = frozenset({
 })
 
 
+def _strip_excluded(data: dict) -> dict:
+    """Return a shallow copy of data with AUDIT_EXCLUDED_FIELDS removed."""
+    return {k: v for k, v in data.items() if k not in AUDIT_EXCLUDED_FIELDS}
+
+
 class AuditLogger:
     """
     Asynchronous audit logger with hash-chaining for immutable provenance logs.
@@ -74,13 +79,16 @@ class AuditLogger:
 
     def _calculate_hash(self, entry: Dict[str, Any], prev_hash: Optional[str]) -> str:
         """Calculates a SHA-256 hash for the given entry data and previous hash."""
-        # Use a deterministic representation of the data
+        # Strip soul fields before hashing — must happen here so verify_chain is consistent
+        clean_input = _strip_excluded(entry.get("input_data", {}))
+        clean_output = _strip_excluded(entry.get("output_data", {}))
+
         data_string = json.dumps({
             "task_id": entry["task_id"],
             "timestamp": entry["timestamp"].isoformat(),
             "node_id": entry["node_id"],
-            "input_data": entry["input_data"],
-            "output_data": entry["output_data"]
+            "input_data": clean_input,
+            "output_data": clean_output,
         }, sort_keys=True, default=str)
         
         hasher = hashlib.sha256()
