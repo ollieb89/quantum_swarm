@@ -35,55 +35,55 @@ phases:
   status: complete
   milestone: v1.1
   started: 2026-03-06
-  completed: 2026-03-06
+  completed: 2026-03-07
 - number: 7
   name: Self-Improvement Loop
   status: complete
   milestone: v1.1
   started: 2026-03-06
-  completed: 2026-03-06
+  completed: 2026-03-07
 - number: 8
   name: Portfolio Risk Governance
-  status: in_progress
+  status: complete
   milestone: v1.2
   started: 2026-03-07
-  completed: ''
+  completed: 2026-03-07
 - number: 9
   name: Structured Memory Registry
   status: complete
   milestone: v1.2
   started: 2026-03-06
-  completed: 2026-03-06
+  completed: 2026-03-07
 - number: 10
   name: Rule Validation Harness
-  status: not_started
+  status: complete
   milestone: v1.2
-  started: ''
-  completed: ''
+  started: 2026-03-07
+  completed: 2026-03-08
 - number: 11
   name: Explainability & Decision Cards
-  status: not_started
+  status: complete
   milestone: v1.2
-  started: ''
-  completed: ''
+  started: 2026-03-07
+  completed: 2026-03-08
 - number: 12
   name: Wire MEM-03 End-to-End (Rule Lifecycle & Memory Forwarding)
-  status: not_started
+  status: complete
   milestone: v1.1
-  started: ''
-  completed: ''
+  started: 2026-03-08
+  completed: 2026-03-08
 - number: 13
   name: Wire InstitutionalGuard into LangGraph Graph
-  status: not_started
+  status: complete
   milestone: v1.2
-  started: ''
-  completed: ''
+  started: 2026-03-08
+  completed: 2026-03-08
 - number: 14
   name: Fix MEM-06 Validation Gate Call Order
-  status: not_started
+  status: complete
   milestone: v1.2
-  started: ''
-  completed: ''
+  started: 2026-03-08
+  completed: 2026-03-08
 updated: '2026-03-08'
 ---
 
@@ -91,13 +91,14 @@ updated: '2026-03-08'
 
 ## Milestones
 
-- **v1.0 MVP** — Phases 1-4 (shipped 2026-03-06)
-- **v1.1 Self-Improvement** — Phases 5-7 (planned)
+- ✅ **v1.0 MVP** — Phases 1-4 (shipped 2026-03-06)
+- ✅ **v1.1 Self-Improvement** — Phases 5-7, 12 (shipped 2026-03-08)
+- 🚧 **v1.2 Risk Governance** — Phases 8-11, 13-14 (complete, pending milestone close)
 
 ## Phases
 
 <details>
-<summary>v1.0 MVP (Phases 1-4) — SHIPPED 2026-03-06</summary>
+<summary>✅ v1.0 MVP (Phases 1-4) — SHIPPED 2026-03-06</summary>
 
 - [x] Phase 1: Foundation & Orchestration (L1) — completed 2026-03-06
   - LangGraph StateGraph, ClawGuard, skill registry, deterministic bypass
@@ -112,177 +113,46 @@ See: `.planning/milestones/v1.0-ROADMAP.md` for full archive
 
 </details>
 
-### v1.1 Self-Improvement (Planned)
+<details>
+<summary>✅ v1.1 Self-Improvement (Phases 5-7, 12) — SHIPPED 2026-03-08</summary>
 
-- [ ] **Phase 5: Quant Alpha Intelligence** — Centralized technical indicator skill available to all agents
-- [x] **Phase 6: Stop-Loss Enforcement** — ATR-based stop-loss calculated, gated, and audited on every trade (completed 2026-03-07)
-- [x] **Phase 7: Self-Improvement Loop** — PerformanceReviewAgent + RuleGenerator with lazy LLM init, SelfLearningPipeline, dual-source memory injection, --review CLI (completed 2026-03-07)
-- [x] **Phase 12: Wire MEM-03 End-to-End (Rule Lifecycle & Memory Forwarding)** — Gap closure: promote generated rules to `active` status; forward institutional memory into MacroAnalyst/QuantModeler sub-graph invocations (closes MC-01, MC-02) (completed 2026-03-08)
+- [x] Phase 5: Quant Alpha Intelligence — completed 2026-03-06
+  - Centralized `quant-alpha-intelligence` skill: RSI, MACD, Bollinger Bands, ATR; `{name}_{period}` result keying
+- [x] Phase 6: Stop-Loss Enforcement — completed 2026-03-07
+  - ATR-based stop-loss gate, OrderRouter hard rejection on missing stop-loss, PostgreSQL audit columns
+- [x] Phase 7: Self-Improvement Loop — completed 2026-03-07
+  - PerformanceReviewAgent, RuleGenerator, SelfLearningPipeline, `--review` CLI, dual-source memory injection
+- [x] Phase 12: Wire MEM-03 End-to-End — completed 2026-03-08
+  - Gap closure: rules promoted to `active`, institutional memory forwarded to analyst sub-graphs (closes MC-01, MC-02)
 
-## Phase Details
+See: `.planning/milestones/v1.1-ROADMAP.md` for full archive
 
-### Phase 5: Quant Alpha Intelligence
-**Goal**: Any agent in the swarm can compute RSI, MACD, and Bollinger Bands through a single registered skill, eliminating duplicate implementations.
-**Depends on**: Phase 4 (skill registry infrastructure)
-**Milestone**: v1.1
-**Requirements**: ANALY-03
-**Success Criteria** (what must be TRUE):
-  1. Calling the `quant-alpha-intelligence` skill with a price series returns RSI, MACD, and Bollinger Band values without error
-  2. The skill is registered in the YAML skill registry and discoverable by the L1 orchestrator via progressive disclosure
-  3. QuantModeler can invoke the skill via its tool interface and receive structured output it uses in analysis
-  4. Unit tests cover each indicator calculation and pass against known reference values
-**Plans**: [PLAN.md](phases/05-quant-alpha-intelligence/PLAN.md)
+</details>
 
+### 🚧 v1.2 Risk Governance and Rule Validation
 
-### Phase 6: Stop-Loss Enforcement
-**Goal**: Every trade the swarm submits has an ATR-derived stop-loss calculated before submission, is rejected at the OrderRouter if that stop-loss is missing, and has the stop-loss level written to the PostgreSQL audit record.
-**Depends on**: Phase 5 (ATR calculation provided by quant-alpha-intelligence skill)
-**Milestone**: v1.1
-**Requirements**: RISK-03, RISK-05, RISK-06
-**Success Criteria** (what must be TRUE):
-  1. A trade submitted without a stop-loss field is rejected by OrderRouter with an explicit error before any venue call is made
-  2. A trade submitted through the normal flow has an ATR-based stop-loss value present in the order payload
-  3. After a trade is logged, the PostgreSQL audit record for that trade contains stop_loss_level, entry_price, and position_size columns populated
-  4. Attempting to bypass the gate (e.g., empty or null stop-loss) is caught and logged as a compliance violation, not silently ignored
-**Plans**: [PLAN.md](phases/06-stop-loss-enforcement/PLAN.md)
-
-### Phase 7: Self-Improvement Loop
-**Goal**: The swarm reviews its own live-vs-backtested performance weekly and automatically writes PREFER/AVOID/CAUTION rules to MEMORY.md that future sessions load as context.
-**Depends on**: Phase 6 (requires real execution records with stop-loss data in trade warehouse)
-**Milestone**: v1.1
-**Requirements**: MEM-02, MEM-03
-**Success Criteria** (what must be TRUE):
-  1. Running the weekly review agent produces a structured performance drift report comparing actual P&L to backtested projections for each completed trade
-  2. The drift report identifies which strategies are over-performing, under-performing, or within expected variance
-  3. Running the rule generator after a review produces at least one PREFER, AVOID, or CAUTION entry appended to MEMORY.md
-  4. Rules written to MEMORY.md follow a consistent, parseable format that future swarm sessions can load as context
-  5. The full pipeline (review → rule generation → MEMORY.md append) can be triggered as a single command and completes without manual intervention
-**Plans**: [PLAN.md](phases/07-self-improvement-loop/PLAN.md)
+- [x] **Phase 8: Portfolio Risk Governance** — Institutional constraints enforced at `institutional_guard` gate (completed 2026-03-07)
+- [x] **Phase 9: Structured Memory Registry** — Machine-readable JSON registry with lifecycle controls (completed 2026-03-07)
+- [x] **Phase 10: Rule Validation Harness** — 2-of-3 backtest metric harness before rule promotion (completed 2026-03-08)
+- [x] **Phase 11: Explainability & Decision Cards** — Immutable DecisionCard JSON for every trade (completed 2026-03-08)
+- [x] **Phase 13: Wire InstitutionalGuard** — Gap closure: `institutional_guard_node` wired into execution graph (closes RISK-07, RISK-08) (completed 2026-03-08)
+- [x] **Phase 14: Fix MEM-06 Validation Gate Call Order** — Gap closure: `persist_rules()` → `proposed` → validator → `active`/`rejected` (closes MEM-06) (completed 2026-03-08)
 
 ## Progress
 
-| Phase | Milestone | Status | Completed |
-|-------|-----------|--------|-----------|
-| 1. Foundation & Orchestration | v1.0 | Complete | 2026-03-06 |
-| 2. Cognitive Analysis & Risk Gating | v1.0 | Complete | 2026-03-06 |
-| 3. Market Execution & Data | v1.0 | Complete | 2026-03-06 |
-| 4. Memory & Institutional Compliance | 3/3 | Complete   | 2026-03-07 |
-| 5. Quant Alpha Intelligence | 2/3 | In Progress|  |
-| 6. Stop-Loss Enforcement | 1/1 | Complete   | 2026-03-07 |
-| 7. Self-Improvement Loop | 2/2 | Complete   | 2026-03-07 |
-| 8. Portfolio Risk Governance | 2/2 | Complete   | 2026-03-07 |
-| 9. Structured Memory Registry | 2/2 | Complete   | 2026-03-07 |
-| 10. Rule Validation Harness | 4/4 | Complete    | 2026-03-07 |
-| 11. Explainability & Decision Cards | 2/2 | Complete    | 2026-03-08 |
-
-## Milestone v1.2: Risk Governance and Rule Validation
-Institutional hardening of risk controls and verification of self-improvement rules.
-
-### Phase 8: Portfolio Risk Governance
-**Goal**: Enforce aggregate portfolio constraints (exposure, concentration, drawdown) at the InstitutionalGuard gate.
-**Depends on**: Phase 6
-**Milestone**: v1.2
-**Requirements**: RISK-07, RISK-08
-**Success Criteria**:
-  1. Orders exceeding max notional exposure or asset concentration are rejected.
-  2. Drawdown circuit breaker rejects orders when daily or cumulative loss exceeds configured thresholds.
-  3. Portfolio-level risk score is calculated and recorded for every trade via state["metadata"].
-  4. _get_open_positions() SQL uses Phase 6 column names (position_size, entry_price).
-  5. idx_trades_exit_time index exists on trades table.
-**Plans**: 2 plans
-Plans:
-- [ ] 08-01-PLAN.md — Write failing test stubs (TDD RED): SQL column check, index check, drawdown rejection, metadata propagation
-- [ ] 08-02-PLAN.md — Fix SQL bug, add exit_time index, implement drawdown circuit breaker (TDD GREEN)
-
-### Phase 9: Structured Memory Registry
-**Goal**: Transition MEMORY.md to a machine-readable JSON registry with lifecycle controls.
-**Depends on**: Phase 7
-**Milestone**: v1.2
-**Requirements**: MEM-04, MEM-05
-**Success Criteria**:
-  1. Memory is stored in a versioned JSON format with status (proposed, active, deprecated).
-  2. Agents load rules based on their lifecycle status.
-  3. update_status() enforces one-way lifecycle transitions with version incrementing.
-  4. Full round-trip verified: RuleGenerator writes proposed -> update_status promotes to active -> orchestrator injects it.
-**Plans**: 2 plans
-Plans:
-- [ ] 09-01-PLAN.md — Add update_status() lifecycle method and atomic save() to MemoryRegistry; expand unit tests (MEM-05)
-- [ ] 09-02-PLAN.md — Integration tests: RuleGenerator persist_rules() + orchestrator injection round-trip (MEM-04, MEM-05)
-
-### Phase 10: Rule Validation Harness
-**Goal**: Backtest or replay newly generated memory rules before promoting them to 'active'.
-**Depends on**: Phase 9, Phase 3 (Backtester)
-**Milestone**: v1.2
-**Requirements**: MEM-06
-**Success Criteria**:
-  1. A validation run compares performance with and without a proposed rule.
-  2. Rules only transition to 'active' if they pass the evaluation harness.
-**Plans**: 3 plans
-Plans:
-- [ ] 10-01-PLAN.md — TDD RED: write test stubs (11 methods), add get_proposed_rules() to MemoryRegistry, add validation YAML config keys
-- [ ] 10-02-PLAN.md — Implement RuleValidator class (two-run backtester, 2-of-3 metric check, audit writes) — turn 9 unit tests GREEN
-- [ ] 10-03-PLAN.md — Wire persist_rules() -> validate_proposed_rules() and turn 2 integration tests GREEN
-
-### Phase 12: Wire MEM-03 End-to-End (Rule Lifecycle & Memory Forwarding)
-**Goal:** Close the two integration gaps in the v1.1 self-improvement loop so that rules generated by the review pipeline are promoted to `active` status and institutional memory is forwarded into MacroAnalyst/QuantModeler sub-graph invocations on every run.
-**Gap Closure:** Closes gaps MC-01 and MC-02 from v1.1 milestone audit (2026-03-08). Restores Flow B end-to-end.
-**Depends on:** Phase 7, Phase 9
-**Milestone:** v1.1 (gap closure)
-**Requirements:** MEM-03
-**Success Criteria** (what must be TRUE):
-  1. After `persist_rules()`, all generated rules have status `active` in the JSON registry and `get_active_rules()` returns them
-  2. MacroAnalyst and QuantModeler sub-graph invocations receive the institutional memory message as first element in the messages list
-  3. A full `python main.py --review` run followed by `python main.py` (dry run) demonstrates rules from the previous review session appearing in the agent context logs
-  4. Existing Phase 7 tests continue to pass; new integration tests cover the rule lifecycle round-trip and memory forwarding
-**Plans**: 2 plans
-Plans:
-- [ ] 12-01-PLAN.md — TDD RED scaffold: 5 failing tests for MC-01 (rule lifecycle) and MC-02 (memory forwarding)
-- [ ] 12-02-PLAN.md — Fix persist_rules() promotion (MC-01) and analyst memory forwarding (MC-02); turn all 5 tests GREEN
-
-### Phase 11: Explainability & Decision Cards
-**Goal**: Generate a compact, immutable "decision card" for every trade containing the full cognitive trace.
-**Depends on**: Phase 4, Phase 8
-**Milestone**: v1.2
-**Requirements**: EXEC-04
-**Success Criteria**:
-  1. Every execution result is accompanied by a JSON decision card in the audit log.
-  2. Decision card identifies which memory rules and risk scores influenced the trade.
-**Plans**: 2 plans
-Plans:
-- [ ] 11-01-PLAN.md — TDD: DecisionCard Pydantic model, build_decision_card() builder, canonical_json(), verify_decision_card() — unit tests GREEN
-- [ ] 11-02-PLAN.md — Wire decision_card_writer node into orchestrator; add SwarmState fields; integration tests (append, retry, failure path)
-
-### Phase 13: Wire InstitutionalGuard into LangGraph Graph
-**Goal:** Close the RISK-07/RISK-08 integration gap so that `institutional_guard_node` executes on every trade, enforcing aggregate portfolio constraints and propagating `trade_risk_score`/`portfolio_heat` metadata to DecisionCards.
-**Gap Closure:** Closes RISK-07, RISK-08 from v1.2 milestone audit (2026-03-08). Restores Flow A end-to-end. Resolves downstream EXEC-04 null `portfolio_risk_score`.
-**Depends on:** Phase 8 (InstitutionalGuard implementation), Phase 11 (DecisionCard)
-**Milestone:** v1.2 (gap closure)
-**Requirements:** RISK-07, RISK-08
-**Success Criteria** (what must be TRUE):
-  1. `workflow.add_edge("claw_guard", "institutional_guard")` and `workflow.add_edge("institutional_guard", "data_fetcher")` exist in orchestrator.py
-  2. A trade execution passes through `institutional_guard_node` (verified by graph trace or log evidence)
-  3. `state["metadata"]["trade_risk_score"]` and `state["metadata"]["portfolio_heat"]` are set after the node executes
-  4. `DecisionCard.portfolio_risk_score` is non-null on a normal trade execution
-  5. All existing Phase 8 unit tests continue to pass; new integration test asserts graph wiring and metadata propagation
-**Plans**: 2 plans
-Plans:
-- [ ] 13-01-PLAN.md — TDD RED: write failing integration tests asserting institutional_guard in graph path and metadata populated
-- [ ] 13-02-PLAN.md — Add two add_edge calls to orchestrator.py; turn integration tests GREEN; verify DecisionCard portfolio_risk_score
-
-### Phase 14: Fix MEM-06 Validation Gate Call Order
-**Goal:** Close the MEM-06 integration gap so that `persist_rules()` adds rules as `proposed` first, then calls the validation harness, which alone promotes passing rules to `active`. Failing rules are moved to `rejected`. Audit events are written to `data/audit.jsonl`.
-**Gap Closure:** Closes MEM-06 from v1.2 milestone audit (2026-03-08). Restores Flow B (self-improvement with rule validation) end-to-end.
-**Depends on:** Phase 10 (RuleValidator), Phase 12 (MC-01 fix)
-**Milestone:** v1.2 (gap closure)
-**Requirements:** MEM-06
-**Success Criteria** (what must be TRUE):
-  1. `persist_rules()` adds rules as `proposed` without immediately promoting them to `active`
-  2. `validate_proposed_rules()` is called after rules are saved as `proposed` and sees a non-empty proposed list
-  3. Rules passing the 2-of-3 metric harness are promoted to `active` by the validator
-  4. Rules failing the harness are moved to `rejected`, never reaching `active`
-  5. Each promotion/rejection event is appended to `data/audit.jsonl` with metric evidence
-  6. Existing Phase 10 and Phase 12 tests continue to pass; new integration test asserts end-to-end gate behaviour
-**Plans**: 2 plans
-Plans:
-- [ ] 14-01-PLAN.md — TDD RED: write failing integration tests asserting proposed → validate → active/rejected flow and audit.jsonl write
-- [ ] 14-02-PLAN.md — Reorder persist_rules() calls (remove explicit update_status active, let validator handle promotion); turn all tests GREEN
+| Phase | Milestone | Plans Complete | Status | Completed |
+|-------|-----------|---------------|--------|-----------|
+| 1. Foundation & Orchestration | v1.0 | — | Complete | 2026-03-06 |
+| 2. Cognitive Analysis & Risk Gating | v1.0 | — | Complete | 2026-03-06 |
+| 3. Market Execution & Data | v1.0 | — | Complete | 2026-03-06 |
+| 4. Memory & Institutional Compliance | v1.0 | — | Complete | 2026-03-06 |
+| 5. Quant Alpha Intelligence | v1.1 | 2/2 | Complete | 2026-03-06 |
+| 6. Stop-Loss Enforcement | v1.1 | 1/1 | Complete | 2026-03-07 |
+| 7. Self-Improvement Loop | v1.1 | 2/2 | Complete | 2026-03-07 |
+| 8. Portfolio Risk Governance | v1.2 | 2/2 | Complete | 2026-03-07 |
+| 9. Structured Memory Registry | v1.2 | 2/2 | Complete | 2026-03-07 |
+| 10. Rule Validation Harness | v1.2 | 4/4 | Complete | 2026-03-08 |
+| 11. Explainability & Decision Cards | v1.2 | 2/2 | Complete | 2026-03-08 |
+| 12. Wire MEM-03 End-to-End | v1.1 | 2/2 | Complete | 2026-03-08 |
+| 13. Wire InstitutionalGuard | v1.2 | 2/2 | Complete | 2026-03-08 |
+| 14. Fix MEM-06 Validation Gate Call Order | v1.2 | 2/2 | Complete | 2026-03-08 |

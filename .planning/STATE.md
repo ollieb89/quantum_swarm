@@ -3,7 +3,7 @@ gsd_state_version: 1.0
 milestone: v1.1
 milestone_name: Self-Improvement
 status: completed
-last_updated: "2026-03-08T06:20:53.683Z"
+last_updated: "2026-03-08T06:36:58.869Z"
 last_activity: 2026-03-08 — Phase 14-02 completed; removed premature update_status from persist_rules(); 21 tests GREEN (5+5+11); 246 passing; MEM-06 closed.
 progress:
   total_phases: 10
@@ -53,10 +53,10 @@ Status: Green
 
 ## Project Reference
 
-See: `.planning/PROJECT.md` (updated 2026-03-08 — Phase 5 complete)
+See: `.planning/PROJECT.md` (updated 2026-03-08 after v1.1 milestone)
 
-**Core value:** Institutional-quality trade signal generation through adversarial AI debate, with immutable audit trails and hard compliance guardrails
-**Current focus:** v1.2 — Milestone complete (Phase 11 done); v1.1 bookkeeping gap resolved (Phase 5 ANALY-03 now closed)
+**Core value:** Institutional-quality trade signal generation through adversarial AI debate, with self-improving memory rules validated by backtesting, hard compliance guardrails, and immutable per-trade audit trails
+**Current focus:** v1.1 SHIPPED (2026-03-08) — v1.2 phases 8-11, 13-14 all complete, run `/gsd:complete-milestone` to close v1.2
 
 ## Architecture
 

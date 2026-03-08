@@ -2,29 +2,19 @@
 
 ## What This Is
 
-A production-grade hierarchical multi-agent financial analysis swarm built on LangGraph. Specialized cognitive agents (Macro Analyst, Quant Modeler, adversarial Bull/Bear researchers) synthesize market intelligence through structured debate, apply institutional risk gating, and execute trades via a multi-venue order router with full MiFID II audit provenance.
+A production-grade hierarchical multi-agent financial analysis swarm built on LangGraph. Specialized cognitive agents (Macro Analyst, Quant Modeler, adversarial Bull/Bear researchers) synthesize market intelligence through structured debate, apply institutional risk gating with portfolio-level constraints, execute trades via a multi-venue order router, and continuously self-improve through backtested rule generation — all with full MiFID II audit provenance and immutable decision cards.
 
 ## Core Value
 
-Institutional-quality trade signal generation through adversarial AI debate, with immutable audit trails and hard compliance guardrails — from market data ingestion to PostgreSQL-persisted execution records.
+Institutional-quality trade signal generation through adversarial AI debate, with self-improving memory rules validated by backtesting, hard compliance guardrails, and immutable per-trade audit trails — from market data ingestion to PostgreSQL-persisted execution records.
 
-## Current Milestone: v1.1 Self-Improvement Loop
-
-**Goal:** Close the feedback loop — enforce stop-losses at execution time, centralize quant alpha math, and teach the swarm to learn from its own live-vs-backtested performance.
-
-**Target features:**
-- ANALY-03: `quant-alpha-intelligence` skill (centralized RSI, MACD, financial math)
-- RISK-03: Mandatory stop-loss calculation and verification per execution
-- MEM-02: Weekly review loop evaluating live vs backtested performance
-- MEM-03: Automated rule generator updating MEMORY.md with PREFER/AVOID/CAUTION
-
-## Current State (v1.0)
+## Current State (v1.1 shipped, v1.2 complete)
 
 - **Runtime:** Python 3.12, LangGraph StateGraph, uv-managed
 - **Infrastructure:** PostgreSQL 17 (AsyncPostgresSaver + Trade Warehouse, port 5433)
 - **LLM:** Google Gemini (`gemini-2.0-flash`) via `langchain-google-genai`
-- **Tests:** 155 passing, 0 failures
-- **LOC:** ~14,600 Python
+- **Tests:** 246 passing, 0 failures (excluding 2 known-broken env test files)
+- **LOC:** ~22,500 Python
 
 ### Architecture
 
@@ -34,9 +24,16 @@ L1 Strategic Orchestrator (intent classifier, ClawGuard, skill registry)
 L2 Domain Managers (MacroAnalyst, QuantModeler, BullishResearcher, BearishResearcher)
     ↓ fan-in → DebateSynthesizer → RiskManager gate (>0.6 threshold)
     ↓ if approved
-L3 Executors (DataFetcher → Backtester → OrderRouter → TradeLogger)
+    → InstitutionalGuard (portfolio constraints: exposure, concentration, drawdown)
+    ↓ if approved
+L3 Executors (DataFetcher → Backtester → OrderRouter → DecisionCardWriter → TradeLogger)
     ↓
-PostgreSQL (LangGraph checkpoints + audit_logs + trades)
+PostgreSQL (LangGraph checkpoints + audit_logs + trades + decision_cards)
+
+Self-Improvement Pipeline (weekly):
+    PerformanceReviewAgent → RuleGenerator → MemoryRegistry (proposed)
+    → RuleValidator (2-of-3 backtest harness) → active/rejected + audit.jsonl
+    → orchestrator injects active rules into MacroAnalyst/QuantModeler context
 ```
 
 ## Constraints
@@ -69,19 +66,34 @@ PostgreSQL (LangGraph checkpoints + audit_logs + trades)
 
 ### Validated (v1.1)
 
-- ✓ ANALY-03: `quant-alpha-intelligence` skill (centralized RSI, MACD, financial math) — Phase 5
-- ✓ RISK-03: Mandatory stop-loss calculation and verification per execution — Phase 6
-- ✓ MEM-02: Weekly review loop evaluating live vs backtested performance — Phase 7
-- ✓ MEM-03: Automated rule generator updating MEMORY.md with PREFER/AVOID/CAUTION — Phase 7
+- ✓ ANALY-03: `quant-alpha-intelligence` skill (RSI, MACD, Bollinger Bands, ATR) with `{name}_{period}` keying — v1.1 Phase 5
+- ✓ RISK-03: ATR-based stop-loss calculated for every trade before submission — v1.1 Phase 6
+- ✓ RISK-05: OrderRouter hard gate rejects any trade missing valid stop-loss — v1.1 Phase 6
+- ✓ RISK-06: `stop_loss_level`, `entry_price`, `position_size` written to PostgreSQL audit record — v1.1 Phase 6
+- ✓ MEM-02: Weekly PerformanceReviewAgent generates structured live-vs-backtested drift report — v1.1 Phase 7
+- ✓ MEM-03: RuleGenerator writes PREFER/AVOID/CAUTION rules to MEMORY.md; rules promoted to `active` and injected into analyst context — v1.1 Phase 12
 
-### Active
+### Validated (v1.2)
+
+- ✓ EXEC-04: DecisionCard tamper-evident audit trail (canonical JSON, SHA-256 hash, `audit.jsonl` append) — v1.2 Phase 11
+- ✓ MEM-04: Structured JSON registry (`data/memory_registry.json`) with Pydantic-validated rules (id, type, condition, action, evidence, status, version, timestamps) — v1.2 Phase 9
+- ✓ MEM-05: One-way lifecycle transitions (proposed → active → deprecated/rejected) with version incrementing and INFO-level audit logging — v1.2 Phase 9
+- ✓ MEM-06: Proposed rules backtested before promotion; 2-of-3 metric harness (Sharpe, max drawdown, win rate); failing rules → `rejected`; all events → `data/audit.jsonl` — v1.2 Phase 10/14
+- ✓ RISK-07: Aggregate portfolio constraints (max notional exposure, asset concentration, cumulative drawdown) enforced at `institutional_guard` gate on every trade — v1.2 Phase 8/13
+- ✓ RISK-08: `state["metadata"]["trade_risk_score"]` and `state["metadata"]["portfolio_heat"]` set by `institutional_guard_node`, recorded in `DecisionCard.portfolio_risk_score` — v1.2 Phase 8/13
+
+### Active (next milestone)
+
+- [ ] ANALY-05: RL optimization for order flow — v2.0
+- [ ] SEC-03: System-wide circuit breakers for API degradation or anomalous strategy behavior
+- [ ] MEM-07: Regime-aware vector memory for recognizing long-term historical parallels — v2.0
+- [ ] ORCH-06: Multi-modal input support (chart image analysis) — v2.0
 
 ### Out of Scope
 
 - High-frequency trading / sub-second reasoning loops (swarm is cognitive, not latency-optimized)
 - Direct management of non-institutional retail accounts
-- Multi-modal input (chart image analysis) — deferred to v2.0
-- RL optimization for order flow — deferred to v2.0
+- Real-time stop-loss auto-triggering (v1.1 gates at submission; live monitoring deferred)
 
 ## Key Decisions
 
@@ -96,14 +108,21 @@ PostgreSQL (LangGraph checkpoints + audit_logs + trades)
 | Lazy LLM init (getter functions) | Allows import without GOOGLE_API_KEY | ✓ Good — essential for test suite |
 | psycopg3 async (not psycopg2) | Native asyncio, no greenlets | ✓ Good — no compatibility shims needed |
 | BudgetedTool + ToolCache wrapper | Budget ceilings + dedup tool calls | ✓ Good — SEC-02 compliance, cost control |
-| `{name}_{period}` result key convention in quant_alpha_intelligence | Allows multi-instance same indicator with different periods (rsi_14, rsi_28) | ✓ Good — locked in Phase 5 CONTEXT.md |
+| `{name}_{period}` result key convention in quant_alpha_intelligence | Multi-instance same indicator with different periods (rsi_14, rsi_28) | ✓ Good — locked in Phase 5 CONTEXT.md |
 | RSI state annotation in handle() not TechnicalIndicators.rsi() | Keeps raw method signatures pure; post-processing in orchestration layer | ✓ Good — TechnicalIndicators stays reusable |
 | INSUFFICIENT_DATA vs INVALID_INPUT error classification by message substring | Minimal change; avoids new exception subclasses | ✓ Good — classifiable without structural changes |
+| MemoryRegistry atomic save (os.replace) | Prevents partial-write corruption on crash | ✓ Good — POSIX atomic rename pattern |
+| RuleValidator 2-of-3 majority vote (Sharpe, drawdown, win rate) | Resilient to single metric noise | ✓ Good — balanced promotion gate |
+| `persist_rules()` → proposed only; validator sole promoter | MEM-06 gate order; validator controls active transition | ✓ Good — prevents premature promotion bypass |
+| InstitutionalGuard as mandatory graph node (not inline check) | Aggregate portfolio constraints enforced at graph level | ✓ Good — route_after_institutional_guard handles approved/rejected |
+| Rejected trades route to synthesize (not END) | Explanatory summary before dead-end; explainability preserved | ✓ Good — Phase 13 design |
+| DecisionCard portfolio_risk_score from state["metadata"]["trade_risk_score"] | Not top-level SwarmState field; avoids schema pollution | ✓ Good — Phase 11 design |
 
 ## Context
 
-Shipped v1.0 in 2 days (2026-03-05 → 2026-03-06), 67 commits, 155 tests.
-Next: v1.1 focuses on self-improvement loop (MEM-02/03) and stop-loss enforcement (RISK-03).
+Shipped v1.1 on 2026-03-08 (3 days, 246 tests, 4 phases).
+All v1.2 phases (8-11, 13-14) also complete on same date — run `/gsd:complete-milestone` for v1.2 archival.
+Known env issues: broken `ccxt`, missing `chromadb` and `pytest-asyncio` (~13 tests affected, not regressions).
 
 ---
-*Last updated: 2026-03-08 — Phase 5 complete (ANALY-03 validated)*
+*Last updated: 2026-03-08 after v1.1 milestone*
