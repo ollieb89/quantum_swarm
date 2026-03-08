@@ -50,6 +50,8 @@ Requirements for the Self-Improvement Loop milestone. Each maps to roadmap phase
 - [x] **RISK-03**: System calculates ATR-based stop-loss for every trade before order submission
 - [x] **RISK-05**: OrderRouter rejects any trade execution missing a valid stop-loss calculation (hard gate, no exception)
 - [x] **RISK-06**: Stop-loss level is recorded in the trade's PostgreSQL audit log entry alongside entry price and position size
+- [ ] **RISK-07**: Aggregate portfolio constraints (max notional exposure, asset concentration, cumulative drawdown circuit breaker) are enforced at the `institutional_guard` gate on every trade — v1.2
+- [ ] **RISK-08**: Pre-trade risk scoring sets `state["metadata"]["trade_risk_score"]` and `state["metadata"]["portfolio_heat"]`; these values are recorded in the DecisionCard `portfolio_risk_score` field on every trade — v1.2
 
 ### Memory / Self-Improvement (MEM)
 
@@ -75,7 +77,7 @@ Requirements for the Rule Validation Harness milestone. Each maps to roadmap pha
 
 ### Memory / Self-Improvement (MEM)
 
-- [x] **MEM-06**: Proposed memory rules are automatically backtested before promotion; rules only transition to active if they pass a 2-of-3 metric evaluation harness (Sharpe ratio delta, max drawdown delta, win rate delta). Failing rules are moved to rejected. All promotion/rejection events are appended to `data/audit.jsonl` with full metric evidence.
+- [ ] **MEM-06**: Proposed memory rules are automatically backtested before promotion; rules only transition to active if they pass a 2-of-3 metric evaluation harness (Sharpe ratio delta, max drawdown delta, win rate delta). Failing rules are moved to rejected. All promotion/rejection events are appended to `data/audit.jsonl` with full metric evidence.
 
 ---
 
@@ -135,36 +137,17 @@ All v1.0 requirements covered by Phases 1-4 (shipped 2026-03-06).
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| MEM-04 | Phase 9 | In Progress |
-| MEM-05 | Phase 9 | In Progress |
+| MEM-04 | Phase 9 | Complete |
+| MEM-05 | Phase 9 | Complete |
+| RISK-07 | Phase 13 | Pending |
+| RISK-08 | Phase 13 | Pending |
+| MEM-06 | Phase 14 | Pending |
 
 **Coverage:**
-- v1.2 requirements: 2 total
-- Mapped to phases: 2
-- Unmapped: 0 ✓
-
-### v1.3 Requirements
-
-| Requirement | Phase | Status |
-|-------------|-------|--------|
-| MEM-06 | Phase 10 | Complete |
-
-**Coverage:**
-- v1.3 requirements: 1 total
-- Mapped to phases: 1
-- Unmapped: 0 ✓
-
-### v1.4 Requirements
-
-| Requirement | Phase | Status |
-|-------------|-------|--------|
-| EXEC-04 | Phase 11 | Complete |
-
-**Coverage:**
-- v1.4 requirements: 1 total
-- Mapped to phases: 1
+- v1.2 requirements: 5 total
+- Mapped to phases: 5
 - Unmapped: 0 ✓
 
 ---
 *Requirements defined: 2026-03-06 (v1.0)*
-*Last updated: 2026-03-08 — MEM-03 reset to Pending; gap closure Phase 12 added (MC-01, MC-02 from v1.1 audit)*
+*Last updated: 2026-03-08 — RISK-07, RISK-08 added formally; MEM-06 reset to Pending; gap closure Phases 13-14 added (RISK-07, RISK-08, MEM-06 from v1.2 audit)*

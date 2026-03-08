@@ -72,6 +72,18 @@ phases:
   milestone: v1.1
   started: ''
   completed: ''
+- number: 13
+  name: Wire InstitutionalGuard into LangGraph Graph
+  status: not_started
+  milestone: v1.2
+  started: ''
+  completed: ''
+- number: 14
+  name: Fix MEM-06 Validation Gate Call Order
+  status: not_started
+  milestone: v1.2
+  started: ''
+  completed: ''
 updated: '2026-03-08'
 ---
 
@@ -239,3 +251,38 @@ Plans:
 Plans:
 - [ ] 11-01-PLAN.md — TDD: DecisionCard Pydantic model, build_decision_card() builder, canonical_json(), verify_decision_card() — unit tests GREEN
 - [ ] 11-02-PLAN.md — Wire decision_card_writer node into orchestrator; add SwarmState fields; integration tests (append, retry, failure path)
+
+### Phase 13: Wire InstitutionalGuard into LangGraph Graph
+**Goal:** Close the RISK-07/RISK-08 integration gap so that `institutional_guard_node` executes on every trade, enforcing aggregate portfolio constraints and propagating `trade_risk_score`/`portfolio_heat` metadata to DecisionCards.
+**Gap Closure:** Closes RISK-07, RISK-08 from v1.2 milestone audit (2026-03-08). Restores Flow A end-to-end. Resolves downstream EXEC-04 null `portfolio_risk_score`.
+**Depends on:** Phase 8 (InstitutionalGuard implementation), Phase 11 (DecisionCard)
+**Milestone:** v1.2 (gap closure)
+**Requirements:** RISK-07, RISK-08
+**Success Criteria** (what must be TRUE):
+  1. `workflow.add_edge("claw_guard", "institutional_guard")` and `workflow.add_edge("institutional_guard", "data_fetcher")` exist in orchestrator.py
+  2. A trade execution passes through `institutional_guard_node` (verified by graph trace or log evidence)
+  3. `state["metadata"]["trade_risk_score"]` and `state["metadata"]["portfolio_heat"]` are set after the node executes
+  4. `DecisionCard.portfolio_risk_score` is non-null on a normal trade execution
+  5. All existing Phase 8 unit tests continue to pass; new integration test asserts graph wiring and metadata propagation
+**Plans**: 2 plans
+Plans:
+- [ ] 13-01-PLAN.md — TDD RED: write failing integration tests asserting institutional_guard in graph path and metadata populated
+- [ ] 13-02-PLAN.md — Add two add_edge calls to orchestrator.py; turn integration tests GREEN; verify DecisionCard portfolio_risk_score
+
+### Phase 14: Fix MEM-06 Validation Gate Call Order
+**Goal:** Close the MEM-06 integration gap so that `persist_rules()` adds rules as `proposed` first, then calls the validation harness, which alone promotes passing rules to `active`. Failing rules are moved to `rejected`. Audit events are written to `data/audit.jsonl`.
+**Gap Closure:** Closes MEM-06 from v1.2 milestone audit (2026-03-08). Restores Flow B (self-improvement with rule validation) end-to-end.
+**Depends on:** Phase 10 (RuleValidator), Phase 12 (MC-01 fix)
+**Milestone:** v1.2 (gap closure)
+**Requirements:** MEM-06
+**Success Criteria** (what must be TRUE):
+  1. `persist_rules()` adds rules as `proposed` without immediately promoting them to `active`
+  2. `validate_proposed_rules()` is called after rules are saved as `proposed` and sees a non-empty proposed list
+  3. Rules passing the 2-of-3 metric harness are promoted to `active` by the validator
+  4. Rules failing the harness are moved to `rejected`, never reaching `active`
+  5. Each promotion/rejection event is appended to `data/audit.jsonl` with metric evidence
+  6. Existing Phase 10 and Phase 12 tests continue to pass; new integration test asserts end-to-end gate behaviour
+**Plans**: 2 plans
+Plans:
+- [ ] 14-01-PLAN.md — TDD RED: write failing integration tests asserting proposed → validate → active/rejected flow and audit.jsonl write
+- [ ] 14-02-PLAN.md — Reorder persist_rules() calls (remove explicit update_status active, let validator handle promotion); turn all tests GREEN
