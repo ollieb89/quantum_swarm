@@ -33,6 +33,8 @@ from .agents.l3.trade_logger import trade_logger_node
 from .nodes.write_external_memory import write_external_memory_node
 from .nodes.write_research_memory import write_research_memory_node
 from .nodes.write_trade_memory import write_trade_memory_node
+from .nodes.merit_loader import merit_loader_node
+from .nodes.merit_updater import merit_updater_node
 
 logger = logging.getLogger(__name__)
 
@@ -281,8 +283,13 @@ def create_orchestrator_graph(config: Dict, checkpointer: Any = None, memory: An
     workflow.add_node("write_research_memory", partial(write_research_memory_node, memory=memory))
     workflow.add_node("write_trade_memory", partial(write_trade_memory_node, memory=memory))
 
-    # Set Entry Point
-    workflow.set_entry_point("classify_intent")
+    # --- Phase 16: KAMI Merit Index nodes ---
+    workflow.add_node("merit_loader", with_audit_logging(merit_loader_node, "merit_loader"))
+    workflow.add_node("merit_updater", with_audit_logging(merit_updater_node, "merit_updater"))
+
+    # Set Entry Point (Phase 16: merit_loader is new entry point)
+    workflow.set_entry_point("merit_loader")
+    workflow.add_edge("merit_loader", "classify_intent")
 
     # --- Routing from intent classifier ---
     workflow.add_conditional_edges(
@@ -334,7 +341,8 @@ def create_orchestrator_graph(config: Dict, checkpointer: Any = None, memory: An
         route_after_order_router,
         {"decision_card_writer": "decision_card_writer", "trade_logger": "trade_logger"},
     )
-    workflow.add_edge("decision_card_writer", "trade_logger")
+    workflow.add_edge("decision_card_writer", "merit_updater")
+    workflow.add_edge("merit_updater", "trade_logger")
     workflow.add_edge("trade_logger", "write_trade_memory")      # Phase 4: store trade outcome
     workflow.add_edge("write_trade_memory", "synthesize")
     workflow.add_edge("synthesize", END)
@@ -484,6 +492,11 @@ class LangGraphOrchestrator:
             "decision_card_status": None,
             "decision_card_error": None,
             "decision_card_audit_ref": None,
+            # Phase 15: Soul fields
+            "system_prompt": None,
+            "active_persona": None,
+            # Phase 16: KAMI Merit Index
+            "merit_scores": None,
         }
 
         # Configure the thread (required for checkpointing)
