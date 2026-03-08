@@ -257,3 +257,15 @@ kami:
   default_merit: 0.5
   merit_floor: 0.1
   merit_ceil: 1.0
+
+# Phase 17: MEMORY.md Evolution + Agent Church
+phase17:
+  kami_delta_threshold: 0.05
+  drift_streak_n: 3
+  merit_floor: 0.40
+  merit_floor_k: 3
+  soul_autoapprove_max_chars: 500
+  soul_autoapprove_allowed_ops:
+    - section_patch
+  rate_limit_rejection_k: 3
+  rate_limit_window_days: 7

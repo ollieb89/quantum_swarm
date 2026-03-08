@@ -15,3 +15,7 @@ class SoulValidationError(SoulError):
 
 class SoulSecurityError(SoulError):
     """Raised when path traversal or other unsafe loading is detected."""
+
+
+class RequiresHumanApproval(SoulError):
+    """Raised when a proposal targets the L1 Orchestrator — cannot be auto-approved."""
