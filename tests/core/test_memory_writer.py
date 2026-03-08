@@ -345,7 +345,7 @@ class TestEvaluateDriftFlags:
                 DriftRule(flag_id="recency_bias", type="keyword_any", include=("latest",)),
             ),
         )
-        monkeypatch.setattr("src.graph.nodes.memory_writer.load_soul", lambda _: mock_soul)
+        monkeypatch.setattr(mw_mod, "load_soul", lambda _: mock_soul)
 
         result = mw_mod._evaluate_drift_flags("macro_analyst", "The latest data shows growth.")
         assert result == "recency_bias"
@@ -364,7 +364,7 @@ class TestEvaluateDriftFlags:
                 DriftRule(flag_id="recency_bias", type="keyword_any", include=("latest",)),
             ),
         )
-        monkeypatch.setattr("src.graph.nodes.memory_writer.load_soul", lambda _: mock_soul)
+        monkeypatch.setattr(mw_mod, "load_soul", lambda _: mock_soul)
 
         result = mw_mod._evaluate_drift_flags("macro_analyst", "Structural regime analysis.")
         assert result == "none"
@@ -380,7 +380,7 @@ class TestEvaluateDriftFlags:
             agents="test agents",
             drift_rules=(),
         )
-        monkeypatch.setattr("src.graph.nodes.memory_writer.load_soul", lambda _: mock_soul)
+        monkeypatch.setattr(mw_mod, "load_soul", lambda _: mock_soul)
 
         result = mw_mod._evaluate_drift_flags("bullish_researcher", "Some output text.")
         assert result == "none"
@@ -388,7 +388,7 @@ class TestEvaluateDriftFlags:
     def test_exception_returns_evaluation_failed(self, monkeypatch):
         """If load_soul raises, _evaluate_drift_flags returns 'evaluation_failed'."""
         monkeypatch.setattr(
-            "src.graph.nodes.memory_writer.load_soul",
+            mw_mod, "load_soul",
             MagicMock(side_effect=RuntimeError("broken")),
         )
 
@@ -425,7 +425,7 @@ class TestProcessAgentDrift:
                           include=("consensus expects",)),
             ),
         )
-        monkeypatch.setattr("src.graph.nodes.memory_writer.load_soul", lambda _: mock_soul)
+        monkeypatch.setattr(mw_mod, "load_soul", lambda _: mock_soul)
 
         state = _make_state(
             macro_report={"content": "The consensus expects inflation to fall."},
@@ -452,7 +452,7 @@ class TestProcessAgentDrift:
                           include=("consensus expects",)),
             ),
         )
-        monkeypatch.setattr("src.graph.nodes.memory_writer.load_soul", lambda _: mock_soul)
+        monkeypatch.setattr(mw_mod, "load_soul", lambda _: mock_soul)
 
         state = _make_state(
             macro_report={"content": "Structural regime analysis shows credit tightening."},
@@ -475,7 +475,7 @@ class TestProcessAgentDrift:
             agents="test agents",
             drift_rules=(),
         )
-        monkeypatch.setattr("src.graph.nodes.memory_writer.load_soul", lambda _: mock_soul)
+        monkeypatch.setattr(mw_mod, "load_soul", lambda _: mock_soul)
 
         state = _make_state(
             bullish_thesis="Momentum is building in tech sector.",
@@ -490,7 +490,7 @@ class TestProcessAgentDrift:
     def test_drift_eval_exception_writes_evaluation_failed(self, tmp_path, monkeypatch):
         """If drift evaluation throws, _process_agent writes evaluation_failed."""
         monkeypatch.setattr(
-            "src.graph.nodes.memory_writer.load_soul",
+            mw_mod, "load_soul",
             MagicMock(side_effect=RuntimeError("soul broken")),
         )
 
