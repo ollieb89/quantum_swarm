@@ -52,10 +52,10 @@ Status: Green
 
 ## Project Reference
 
-See: `.planning/PROJECT.md` (updated 2026-03-06 — Milestone v1.1 started)
+See: `.planning/PROJECT.md` (updated 2026-03-08 — Phase 5 complete)
 
 **Core value:** Institutional-quality trade signal generation through adversarial AI debate, with immutable audit trails and hard compliance guardrails
-**Current focus:** v1.1 — Phase 5: Quant Alpha Intelligence (ANALY-03)
+**Current focus:** v1.2 — Milestone complete (Phase 11 done); v1.1 bookkeeping gap resolved (Phase 5 ANALY-03 now closed)
 
 ## Architecture
 

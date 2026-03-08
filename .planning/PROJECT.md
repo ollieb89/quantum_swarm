@@ -67,12 +67,14 @@ PostgreSQL (LangGraph checkpoints + audit_logs + trades)
 - ✓ SEC-02: Budget ceilings via BudgetedTool wrapper — v1.0
 - ✓ SEC-04: Immutable hash-chained audit trail (SHA-256, MiFID II) — v1.0
 
-### Active (v1.1 targets)
+### Validated (v1.1)
 
-- [ ] ANALY-03: `quant-alpha-intelligence` skill (centralized RSI, MACD, financial math)
-- [ ] RISK-03: Mandatory stop-loss calculation and verification per execution
-- [ ] MEM-02: Weekly review loop evaluating live vs backtested performance
-- [ ] MEM-03: Automated rule generator updating MEMORY.md with PREFER/AVOID/CAUTION
+- ✓ ANALY-03: `quant-alpha-intelligence` skill (centralized RSI, MACD, financial math) — Phase 5
+- ✓ RISK-03: Mandatory stop-loss calculation and verification per execution — Phase 6
+- ✓ MEM-02: Weekly review loop evaluating live vs backtested performance — Phase 7
+- ✓ MEM-03: Automated rule generator updating MEMORY.md with PREFER/AVOID/CAUTION — Phase 7
+
+### Active
 
 ### Out of Scope
 
@@ -94,6 +96,9 @@ PostgreSQL (LangGraph checkpoints + audit_logs + trades)
 | Lazy LLM init (getter functions) | Allows import without GOOGLE_API_KEY | ✓ Good — essential for test suite |
 | psycopg3 async (not psycopg2) | Native asyncio, no greenlets | ✓ Good — no compatibility shims needed |
 | BudgetedTool + ToolCache wrapper | Budget ceilings + dedup tool calls | ✓ Good — SEC-02 compliance, cost control |
+| `{name}_{period}` result key convention in quant_alpha_intelligence | Allows multi-instance same indicator with different periods (rsi_14, rsi_28) | ✓ Good — locked in Phase 5 CONTEXT.md |
+| RSI state annotation in handle() not TechnicalIndicators.rsi() | Keeps raw method signatures pure; post-processing in orchestration layer | ✓ Good — TechnicalIndicators stays reusable |
+| INSUFFICIENT_DATA vs INVALID_INPUT error classification by message substring | Minimal change; avoids new exception subclasses | ✓ Good — classifiable without structural changes |
 
 ## Context
 
@@ -101,4 +106,4 @@ Shipped v1.0 in 2 days (2026-03-05 → 2026-03-06), 67 commits, 155 tests.
 Next: v1.1 focuses on self-improvement loop (MEM-02/03) and stop-loss enforcement (RISK-03).
 
 ---
-*Last updated: 2026-03-06 — Milestone v1.1 started*
+*Last updated: 2026-03-08 — Phase 5 complete (ANALY-03 validated)*
