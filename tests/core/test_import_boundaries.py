@@ -46,6 +46,9 @@ class TestCoreLeafImports:
     def test_soul_proposal_imports_cleanly(self):
         _isolated_import("src.core.soul_proposal")
 
+    def test_agent_church_imports_cleanly(self):
+        _isolated_import("src.core.agent_church")
+
 
 class TestNoCoreToAgentImport:
     """Leaf core modules must not import from agents or orchestrator."""
@@ -95,4 +98,15 @@ class TestNoCoreToAgentImport:
         for line in import_lines:
             assert "src.graph" not in line, (
                 f"soul_proposal.py must not import from src.graph.*: {line.strip()}"
+            )
+
+    def test_agent_church_does_not_import_graph(self):
+        import src.core.agent_church as m
+        with open(m.__file__, encoding="utf-8") as f:
+            lines = f.readlines()
+        # Check only actual import statement lines (not docstrings/comments)
+        import_lines = [l for l in lines if l.startswith("from ") or l.startswith("import ")]
+        for line in import_lines:
+            assert "src.graph" not in line, (
+                f"agent_church.py must not import from src.graph.*: {line.strip()}"
             )

@@ -35,6 +35,7 @@ from .nodes.write_research_memory import write_research_memory_node
 from .nodes.write_trade_memory import write_trade_memory_node
 from .nodes.merit_loader import merit_loader_node
 from .nodes.merit_updater import merit_updater_node
+from .nodes.memory_writer import memory_writer_node
 
 logger = logging.getLogger(__name__)
 
@@ -287,6 +288,9 @@ def create_orchestrator_graph(config: Dict, checkpointer: Any = None, memory: An
     workflow.add_node("merit_loader", with_audit_logging(merit_loader_node, "merit_loader"))
     workflow.add_node("merit_updater", with_audit_logging(merit_updater_node, "merit_updater"))
 
+    # --- Phase 17: MEMORY.md Evolution node ---
+    workflow.add_node("memory_writer", with_audit_logging(memory_writer_node, "memory_writer"))
+
     # Set Entry Point (Phase 16: merit_loader is new entry point)
     workflow.set_entry_point("merit_loader")
     workflow.add_edge("merit_loader", "classify_intent")
@@ -342,7 +346,8 @@ def create_orchestrator_graph(config: Dict, checkpointer: Any = None, memory: An
         {"decision_card_writer": "decision_card_writer", "trade_logger": "trade_logger"},
     )
     workflow.add_edge("decision_card_writer", "merit_updater")
-    workflow.add_edge("merit_updater", "trade_logger")
+    workflow.add_edge("merit_updater", "memory_writer")
+    workflow.add_edge("memory_writer", "trade_logger")
     workflow.add_edge("trade_logger", "write_trade_memory")      # Phase 4: store trade outcome
     workflow.add_edge("write_trade_memory", "synthesize")
     workflow.add_edge("synthesize", END)

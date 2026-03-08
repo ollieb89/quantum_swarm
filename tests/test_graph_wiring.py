@@ -76,6 +76,52 @@ def test_institutional_guard_wired_in_graph():
     )
 
 
+def test_memory_writer_wired_between_merit_updater_and_trade_logger():
+    """Assert that memory_writer node is wired: merit_updater → memory_writer → trade_logger.
+
+    Phase 17 Plan 03: memory_writer_node inserted into the graph between merit_updater
+    and trade_logger (replacing the former direct merit_updater → trade_logger edge).
+    """
+    captured = {}
+
+    def fake_compile(self, *args, **kwargs):
+        captured["workflow"] = self
+        return self
+
+    with patch("langgraph.graph.StateGraph.compile", fake_compile):
+        graph_obj = create_orchestrator_graph({})
+
+    workflow = captured.get("workflow", graph_obj)
+
+    try:
+        edges = list(workflow._graph.edges())
+    except AttributeError:
+        edges = [(e[0], e[1]) for e in getattr(workflow, "edges", [])]
+
+    # memory_writer must exist as a node
+    node_names = list(workflow.nodes.keys()) if hasattr(workflow, "nodes") else []
+    assert "memory_writer" in node_names or any(
+        "memory_writer" in str(e) for e in edges
+    ), f"memory_writer node not found. Nodes: {node_names}, edges: {edges}"
+
+    # merit_updater → memory_writer edge must exist
+    assert ("merit_updater", "memory_writer") in edges, (
+        f"Expected edge merit_updater -> memory_writer not found. "
+        f"Edges from merit_updater: {[e for e in edges if e[0] == 'merit_updater']}"
+    )
+
+    # memory_writer → trade_logger edge must exist
+    assert ("memory_writer", "trade_logger") in edges, (
+        f"Expected edge memory_writer -> trade_logger not found. "
+        f"Edges from memory_writer: {[e for e in edges if e[0] == 'memory_writer']}"
+    )
+
+    # The old direct merit_updater → trade_logger edge must NOT exist
+    assert ("merit_updater", "trade_logger") not in edges, (
+        "Old direct edge merit_updater -> trade_logger still present — wiring not updated"
+    )
+
+
 def test_institutional_guard_metadata_propagation():
     """
     Assert that institutional_guard_node populates metadata with trade_risk_score
