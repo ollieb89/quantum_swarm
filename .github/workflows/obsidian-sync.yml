@@ -1,0 +1,58 @@
+name: Obsidian Vault Sync
+
+on:
+  push:
+    branches: [main]
+    paths-ignore:
+      - 'quantum-swarm/**'
+
+concurrency:
+  group: obsidian-sync
+  cancel-in-progress: true
+
+jobs:
+  sync-vault:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 10
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Generate tracking payload from commits
+        run: |
+          COMMIT_COUNT=$(git rev-list --count HEAD~1..HEAD 2>/dev/null || echo 1)
+          python3 scripts/generate_tracking_payload.py \
+            --commits "$COMMIT_COUNT" \
+            --output data/ci_tracking_update.json \
+            --planning-dir .planning
+
+      - name: Update Obsidian project tracking
+        run: |
+          python3 scripts/update_project_tracking.py \
+            --project quantum-swarm \
+            --event progress \
+            --input data/ci_tracking_update.json \
+            --vault-root quantum-swarm
+
+      - name: Generate transclusion indexes
+        run: |
+          python3 scripts/generate_transclusion_indexes.py \
+            --vault-root quantum-swarm \
+            --project quantum-swarm \
+            --repo-root .
+
+      - name: Commit vault updates
+        run: |
+          git config user.name "OpenClaw Architect"
+          git config user.email "architect@openclaw.ai"
+          git add quantum-swarm/ data/ci_tracking_update.json .planning/
+          git diff --staged --quiet && echo "No changes to commit" && exit 0
+          git commit -m "docs: sync obsidian vault from CI [skip ci]"
+          git push

@@ -9,6 +9,7 @@ import logging
 from typing import Any, Dict, Optional
 
 from src.graph.state import SwarmState
+from src.core.parsing import parse_quant_proposal
 from src.tools.data_sources.ccxt_client import fetch_crypto_ohlcv
 from src.tools.data_sources.economic_calendar import fetch_economic_data
 from src.tools.data_sources.news_sentiment import fetch_news_sentiment
@@ -27,9 +28,10 @@ async def data_fetcher_node(state: SwarmState) -> Dict[str, Any]:
     Returns:
         State update dict with data_fetcher_result.
     """
-    quant_proposal = state.get("quant_proposal", {})
-    symbol = quant_proposal.get("symbol", "AAPL")
-    asset_class = quant_proposal.get("asset_class", "equity")
+    # Use shared parsing utility
+    quant_parsed = parse_quant_proposal(state)
+    symbol = quant_parsed.get("symbol", "BTC-USD")
+    asset_class = quant_parsed.get("asset_class", "crypto" if "BTC" in symbol or "ETH" in symbol else "equity")
     
     metadata = state.get("metadata", {})
     fetch_fundamentals = metadata.get("fetch_fundamentals", False)

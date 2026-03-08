@@ -35,7 +35,7 @@ logger = logging.getLogger(__name__)
 
 # Default pricing for Gemini 2.0 Flash (USD per 1 M tokens, as of 2026-03)
 _DEFAULT_PRICING: Dict[str, Dict[str, float]] = {
-    "gemini-2.0-flash": {
+    "gemini-2.5-flash": {
         "input_per_million": 0.075,
         "output_per_million": 0.30,
     },
@@ -62,7 +62,7 @@ class BudgetManager:
     def __init__(
         self,
         config: Optional[Dict[str, Any]] = None,
-        model: str = "gemini-2.0-flash",
+        model: str = "gemini-2.5-flash",
     ) -> None:
         cfg = (config or {}).get("budget", {})
         self._session_token_limit: int = int(

@@ -34,6 +34,7 @@ import logging
 from typing import Any
 
 from src.graph.state import SwarmState
+from src.core.parsing import parse_quant_proposal
 
 logger = logging.getLogger(__name__)
 
@@ -57,9 +58,9 @@ async def backtester_node(state: SwarmState) -> dict[str, Any]:
     Returns:
         Partial state update dict with ``backtest_result`` and ``messages`` keys.
     """
-    quant_proposal: dict = state.get("quant_proposal") or {}
-    symbol: str = quant_proposal.get("symbol", "AAPL")
-    strategy: dict = quant_proposal.get("strategy") or {}
+    quant_parsed = parse_quant_proposal(state)
+    symbol: str = quant_parsed.get("symbol", "BTC-USD")
+    strategy: dict = quant_parsed.get("strategy") or {}
 
     logger.info("Backtester node: symbol=%s, strategy=%s", symbol, strategy)
 

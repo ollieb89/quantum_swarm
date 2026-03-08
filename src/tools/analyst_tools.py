@@ -13,13 +13,85 @@ from typing import Any
 from langchain_core.tools import tool
 
 from src.agents.l3_executor import DataFetcher, Backtester
+from src.skills.quant_alpha_intelligence import TechnicalIndicators
 
 logger = logging.getLogger(__name__)
 
-# Shared singleton instances with a minimal config (no external connections needed
-# for the simulated data layer used in phase 2 development).
+# Shared singleton instances
 _data_fetcher = DataFetcher(config={"timeout": 30})
 _backtester = Backtester(config={"timeout": 30, "max_duration": 300})
+_indicators = TechnicalIndicators()
+
+
+@tool
+def calculate_indicators(series: dict[str, list[float]], indicators: list[dict[str, Any]]) -> dict[str, Any]:
+    """Calculate technical indicators (RSI, MACD, Bollinger Bands, ATR) for price series.
+
+    Use this tool to perform technical analysis on price data. You must provide
+    the raw price series (at least 'close' prices).
+
+    Args:
+        series: Dictionary of price series, e.g.::
+            {
+                "close": [100.0, 101.0, 102.0, ...],
+                "high": [105.0, 106.0, 107.0, ...],
+                "low": [95.0, 96.0, 97.0, ...]
+            }
+        indicators: List of indicator requests, e.g.::
+            [
+                {"name": "rsi", "params": {"period": 14}},
+                {"name": "macd", "params": {"fast": 12, "slow": 26, "signal": 9}},
+                {"name": "bollinger_bands", "params": {"period": 20, "std_dev": 2.0}}
+            ]
+
+    Returns:
+        A dict containing 'results' (indicator values) and 'metadata'.
+        Returns structured errors if parameters are outside safe range [2, 250]
+        or if insufficient data is provided.
+    """
+    from src.skills.quant_alpha_intelligence import handle
+    
+    logger.info("calculate_indicators called: %d indicators requested", len(indicators))
+    
+    state = {
+        "series": series,
+        "indicators": indicators,
+        "full_series": False
+    }
+    
+    return handle(state)
+
+
+@tool
+def fetch_historical_data(symbol: str, start_date: str, end_date: str, interval: str = "1d") -> list[dict[str, Any]]:
+    """Fetch historical price data (OHLCV) for a given symbol and date range.
+
+    Use this tool to retrieve a series of prices for technical indicator
+    calculations or historical analysis.
+
+    Args:
+        symbol: Ticker symbol, e.g. "BTC-USD", "ETH-USD".
+        start_date: Start date in YYYY-MM-DD format.
+        end_date: End date in YYYY-MM-DD format.
+        interval: Data interval, e.g. "1m", "5m", "1h", "1d".
+
+    Returns:
+        A list of candle dictionaries, each containing:
+          - timestamp (str)
+          - open (float)
+          - high (float)
+          - low (float)
+          - close (float)
+          - volume (float)
+    """
+    logger.info("fetch_historical_data called: symbol=%s range=%s to %s", symbol, start_date, end_date)
+
+    return _data_fetcher.fetch_historical(
+        symbol=symbol,
+        start_date=start_date,
+        end_date=end_date,
+        interval=interval
+    )
 
 
 @tool

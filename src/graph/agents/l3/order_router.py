@@ -41,6 +41,7 @@ import uuid
 from typing import Any
 
 from src.graph.state import SwarmState
+from src.core.parsing import parse_quant_proposal
 from src.agents.l3_executor import OrderRouter as Executor
 
 logger = logging.getLogger(__name__)
@@ -87,11 +88,11 @@ async def order_router_node(state: SwarmState) -> dict[str, Any]:
     # 2. Extract order parameters from quant_proposal
     # ------------------------------------------------------------------
     execution_mode: str = state.get("execution_mode", "paper")
-    quant_proposal: dict = state.get("quant_proposal") or {}
-    symbol: str = quant_proposal.get("symbol", "AAPL")
-    side: str = quant_proposal.get("side", "buy")
-    quantity: float = float(quant_proposal.get("quantity", 1.0))
-    asset_class: str = quant_proposal.get("asset_class", "equity")
+    quant_parsed = parse_quant_proposal(state)
+    symbol: str = quant_parsed.get("symbol", "BTC-USD")
+    side: str = quant_parsed.get("side", "buy")
+    quantity: float = float(quant_parsed.get("quantity", 1.0))
+    asset_class: str = quant_parsed.get("asset_class", "crypto" if "BTC" in symbol or "ETH" in symbol else "equity")
     
     # Required for executor compliance checks
     order_params = {
@@ -99,8 +100,8 @@ async def order_router_node(state: SwarmState) -> dict[str, Any]:
         "side": side,
         "quantity": quantity,
         "asset_class": asset_class,
-        "entry_price": quant_proposal.get("entry_price"),
-        "stop_loss": quant_proposal.get("stop_loss"),
+        "entry_price": quant_parsed.get("entry_price"),
+        "stop_loss": quant_parsed.get("stop_loss"),
     }
 
     logger.info(

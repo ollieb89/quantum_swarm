@@ -31,6 +31,7 @@ from datetime import datetime, timezone
 from typing import Any
 
 from src.graph.state import SwarmState
+from src.core.parsing import parse_quant_proposal
 from src.models.data_models import TradeRecord
 from src.core.db import get_pool
 
@@ -71,22 +72,22 @@ async def trade_logger_node(state: SwarmState) -> dict[str, Any]:
     task_id = state.get("task_id", "unknown")
     logger.info("TradeLogger node invoked (task_id=%s)", task_id)
 
-    quant_proposal: dict = state.get("quant_proposal") or {}
+    quant_parsed: dict = parse_quant_proposal(state)
     execution_result: dict = state.get("execution_result") or {}
 
-    symbol: str = quant_proposal.get("symbol", "UNKNOWN")
-    side: str = quant_proposal.get("side", "buy")
-    quantity: float = float(quant_proposal.get("quantity", 1.0))
+    symbol: str = quant_parsed.get("symbol", "UNKNOWN")
+    side: str = quant_parsed.get("side", "buy")
+    quantity: float = float(quant_parsed.get("quantity", 1.0))
     execution_price: float = float(execution_result.get("execution_price", 0.0) or 0.0)
-    stop_loss: float | None = quant_proposal.get("stop_loss")
+    stop_loss: float | None = quant_parsed.get("stop_loss")
     if stop_loss is not None:
         stop_loss = float(stop_loss)
     
-    atr_at_entry: float | None = quant_proposal.get("atr_at_entry")
+    atr_at_entry: float | None = quant_parsed.get("atr_at_entry")
     if atr_at_entry is not None:
         atr_at_entry = float(atr_at_entry)
     
-    stop_loss_multiplier: float | None = quant_proposal.get("stop_loss_multiplier", 2.0)
+    stop_loss_multiplier: float | None = quant_parsed.get("stop_loss_multiplier", 2.0)
     if stop_loss_multiplier is not None:
         stop_loss_multiplier = float(stop_loss_multiplier)
 
@@ -96,7 +97,9 @@ async def trade_logger_node(state: SwarmState) -> dict[str, Any]:
     portfolio_heat = meta.get("portfolio_heat")
 
     execution_mode: str = state.get("execution_mode", "paper")
-    trade_id: str = execution_result.get("order_id", f"trade_{task_id}_{datetime.now(timezone.utc).timestamp()}")
+    # Bug Fix: Ensure trade_id is never None even if order_id is explicitly None
+    trade_id: str = (execution_result.get("order_id") or 
+                   f"trade_{task_id}_{datetime.now(timezone.utc).timestamp()}")
 
     record = TradeRecord(
         trade_id=trade_id,
@@ -116,7 +119,7 @@ async def trade_logger_node(state: SwarmState) -> dict[str, Any]:
         entry_time=datetime.now(timezone.utc),
         exit_time=None,
         execution_mode=execution_mode,
-        strategy_context=dict(quant_proposal),  # snapshot
+        strategy_context=dict(quant_parsed),  # snapshot
     )
 
     # Persist to Trade Warehouse (PostgreSQL)
@@ -158,7 +161,7 @@ async def trade_logger_node(state: SwarmState) -> dict[str, Any]:
                         trade_risk_score,
                         portfolio_heat,
                         execution_mode,
-                        json.dumps(dict(quant_proposal))
+                        json.dumps(dict(quant_parsed))
                     )
                 )
     except Exception as e:

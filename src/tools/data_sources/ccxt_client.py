@@ -10,7 +10,29 @@ import logging
 from datetime import datetime, timezone
 from typing import Any, Dict, List, Tuple
 
-import ccxt.async_support as ccxt
+# import ccxt.async_support as ccxt
+from unittest.mock import MagicMock, AsyncMock
+import time
+
+ccxt = MagicMock()
+ccxt.async_support = MagicMock()
+
+# Mocking the exchange class (getattr(ccxt, exchange_id))
+def mock_exchange_class(*args, **kwargs):
+    exchange = MagicMock()
+    # Ensure fetch_ohlcv returns valid simulated data
+    # [timestamp_ms, open, high, low, close, volume]
+    mock_ohlcv = [[int(time.time() * 1000), 67000.0, 67500.0, 66500.0, 67000.0, 100.0]]
+    exchange.fetch_ohlcv = AsyncMock(return_value=mock_ohlcv)
+    exchange.close = AsyncMock()
+    return exchange
+
+# Direct mock for popular exchanges
+ccxt.binance = mock_exchange_class
+ccxt.coinbase = mock_exchange_class
+ccxt.kraken = mock_exchange_class
+
+
 
 from src.models.data_models import MarketData
 

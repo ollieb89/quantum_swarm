@@ -25,7 +25,7 @@ def get_pool() -> AsyncConnectionPool:
         logger.info("Initializing PostgreSQL connection pool...")
         _pool = AsyncConnectionPool(
             conninfo=DB_URL,
-            open=False, # Wait for explicit open() or first use
+            open=True, # Open immediately
             min_size=2,
             max_size=10,
         )

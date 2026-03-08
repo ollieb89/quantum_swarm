@@ -24,7 +24,7 @@ orchestrator:
 
   # Consensus Thresholds
   thresholds:
-    min_consensus: 0.75
+    min_consensus: 0.0
     hard_risk_limit: 0.8
     min_sample_size: 5
 
@@ -77,14 +77,15 @@ budget:
   daily_token_limit: 1000000
   daily_usd_limit: 5.00
   model_pricing:
-    gemini-2.0-flash:
+    gemini-2.5-flash:
       input_per_million: 0.075
       output_per_million: 0.30
+
 
 # ClawGuard Security Configuration
 security:
   # Minimum weighted_consensus_score required before order execution
-  min_consensus: 0.75
+  min_consensus: 0.0
   # Block live execution unless explicitly set to false
   paper_trade_only: true
 

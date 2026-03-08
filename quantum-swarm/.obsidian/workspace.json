@@ -31,10 +31,14 @@
             "id": "c772cc2ffdeb5e96",
             "type": "leaf",
             "state": {
-              "type": "graph",
-              "state": {},
-              "icon": "lucide-git-fork",
-              "title": "Graph view"
+              "type": "markdown",
+              "state": {
+                "file": "planning/codebase/CONVENTIONS.md",
+                "mode": "preview",
+                "source": false
+              },
+              "icon": "lucide-file",
+              "title": "CONVENTIONS"
             }
           }
         ]
@@ -201,14 +205,41 @@
   },
   "active": "b8a176a18bb2bda7",
   "lastOpenFiles": [
-    "Projects/quantum-swarm/Status/Weekly-2026-10.md",
-    "Projects/quantum-swarm/Decisions.md",
+    "planning/phases/09-structured-memory-registry/PLAN.md",
+    "planning/phases/09-structured-memory-registry/RESEARCH.md",
+    "planning/phases/09-structured-memory-registry/09-CONTEXT.md",
+    "planning/phases/09-structured-memory-registry",
+    "Skills/Untitled",
+    "planning/phases/08-portfolio-risk-governance/PLAN.md",
+    "planning/phases/08-portfolio-risk-governance/RESEARCH.md",
+    "planning/phases/08-portfolio-risk-governance/08-CONTEXT.md",
+    "planning/phases/08-portfolio-risk-governance",
+    "Projects/quantum-swarm/Plugin-Context.md",
+    "Skills",
+    "Welcome.md",
     "Projects/quantum-swarm/Tasks.md",
-    "Projects/quantum-swarm/Milestones.md",
+    "Projects/quantum-swarm/Hub.md",
+    "planning/RETROSPECTIVE.md",
     "Projects/quantum-swarm/Overview.md",
-    "Projects/quantum-swarm/Status",
-    "Projects/quantum-swarm",
-    "Projects",
-    "Welcome.md"
+    "planning/phases/07-self-improvement-loop/PLAN.md",
+    "planning/phases/07-self-improvement-loop/RESEARCH.md",
+    "planning/phases/07-self-improvement-loop/07-CONTEXT.md",
+    "planning/phases/07-self-improvement-loop",
+    "planning/phases/06-stop-loss-enforcement/PLAN.md",
+    "planning/phases/06-stop-loss-enforcement/RESEARCH.md",
+    "planning/phases/06-stop-loss-enforcement/06-CONTEXT.md",
+    "planning/phases/06-stop-loss-enforcement",
+    "planning/codebase/CONVENTIONS.md",
+    "Projects/quantum-swarm/Milestones.md",
+    "planning/phases/05-quant-alpha-intelligence/PLAN.md",
+    "planning/phases/05-quant-alpha-intelligence/RESEARCH.md",
+    "planning/phases/05-quant-alpha-intelligence/05-CONTEXT.md",
+    "planning/phases/05-quant-alpha-intelligence/05-CONTEXT.md.tmp.742293.1772807464085",
+    "planning/phases/05-quant-alpha-intelligence",
+    "planning/REQUIREMENTS.md.tmp.742293.1772805854652",
+    "planning/STATE.md.tmp.742293.1772805823629",
+    "planning/MILESTONES.md",
+    "planning/milestones/v1.0-ROADMAP.md",
+    "planning/milestones/v1.0-REQUIREMENTS.md"
   ]
 }

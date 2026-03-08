@@ -47,8 +47,8 @@ class KnowledgeBase:
                 SELECT
                     COUNT(*) as data_points,
                     AVG(close) as avg_price,
-                    MIN(low) as 5y_low,
-                    MAX(high) as 5y_high,
+                    MIN(low) as "5y_low",
+                    MAX(high) as "5y_high",
                     STDDEV(close) as vol_std
                 FROM historical_ohlcv
                 WHERE symbol = '{symbol.upper()}'

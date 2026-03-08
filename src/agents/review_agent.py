@@ -16,7 +16,7 @@ from src.core.db import get_pool
 
 logger = logging.getLogger(__name__)
 
-_MODEL_ID = "gemini-2.0-flash"
+_MODEL_ID = "gemini-2.5-flash"
 
 # Lazy LLM singleton — instantiation requires GOOGLE_API_KEY at runtime, not import
 _llm = None

@@ -65,7 +65,7 @@ class AuditLogger:
             "node_id": entry["node_id"],
             "input_data": entry["input_data"],
             "output_data": entry["output_data"]
-        }, sort_keys=True)
+        }, sort_keys=True, default=str)
         
         hasher = hashlib.sha256()
         hasher.update(data_string.encode('utf-8'))
@@ -106,8 +106,8 @@ class AuditLogger:
                         task_id, 
                         timestamp, 
                         node_id, 
-                        json.dumps(input_data), 
-                        json.dumps(output_data), 
+                        json.dumps(input_data, default=str), 
+                        json.dumps(output_data, default=str), 
                         current_hash, 
                         self._last_hash
                     )

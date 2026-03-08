@@ -10,6 +10,7 @@ import logging
 from typing import Any
 
 from src.graph.state import SwarmState
+from src.core.parsing import parse_quant_proposal
 from src.tools.knowledge_base import get_kb
 
 logger = logging.getLogger(__name__)
@@ -24,8 +25,8 @@ async def knowledge_base_node(state: SwarmState) -> dict[str, Any]:
         "knowledge_base_result"  dict with sentiment_context and historical_stats
         "messages"               list — one assistant message entry
     """
-    quant_proposal = state.get("quant_proposal") or {}
-    symbol: str = quant_proposal.get("symbol", "AAPL")
+    quant_parsed = parse_quant_proposal(state)
+    symbol: str = quant_parsed.get("symbol", "BTC-USD")
     
     logger.info("KnowledgeBase node: symbol=%s", symbol)
     
