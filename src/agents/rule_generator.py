@@ -100,12 +100,16 @@ class RuleGenerator:
         return "CAUTION"
 
     def persist_rules(self, rules: List[MemoryRule]):
-        """Append new rules to the JSON registry and to data/MEMORY.md."""
+        """Append new rules to the JSON registry and to data/MEMORY.md.
+
+        Rules are added as 'proposed'. RuleValidator.validate_proposed_rules() is
+        then called to run the 2-of-3 backtest harness; passing rules are promoted
+        to 'active', failing rules to 'rejected' (MEM-06).
+        """
         if not rules:
             return
         for rule in rules:
             self.registry.add_rule(rule)
-            self.registry.update_status(rule.id, "active")
         # Append human-readable entries to MEMORY.md for orchestrator injection
         self.memory_md_path.parent.mkdir(parents=True, exist_ok=True)
         timestamp = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
