@@ -33,6 +33,12 @@ logger = logging.getLogger(__name__)
 _BULLISH_SOURCE = "bullish_research"
 _BEARISH_SOURCE = "bearish_research"
 
+# Phase 21: maps debate source → opponent soul handle for peer summary lookup
+_OPPONENT_MAP: dict[str, str] = {
+    _BULLISH_SOURCE: "CASSANDRA",
+    _BEARISH_SOURCE: "MOMENTUM",
+}
+
 
 def _extract_researcher_text(messages: list[Any], source_name: str) -> str:
     """Return concatenated content from all messages tagged with *source_name*.
@@ -116,28 +122,36 @@ def DebateSynthesizer(state: SwarmState) -> dict[str, Any]:
         weighted_consensus_score,
     )
 
+    # Phase 21: read soul_sync_context for peer summary enrichment
+    soul_sync_context = state.get("soul_sync_context") or {}
+    logger.info("DebateSynthesizer: soul_sync_context consumed (%d peer summaries)", len(soul_sync_context))
+
     # Compile debate history with provenance metadata
     debate_history: list[dict] = []
 
     if bullish_text:
-        debate_history.append(
-            {
-                "source": _BULLISH_SOURCE,
-                "hypothesis": "bullish",
-                "evidence": bullish_text,
-                "strength": bull_w,   # merit composite, not len(text)
-            }
-        )
+        entry: dict[str, Any] = {
+            "source": _BULLISH_SOURCE,
+            "hypothesis": "bullish",
+            "evidence": bullish_text,
+            "strength": bull_w,   # merit composite, not len(text)
+        }
+        opponent_summary = soul_sync_context.get(_OPPONENT_MAP[_BULLISH_SOURCE], "")
+        if opponent_summary:
+            entry["peer_soul_summary"] = opponent_summary
+        debate_history.append(entry)
 
     if bearish_text:
-        debate_history.append(
-            {
-                "source": _BEARISH_SOURCE,
-                "hypothesis": "bearish",
-                "evidence": bearish_text,
-                "strength": bear_w,   # merit composite, not len(text)
-            }
-        )
+        entry = {
+            "source": _BEARISH_SOURCE,
+            "hypothesis": "bearish",
+            "evidence": bearish_text,
+            "strength": bear_w,   # merit composite, not len(text)
+        }
+        opponent_summary = soul_sync_context.get(_OPPONENT_MAP[_BEARISH_SOURCE], "")
+        if opponent_summary:
+            entry["peer_soul_summary"] = opponent_summary
+        debate_history.append(entry)
 
     # If neither researcher ran, add a placeholder so debate_history is never empty
     if not debate_history:
