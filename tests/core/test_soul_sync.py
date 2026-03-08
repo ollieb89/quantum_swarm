@@ -179,7 +179,7 @@ class TestGraphTopology:
 class TestNoLLMCalls:
     def test_handshake_no_llm(self):
         """soul_sync_handshake_node must not invoke any LLM during execution."""
-        with patch("src.graph.nodes.soul_sync_handshake.ChatGoogleGenerativeAI") as mock_llm:
+        with patch("src.graph.nodes.soul_sync_handshake.ChatGoogleGenerativeAI", create=True) as mock_llm:
             state: SwarmState = {  # type: ignore[typeddict-item]
                 "task_id": "test-01",
                 "user_input": "test",

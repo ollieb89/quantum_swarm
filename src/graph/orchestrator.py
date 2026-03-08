@@ -36,6 +36,7 @@ from .nodes.write_trade_memory import write_trade_memory_node
 from .nodes.merit_loader import merit_loader_node
 from .nodes.merit_updater import merit_updater_node
 from .nodes.memory_writer import memory_writer_node
+from .nodes.soul_sync_handshake import soul_sync_handshake_node
 
 logger = logging.getLogger(__name__)
 
@@ -291,6 +292,9 @@ def create_orchestrator_graph(config: Dict, checkpointer: Any = None, memory: An
     # --- Phase 17: MEMORY.md Evolution node ---
     workflow.add_node("memory_writer", with_audit_logging(memory_writer_node, "memory_writer"))
 
+    # --- Phase 18: Theory of Mind Soul-Sync barrier node ---
+    workflow.add_node("soul_sync_handshake_node", with_audit_logging(soul_sync_handshake_node, "soul_sync_handshake_node"))
+
     # Set Entry Point (Phase 16: merit_loader is new entry point)
     workflow.set_entry_point("merit_loader")
     workflow.add_edge("merit_loader", "classify_intent")
@@ -312,8 +316,9 @@ def create_orchestrator_graph(config: Dict, checkpointer: Any = None, memory: An
     workflow.add_edge("quant_modeler", "bullish_researcher")
     workflow.add_edge("quant_modeler", "bearish_researcher")
 
-    # --- Fan-in: both researchers must complete before debate_synthesizer ---
-    workflow.add_edge(["bullish_researcher", "bearish_researcher"], "debate_synthesizer")
+    # --- Fan-in + Phase 18 barrier: both researchers → soul_sync_handshake → debate_synthesizer ---
+    workflow.add_edge(["bullish_researcher", "bearish_researcher"], "soul_sync_handshake_node")
+    workflow.add_edge("soul_sync_handshake_node", "debate_synthesizer")
 
     # --- Phase 4: research memory written after debate, before risk gate ---
     workflow.add_edge("debate_synthesizer", "write_research_memory")
@@ -502,6 +507,8 @@ class LangGraphOrchestrator:
             "active_persona": None,
             # Phase 16: KAMI Merit Index
             "merit_scores": None,
+            # Phase 18: Theory of Mind Soul-Sync
+            "soul_sync_context": None,
         }
 
         # Configure the thread (required for checkpointing)
