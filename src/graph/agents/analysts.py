@@ -130,7 +130,17 @@ def MacroAnalyst(state: SwarmState, budget: Optional[BudgetManager] = None) -> d
         f"Perform a macro analysis. User intent: {intent}. Context: {user_input}"
     )
 
-    result = _get_macro_agent().invoke({"messages": [HumanMessage(content=query)]})
+    # Extract institutional memory message from parent state (injected by orchestrator._load_institutional_memory())
+    # state["messages"] is a list of dicts: [{"role": "system", "content": "INSTITUTIONAL MEMORY: ..."}]
+    # Convert to HumanMessage so ReAct sub-graph accepts it (sub-graphs don't process raw dicts)
+    _memory_msgs = state.get("messages", [])
+    _memory_prefix: list = []
+    if _memory_msgs:
+        first = _memory_msgs[0]
+        content = first.get("content", "") if isinstance(first, dict) else getattr(first, "content", "")
+        if content:
+            _memory_prefix = [HumanMessage(content=content)]
+    result = _get_macro_agent().invoke({"messages": _memory_prefix + [HumanMessage(content=query)]})
 
     # Extract the final AI message from the sub-graph result
     agent_messages = result.get("messages", [])
@@ -188,7 +198,17 @@ def QuantModeler(state: SwarmState, budget: Optional[BudgetManager] = None) -> d
         f"Macro context: {macro_context}"
     )
 
-    result = _get_quant_agent().invoke({"messages": [HumanMessage(content=query)]})
+    # Extract institutional memory message from parent state (injected by orchestrator._load_institutional_memory())
+    # state["messages"] is a list of dicts: [{"role": "system", "content": "INSTITUTIONAL MEMORY: ..."}]
+    # Convert to HumanMessage so ReAct sub-graph accepts it (sub-graphs don't process raw dicts)
+    _memory_msgs = state.get("messages", [])
+    _memory_prefix: list = []
+    if _memory_msgs:
+        first = _memory_msgs[0]
+        content = first.get("content", "") if isinstance(first, dict) else getattr(first, "content", "")
+        if content:
+            _memory_prefix = [HumanMessage(content=content)]
+    result = _get_quant_agent().invoke({"messages": _memory_prefix + [HumanMessage(content=query)]})
 
     agent_messages = result.get("messages", [])
     tokens_to_add = 0
