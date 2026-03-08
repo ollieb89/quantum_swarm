@@ -2,14 +2,14 @@
 gsd_state_version: 1.0
 milestone: v1.1
 milestone_name: Self-Improvement
-status: completed
-last_updated: "2026-03-08T00:29:43.144Z"
-last_activity: 2026-03-08 — Phase 11-01 completed; DecisionCard Pydantic model, builder, canonical JSON, SHA-256 verifier implemented TDD; 14/14 tests passing.
+status: executing
+last_updated: "2026-03-08T00:36:15.764Z"
+last_activity: 2026-03-08 — Phase 11-02 completed; decision_card_writer_node wired into LangGraph; conditional edge order_router->decision_card_writer->trade_logger; 21/21 decision card tests passing; 225-test suite clean.
 progress:
   total_phases: 7
-  completed_phases: 5
+  completed_phases: 6
   total_plans: 13
-  completed_plans: 14
+  completed_plans: 15
 ---
 
 # Project State
@@ -26,18 +26,18 @@ Previous: v1.1 Self-Improvement Loop — SHIPPED 2026-03-06 (169 tests, 3 phases
 ## Current Phase
 
 Phase: 11 — Explainability & Decision Cards
-Plan: 01 (complete)
-Status: In Progress (1/2 plans done)
-Last activity: 2026-03-08 — Phase 11-01 completed; DecisionCard Pydantic model, builder, canonical JSON, SHA-256 verifier implemented TDD; 14/14 tests passing.
+Plan: 02 (complete)
+Status: Complete (2/2 plans done)
+Last activity: 2026-03-08 — Phase 11-02 completed; decision_card_writer_node wired into LangGraph; conditional edge order_router->decision_card_writer->trade_logger; 21/21 decision card tests passing; 225-test suite clean.
 
 ## Progress
 
 ```
-v1.2: [=======   ] 3/4 phases complete
+v1.2: [==========] 4/4 phases complete
 Phase 8: Portfolio Risk Governance     — Complete (2026-03-06)
 Phase 9: Structured Memory Registry    — Complete (2026-03-06)
 Phase 10: Rule Validation Harness      — Complete (2026-03-08)
-Phase 11: Explainability & Decision Cards — In Progress (1/2 plans done)
+Phase 11: Explainability & Decision Cards — Complete (2026-03-08)
 ```
 
 ## Health
@@ -46,7 +46,7 @@ Status: Green
 - Phase 9 complete (09-01 + 09-02): MemoryRegistry models + lifecycle controls + integration tests; MEM-04 + MEM-05 fully verified; 14/14 structured memory tests.
 - Phase 8 complete (08-01 + 08-02): TDD stubs written then turned GREEN; RISK-07 + RISK-08 fully satisfied.
 - Phase 7 complete (07-01 + 07-02): self-improvement loop end-to-end + MEM-02/MEM-03 gap closure.
-- 207 tests passing (193 passing in broader suite + 14 structured memory tests; 5 known pre-existing failures in test_order_router + test_persistence).
+- 225 tests passing (225 excluding 2 known-broken test files: test_order_router + test_persistence); 21/21 decision card tests passing.
 - InstitutionalGuard enforces: restricted assets, max concurrent trades, max notional exposure, asset concentration, daily drawdown.
 - Architecture stable: LangGraph + Gemini + psycopg3.
 
@@ -121,6 +121,10 @@ See: `.planning/PROJECT.md` (updated 2026-03-06 — Milestone v1.1 started)
 - Integration tests for RuleValidator drive chain through rg.persist_rules([rule]) not validate_proposed_rules() directly — verifies auto-wiring is real; audit_path redirected via patched __init__ wrapper (10-03)
 - DecisionCard content_hash excluded from its own SHA-256 payload; model_dump(mode="json") used before hashing so datetimes are ISO strings; verify_decision_card() is a pure function — never mutates card_dict (11-01)
 - portfolio_risk_score in DecisionCard sourced via state.get("metadata", {}).get("trade_risk_score") — not a top-level SwarmState field (11-01)
+- decision_card_writer_node wired via conditional edge after order_router; success==True -> decision_card_writer -> trade_logger; failure -> trade_logger directly (11-02)
+- Test isolation for audit.jsonl writes: patch builtins.open on mode=='a' with mock_open(); avoid Path monkeypatching which causes recursive calls (11-02)
+- get_pool() DB failure in decision_card_writer is non-fatal: caught, prev_audit_hash=None, card still written (11-02)
+- SwarmState Phase 11 fields: decision_card_status (Literal pending/written/failed), decision_card_error (str), decision_card_audit_ref (str card_id) — all Optional, initialized to None (11-02)
 
 ## v1.1 Phase Dependency Chain
 

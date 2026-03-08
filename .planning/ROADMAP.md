@@ -154,7 +154,7 @@ See: `.planning/milestones/v1.0-ROADMAP.md` for full archive
 | 8. Portfolio Risk Governance | 2/2 | Complete   | 2026-03-07 |
 | 9. Structured Memory Registry | 2/2 | Complete   | 2026-03-07 |
 | 10. Rule Validation Harness | 4/4 | Complete    | 2026-03-07 |
-| 11. Explainability & Decision Cards | 1/2 | In Progress|  |
+| 11. Explainability & Decision Cards | 2/2 | Complete   | 2026-03-08 |
 
 ## Milestone v1.2: Risk Governance and Rule Validation
 Institutional hardening of risk controls and verification of self-improvement rules.
