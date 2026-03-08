@@ -139,6 +139,56 @@
 - Sessions: ~6 sessions across 2 days
 - ~25 commits covering 6 phases + MEM-06 async post-close fix
 
+## Milestone: v1.3 — MBS Persona System
+
+**Shipped:** 2026-03-08
+**Phases:** 8 (15-22) | **Plans:** 18 | **Tests:** 300+
+
+### What Was Built
+
+- SoulLoader with frozen AgentSoul dataclass, lru_cache, path-traversal guard; AXIOM fully populated + 4 skeleton personas
+- KAMI Merit Index: multi-dimensional formula (Accuracy+Recovery+Consensus+Fidelity) with EMA decay, PostgreSQL persistence, replaces character-length proxy in DebateSynthesizer
+- Per-agent MEMORY.md forensic logs (50-entry cap, KAMI deltas), SoulProposal triggers, standalone Agent Church approval gate
+- Theory of Mind soul-sync handshake: peer soul summaries exchanged before debate, Empathetic Refutation few-shots
+- ARS Drift Auditor: 5 stdlib-only drift metrics, 30-cycle warm-up, flag-then-suspend escalation, daily systemd timer
+- Pipeline closure: drift flags from SOUL.md rules, soul-sync context in debate, failure paths through KAMI+memory
+
+### What Worked
+
+- **Audit-driven gap closure (again)**: Running `/gsd:audit-milestone` after Phase 19 revealed 3 integration gaps (hardcoded DRIFT_FLAGS, orphaned soul_sync_context, failure path bypass). Phases 20-22 closed these cleanly without disrupting the core phase chain.
+- **Frozen dataclass + lru_cache pattern for AgentSoul**: Hashability required for caching, immutability prevents concurrent fan-out mutation. The pattern held cleanly across 8 phases of extensions (drift_rules, users field).
+- **Synchronous node functions everywhere**: After MEM-06's asyncio.run() defect, enforcing synchronous I/O in all node functions prevented an entire class of bugs.
+- **Import Layer Law enforcement**: `test_import_boundaries.py` caught potential upward imports from core → agents/orchestrator early, preventing soul system from leaking graph-layer concerns.
+- **Standalone Agent Church pattern**: Keeping soul mutation out-of-band (not a LangGraph node) avoided deadlock, L1 self-approval conflicts, and mid-graph cache invalidation.
+- **Counter cosine for ARS sentiment**: stdlib-only approach (no numpy/sentence-transformers) kept the background auditor lightweight and dependency-free.
+
+### What Was Inefficient
+
+- **8 phases in 1 day**: Velocity was high but Nyquist VALIDATION.md files were skipped for most phases (partial for 15-18, missing for 19-22). Speed vs. validation documentation tradeoff.
+- **SUMMARY frontmatter gaps**: Several phases had requirements-completed fields missing or listed in wrong phase SUMMARY files. Frontmatter validation should be automated.
+- **Skeleton agents remain unpopulated**: MOMENTUM, CASSANDRA, SIGMA, GUARDIAN still have minimal prose content. Drift evaluation returns 'none' for them by design, but full persona diversity deferred.
+- **Accuracy dimension deferred**: KAMI Accuracy is never updated in-cycle — thesis_records/ stub exists but no reconciliation process. Recovery and Consensus carry all the weight.
+
+### Patterns Established
+
+- **Frozen dataclass field ordering**: Fields with defaults must come after fields without defaults — `users` and `drift_rules` placed last in AgentSoul to satisfy Python dataclass constraint
+- **Module-level monkeypatch for tests**: `monkeypatch.setattr(module, 'function_name', mock)` instead of string path patches — avoids AttributeError when modules aren't loaded as submodule attributes
+- **Fail-soft on malformed config**: `drift_rules=()` on YAML parse failure, `_check_evolution_suspended` returns False on DB error — agents function without optional features rather than crashing
+- **_EXTERNAL_CAUSES duplication across layers**: Duplicating constants between graph/core layers (not importing) preserves Import Layer Law
+- **Direct edge for unconditional routing**: When routing becomes unconditional (failure path always flows through KAMI+memory), delete the conditional router entirely and use a direct graph edge
+
+### Key Lessons
+
+- **Audit → gap phases → re-audit is the reliable pattern**: v1.3 audit revealed INT-01/INT-02/INT-03 gaps, Phases 20-22 closed them, and re-audit confirmed 18/18 requirements. This pattern has worked across v1.1, v1.2, and v1.3.
+- **Soul file content is a product decision, not an engineering task**: The 4 skeleton personas need creative writing (HEXACO-6 profiles, diverse cognitive styles). Engineering can scaffold the format but can't generate authentic personality content.
+- **Background auditors must never gate revenue paths**: ARS suspension gates evolution only (not trades). This strict scope boundary is the key architectural constraint — any leak would make safety and revenue goals adversarial.
+
+### Cost Observations
+
+- Model: claude-sonnet-4-6 (balanced profile)
+- Sessions: ~3-4 sessions in 1 day
+- 90 commits covering 8 phases (5 core + 3 gap closure)
+
 ## Cross-Milestone Trends
 
 | Milestone | Phases | Tests | Days | LOC |
@@ -146,3 +196,4 @@
 | v1.0 MVP  | 4      | 155   | 2    | ~14,600 |
 | v1.1 Self-Improvement | 4 | 246 | 3 | ~22,500 |
 | v1.2 Risk Governance  | 6 | 260+ | 2 | ~23,500 |
+| v1.3 MBS Persona System | 8 | 300+ | 1 | ~30,600 |

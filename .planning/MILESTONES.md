@@ -1,5 +1,30 @@
 # Milestones
 
+## v1.3 MBS Persona System (Shipped: 2026-03-08)
+
+**Phases completed:** 8 phases (15-22), 18 plans
+**Commits:** 90
+**LOC:** ~30,600 Python (+18,063 lines in milestone)
+**Timeline:** 1 day (2026-03-08)
+**Git range:** feat(15-01) → feat(22-02)
+
+**Key accomplishments:**
+1. Soul Foundation — SoulLoader with frozen AgentSoul dataclass, lru_cache, path-traversal guard; AXIOM (macro_analyst) fully populated with Drift Guard + 4 skeleton personas; all 5 L2 nodes inject soul into SwarmState system_prompt
+2. KAMI Merit Index — Multi-dimensional merit formula (Accuracy+Recovery+Consensus+Fidelity) with EMA decay, PostgreSQL persistence; replaces character-length proxy in DebateSynthesizer consensus weighting
+3. Agent Self-Evolution — Per-agent MEMORY.md forensic logs (50-entry cap, KAMI deltas, merit scores), SoulProposal triggers (KAMI_SPIKE/DRIFT_STREAK/MERIT_FLOOR), standalone Agent Church approval gate with L1 self-proposal guard
+4. Theory of Mind Soul-Sync — soul_sync_handshake_node exchanges peer soul summaries before debate; public_soul_summary() excludes Drift Guard and Core Wounds; Empathetic Refutation few-shots in researcher USER.md
+5. ARS Drift Auditor — 5 stdlib-only drift metrics (rejection rate, KAMI variance, alignment mutations, sentiment shift, role boundary violations), 30-cycle warm-up, flag-then-suspend escalation, systemd timer for daily audits
+6. Full Pipeline Closure — Drift flags evaluated from SOUL.md rules (replaces hardcoded 'none'), soul-sync context consumed in debate synthesis, failure paths route through merit_updater+memory_writer for complete learning coverage
+
+### Tech Debt (from audit)
+- SUMMARY frontmatter missing requirements-completed fields in some phases (verified in VERIFICATION.md)
+- Skeleton agents have prose Drift Guard but no YAML drift_guard block — drift_flag_frequency returns 0 until fully populated
+- data/thesis_records/ stub for deferred Accuracy dimension
+- Nyquist VALIDATION.md partial/missing for phases 15-22
+- Pre-existing: broken ccxt, missing chromadb/pytest-asyncio (~13 tests in older phases)
+
+---
+
 ## v1.2 Risk Governance and Rule Validation (Shipped: 2026-03-08)
 
 **Phases completed:** 6 phases (8, 9, 10, 11, 13, 14), 14 plans
