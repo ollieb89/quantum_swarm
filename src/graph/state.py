@@ -67,3 +67,10 @@ class SwarmState(TypedDict):
     decision_card_status: Optional[Literal["pending", "written", "failed"]]
     decision_card_error: Optional[str]
     decision_card_audit_ref: Optional[str]     # card_id on success
+
+    # Phase 15: MBS Persona System — soul identity fields
+    # IMPORTANT: These fields must NEVER enter state["messages"] (operator.add reducer
+    # would cause unbounded accumulation and corrupt MiFID II audit trail).
+    # They are excluded from AuditLogger hash input via AUDIT_EXCLUDED_FIELDS.
+    system_prompt: Optional[str]    # Full soul content (IDENTITY + SOUL + AGENTS concatenated)
+    active_persona: Optional[str]   # Agent handle from first H1 of IDENTITY.md (e.g. 'AXIOM')

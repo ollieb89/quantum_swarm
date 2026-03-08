@@ -9,6 +9,18 @@ from .db import get_pool
 
 logger = logging.getLogger(__name__)
 
+# Phase 15: Fields excluded from AuditLogger hash input.
+# Soul fields must not enter the hash chain — they are runtime-injected persona
+# context, not trade-decision data, and would corrupt MiFID II audit immutability
+# if included (content changes across agent restarts without any decision change).
+# soul_sync_context is pre-declared here for Phase 18 (Theory of Mind Soul-Sync).
+AUDIT_EXCLUDED_FIELDS: frozenset[str] = frozenset({
+    "system_prompt",
+    "active_persona",
+    "soul_sync_context",
+})
+
+
 class AuditLogger:
     """
     Asynchronous audit logger with hash-chaining for immutable provenance logs.
@@ -41,6 +53,10 @@ class AuditLogger:
         -- CREATE INDEX IF NOT EXISTS idx_audit_task_id ON audit_logs(task_id);
         """
         pool = get_pool()
+        try:
+            await pool.open()
+        except Exception:
+            pass  # Pool may already be open
         async with pool.connection() as conn:
             await conn.execute(query)
             # Retrieve the last hash in the chain for session continuity
@@ -95,6 +111,10 @@ class AuditLogger:
         
         # Save to database
         pool = get_pool()
+        try:
+            await pool.open()
+        except Exception:
+            pass  # Pool may already be open
         async with pool.connection() as conn:
             async with conn.cursor() as cur:
                 await cur.execute(
@@ -120,6 +140,10 @@ class AuditLogger:
     async def verify_chain(self) -> bool:
         """Verifies the integrity of the entire hash chain in the database."""
         pool = get_pool()
+        try:
+            await pool.open()
+        except Exception:
+            pass  # Pool may already be open
         async with pool.connection() as conn:
             async with conn.cursor() as cur:
                 await cur.execute("SELECT task_id, timestamp, node_id, input_data, output_data, entry_hash, prev_hash FROM audit_logs ORDER BY id ASC")
