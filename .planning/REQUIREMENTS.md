@@ -30,12 +30,12 @@ Requirements for the MBS Persona System milestone. Each maps to roadmap phases s
 
 - [x] **EVOL-01**: After each task cycle, each active agent appends a structured self-reflection entry to its `src/core/souls/{agent_id}/MEMORY.md` (capped at 50 entries; includes `[KAMI_DELTA:]` and `[MERIT_SCORE:]` machine-readable markers)
 - [x] **EVOL-02**: Agent can propose a SOUL.md diff stored as `data/soul_proposals/{agent_id}.json` (Pydantic-validated schema: agent_id, section, diff, rationale, proposed_at, status)
-- [ ] **EVOL-03**: Standalone `agent_church.py` script (not a LangGraph node) reviews proposals, applies approved diffs with `load_soul.cache_clear()` + `warmup_soul_cache()`, and raises RequiresHumanApproval for any L1 Orchestrator self-proposals
+- [x] **EVOL-03**: Standalone `agent_church.py` script (not a LangGraph node) reviews proposals, applies approved diffs with `load_soul.cache_clear()` + `warmup_soul_cache()`, and raises RequiresHumanApproval for any L1 Orchestrator self-proposals
 
 ### Theory of Mind Soul-Sync (Tier 2c)
 
 - [ ] **TOM-01**: `soul_sync_handshake_node` runs before DebateSynthesizer as a barrier node; reads peer soul summaries from lru_cache into `soul_sync_context` SwarmState field; preserves parallel researcher fan-out topology
-- [ ] **TOM-02**: AgentSoul exposes `public_soul_summary()` method (excludes Drift Guard triggers and Core Wounds from peer view); researcher USER.md files contain Empathetic Refutation few-shot examples
+- [x] **TOM-02**: AgentSoul exposes `public_soul_summary()` method (excludes Drift Guard triggers and Core Wounds from peer view); researcher USER.md files contain Empathetic Refutation few-shot examples
 
 ### ARS Drift Auditor (Tier 2d)
 
@@ -98,9 +98,9 @@ Which phases cover which requirements. Updated during roadmap creation.
 | KAMI-04 | Phase 16 | Complete |
 | EVOL-01 | Phase 17 | Complete |
 | EVOL-02 | Phase 17 | Complete |
-| EVOL-03 | Phase 17 | Pending |
+| EVOL-03 | Phase 17 | Complete |
 | TOM-01 | Phase 18 | Pending |
-| TOM-02 | Phase 18 | Pending |
+| TOM-02 | Phase 18 | Complete |
 | ARS-01 | Phase 19 | Pending |
 | ARS-02 | Phase 19 | Pending |
 

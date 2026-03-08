@@ -3,13 +3,13 @@ gsd_state_version: 1.0
 milestone: v1.3
 milestone_name: MBS Persona System
 status: completed
-last_updated: "2026-03-08T13:50:27.974Z"
-last_activity: "2026-03-08 — 17-03 complete: Agent Church standalone review script (EVOL-03), memory_writer_node wired in orchestrator (merit_updater→memory_writer→trade_logger), 8 new tests, 362 total passing"
+last_updated: "2026-03-08T14:55:22.442Z"
+last_activity: "2026-03-08 — 18-01 complete: AgentSoul extended with users field + public_soul_summary() (H2 section parser, Drift Guard excluded, 300-char cap); soul_sync_context added to SwarmState; 14-test suite green (13 pass, 3 skip Plan 02)"
 progress:
   total_phases: 5
   completed_phases: 3
-  total_plans: 9
-  completed_plans: 9
+  total_plans: 11
+  completed_plans: 10
 ---
 
 # Project State
@@ -25,10 +25,10 @@ Previous: v1.2 Risk Governance — SHIPPED 2026-03-08 (260+ tests, 6 phases)
 
 ## Current Phase
 
-Phase: 17 of 19 (MEMORY.md Evolution + Agent Church — Complete)
-Plan: 03/03 complete
-Status: Phase 17 complete — EVOL-01/EVOL-02/EVOL-03 all satisfied; next: Phase 18 (Theory of Mind Soul-Sync)
-Last activity: 2026-03-08 — 17-03 complete: Agent Church standalone review script (EVOL-03), memory_writer_node wired in orchestrator (merit_updater→memory_writer→trade_logger), 8 new tests, 362 total passing
+Phase: 18 of 19 (Theory of Mind Soul-Sync — In Progress)
+Plan: 01/02 complete
+Status: Phase 18 Plan 01 complete — data contracts established, AgentSoul extended, SwarmState soul_sync_context added; next: Plan 02 (soul_sync_handshake_node)
+Last activity: 2026-03-08 — 18-01 complete: AgentSoul extended with users field + public_soul_summary() (H2 section parser, Drift Guard excluded, 300-char cap); soul_sync_context added to SwarmState; 14-test suite green (13 pass, 3 skip Plan 02)
 
 ## Decisions
 
@@ -56,6 +56,9 @@ Last activity: 2026-03-08 — 17-03 complete: Agent Church standalone review scr
 - [Phase 17-03]: RequiresHumanApproval propagates from review_proposals() to caller — not caught internally
 - [Phase 17-03]: HANDLE_TO_AGENT_ID copied into agent_church.py (not imported from src.graph.nodes) to maintain Import Layer Law
 - [Phase 17-03]: memory_writer_node wired between merit_updater and trade_logger in orchestrator — Phase 17 EVOL-01/02/03 complete end-to-end
+- [Phase 18-01]: users field placed as LAST field in AgentSoul frozen dataclass — Python dataclass requires fields with defaults to follow fields without defaults
+- [Phase 18-01]: soul_sync_context uses plain Optional[Dict[str, str]] with no Annotated reducer — written once by handshake node, same pattern as merit_scores
+- [Phase 18-01]: public_soul_summary() uses re.split on H2 boundaries with _PEER_VISIBLE_SECTIONS frozenset filter; falls back to raw soul[:300] if no matching sections found
 
 ## Progress
 

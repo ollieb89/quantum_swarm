@@ -157,5 +157,5 @@ Plans:
 | 15. Soul Foundation | v1.3 | 3/3 | Complete | 2026-03-08 |
 | 16. KAMI Merit Index | 3/3 | Complete    | 2026-03-08 | - |
 | 17. MEMORY.md Evolution + Agent Church | 3/3 | Complete    | 2026-03-08 | - |
-| 18. Theory of Mind Soul-Sync | v1.3 | 0/2 | Not started | - |
+| 18. Theory of Mind Soul-Sync | 1/2 | In Progress|  | - |
 | 19. ARS Drift Auditor | v1.3 | 0/TBD | Not started | - |
