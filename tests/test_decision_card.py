@@ -1,10 +1,17 @@
 """
 Unit tests for src.core.decision_card — DecisionCard model, builder, canonical JSON, verifier.
+Also: Integration tests for decision_card_writer node in src.graph.orchestrator.
 Drive implementation via TDD: RED → GREEN → REFACTOR.
 """
 
+import asyncio
+import json
+import sys
+import tempfile
 import unittest
-from unittest.mock import MagicMock, patch
+from io import StringIO
+from pathlib import Path
+from unittest.mock import AsyncMock, MagicMock, mock_open, patch
 from datetime import datetime, timezone
 
 
@@ -278,6 +285,207 @@ class TestHashing(unittest.TestCase):
         import hashlib
         recomputed = hashlib.sha256(raw.encode("utf-8")).hexdigest()
         self.assertEqual(recomputed, card_dict["content_hash"])
+
+
+def _make_ccxt_stub():
+    """Stub the broken ccxt package so orchestrator imports succeed."""
+    if "ccxt" not in sys.modules:
+        ccxt_stub = MagicMock()
+        sys.modules["ccxt"] = ccxt_stub
+        sys.modules["ccxt.async_support"] = ccxt_stub
+
+
+class TestDecisionCardWriter(unittest.TestCase):
+    """Integration tests for the decision_card_writer_node in src.graph.orchestrator."""
+
+    @classmethod
+    def setUpClass(cls):
+        _make_ccxt_stub()
+
+    def _make_state(self, **overrides) -> dict:
+        """Return a minimal synthetic SwarmState dict for writer tests."""
+        base = {
+            "task_id": "test-task-001",
+            "user_input": "Buy BTC",
+            "intent": "trade",
+            "messages": [],
+            "macro_report": None,
+            "quant_proposal": None,
+            "bullish_thesis": None,
+            "bearish_thesis": None,
+            "debate_resolution": None,
+            "weighted_consensus_score": 0.8,
+            "debate_history": [],
+            "risk_approval": {"approved": True, "reasoning": "ok", "stop_loss_level": 95.0},
+            "consensus_score": 0.8,
+            "compliance_flags": [],
+            "risk_approved": True,
+            "risk_notes": None,
+            "final_decision": None,
+            "metadata": {"trade_risk_score": 0.35},
+            "blackboard_session": None,
+            "total_tokens": 0,
+            "trade_history": [],
+            "execution_mode": "paper",
+            "data_fetcher_result": None,
+            "knowledge_base_result": None,
+            "backtest_result": None,
+            "execution_result": {
+                "order_id": "ORD-1",
+                "execution_price": 100.0,
+                "success": True,
+                "message": "filled",
+                "metadata": {},
+            },
+            "decision_card_status": None,
+            "decision_card_error": None,
+            "decision_card_audit_ref": None,
+        }
+        base.update(overrides)
+        return base
+
+    def _make_pool_mock(self):
+        """Return an AsyncMock pool that simulates no prior DB rows."""
+        mock_cur = AsyncMock()
+        mock_cur.fetchone = AsyncMock(return_value=None)
+        mock_cur.__aenter__ = AsyncMock(return_value=mock_cur)
+        mock_cur.__aexit__ = AsyncMock(return_value=False)
+
+        mock_conn = AsyncMock()
+        mock_conn.cursor = MagicMock(return_value=mock_cur)
+        mock_conn.__aenter__ = AsyncMock(return_value=mock_conn)
+        mock_conn.__aexit__ = AsyncMock(return_value=False)
+
+        mock_pool = MagicMock()
+        mock_pool.connection = MagicMock(return_value=mock_conn)
+
+        return mock_pool
+
+    def _make_registry_mock(self):
+        """Return a MagicMock MemoryRegistry with no active rules."""
+        mock_registry = MagicMock()
+        mock_registry.get_active_rules.return_value = []
+        return mock_registry
+
+    # ------------------------------------------------------------------
+    # Routing tests (synchronous — no async needed)
+    # ------------------------------------------------------------------
+
+    def test_route_after_order_router_success(self):
+        """State with execution_result.success=True -> route to 'decision_card_writer'."""
+        from src.graph.orchestrator import route_after_order_router
+
+        state = self._make_state(execution_result={"success": True})
+        self.assertEqual(route_after_order_router(state), "decision_card_writer")
+
+    def test_route_after_order_router_failure(self):
+        """State with execution_result.success=False -> route to 'trade_logger'."""
+        from src.graph.orchestrator import route_after_order_router
+
+        state = self._make_state(execution_result={"success": False})
+        self.assertEqual(route_after_order_router(state), "trade_logger")
+
+    def test_route_after_order_router_none(self):
+        """State with execution_result=None -> route to 'trade_logger'."""
+        from src.graph.orchestrator import route_after_order_router
+
+        state = self._make_state(execution_result=None)
+        self.assertEqual(route_after_order_router(state), "trade_logger")
+
+    # ------------------------------------------------------------------
+    # Node tests (async via asyncio.run)
+    # ------------------------------------------------------------------
+
+    def test_card_appended_to_audit_jsonl(self):
+        """Successful trade -> audit.jsonl contains one valid decision card line."""
+        from src.graph.orchestrator import decision_card_writer_node
+        from src.core.decision_card import verify_decision_card
+
+        state = self._make_state()
+        captured_lines = []
+
+        # Capture writes via mock_open; then read back what was "written"
+        m = mock_open()
+
+        def patched_open(path, mode="r", *args, **kwargs):
+            if mode == "a":
+                return m(path, mode, *args, **kwargs)
+            return open(path, mode, *args, **kwargs)
+
+        with patch("src.graph.orchestrator.get_pool", return_value=self._make_pool_mock()), \
+             patch("src.graph.orchestrator.MemoryRegistry", return_value=self._make_registry_mock()), \
+             patch("builtins.open", side_effect=patched_open):
+
+            result = asyncio.run(decision_card_writer_node(state))
+
+        self.assertEqual(result["decision_card_status"], "written")
+        self.assertIsNotNone(result["decision_card_audit_ref"])
+        self.assertIsNone(result["decision_card_error"])
+
+        # Check that write() was called with valid JSON + newline
+        write_calls = m().write.call_args_list
+        self.assertTrue(len(write_calls) >= 1, "Expected at least one write() call")
+        written_data = "".join(call.args[0] for call in write_calls)
+        line = written_data.strip()
+        card_dict = json.loads(line)
+        self.assertEqual(card_dict["event_type"], "decision_card_created")
+        self.assertTrue(verify_decision_card(card_dict))
+
+    def test_card_not_written_for_failed_trade(self):
+        """Route function directs failed trades away from writer -> no card created."""
+        from src.graph.orchestrator import route_after_order_router
+
+        state = self._make_state(execution_result={"success": False, "order_id": "ORD-2"})
+        route = route_after_order_router(state)
+        self.assertEqual(route, "trade_logger")
+        # The node is never called for failed trades (verified by routing alone)
+
+    def test_retry_behavior(self):
+        """First open() raises OSError; second succeeds -> status='written'."""
+        from src.graph.orchestrator import decision_card_writer_node
+
+        state = self._make_state()
+        call_count = {"n": 0}
+        m = mock_open()
+
+        def side_effect_open(path, mode="r", *args, **kwargs):
+            if mode == "a":
+                call_count["n"] += 1
+                if call_count["n"] == 1:
+                    raise OSError("disk full")
+                return m(path, mode, *args, **kwargs)
+            return open(path, mode, *args, **kwargs)
+
+        with patch("src.graph.orchestrator.get_pool", return_value=self._make_pool_mock()), \
+             patch("src.graph.orchestrator.MemoryRegistry", return_value=self._make_registry_mock()), \
+             patch("builtins.open", side_effect=side_effect_open):
+
+            result = asyncio.run(decision_card_writer_node(state))
+
+        self.assertEqual(result["decision_card_status"], "written")
+        self.assertIsNotNone(result["decision_card_audit_ref"])
+        self.assertEqual(call_count["n"], 2, "Expected exactly 2 open() attempts for append")
+
+    def test_double_failure_sets_failed_status(self):
+        """Both open() attempts raise OSError -> status='failed', audit_ref is None."""
+        from src.graph.orchestrator import decision_card_writer_node
+
+        state = self._make_state()
+
+        def always_fail(path, mode="r", *args, **kwargs):
+            if mode == "a":
+                raise OSError("disk full every time")
+            return open(path, mode, *args, **kwargs)
+
+        with patch("src.graph.orchestrator.get_pool", return_value=self._make_pool_mock()), \
+             patch("src.graph.orchestrator.MemoryRegistry", return_value=self._make_registry_mock()), \
+             patch("builtins.open", side_effect=always_fail):
+
+            result = asyncio.run(decision_card_writer_node(state))
+
+        self.assertEqual(result["decision_card_status"], "failed")
+        self.assertIsNone(result["decision_card_audit_ref"])
+        self.assertIn("disk full", result["decision_card_error"])
 
 
 if __name__ == "__main__":
