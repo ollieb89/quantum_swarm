@@ -212,4 +212,7 @@ Plans:
 **Success Criteria**:
   1. Every execution result is accompanied by a JSON decision card in the audit log.
   2. Decision card identifies which memory rules and risk scores influenced the trade.
-**Plans**: TBD
+**Plans**: 2 plans
+Plans:
+- [ ] 11-01-PLAN.md — TDD: DecisionCard Pydantic model, build_decision_card() builder, canonical_json(), verify_decision_card() — unit tests GREEN
+- [ ] 11-02-PLAN.md — Wire decision_card_writer node into orchestrator; add SwarmState fields; integration tests (append, retry, failure path)
