@@ -3,13 +3,13 @@ gsd_state_version: 1.0
 milestone: v1.1
 milestone_name: Self-Improvement
 status: completed
-last_updated: "2026-03-08T05:54:58.087Z"
-last_activity: 2026-03-08 — Phase 14-01 completed; 5 MEM-06 gate order RED tests written; 4/5 FAIL against Phase 12 buggy code; all pass against working-tree fix; 249 tests passing.
+last_updated: "2026-03-08T07:26:00.000Z"
+last_activity: 2026-03-08 — Phase 14-02 completed; MEM-06 gate order enforced; removed update_status from persist_rules() loop; 21 tests GREEN (5+5+11); 246 tests passing; Phase 14 complete.
 progress:
   total_phases: 10
-  completed_phases: 8
+  completed_phases: 9
   total_plans: 19
-  completed_plans: 20
+  completed_plans: 21
 ---
 
 # Project State
@@ -26,9 +26,9 @@ Previous: v1.1 Self-Improvement Loop — SHIPPED 2026-03-06 (169 tests, 3 phases
 ## Current Phase
 
 Phase: 14 — Fix Validation Gate Call Order
-Plan: 01 (complete)
-Status: In Progress (1/2 plans done — MEM-06 RED test scaffold complete)
-Last activity: 2026-03-08 — Phase 14-01 completed; 5 MEM-06 gate order RED tests written; 4/5 FAIL against Phase 12 buggy code; all pass against working-tree fix; 249 tests passing.
+Plan: 02 (complete)
+Status: COMPLETE (2/2 plans done — MEM-06 gate order enforced end-to-end)
+Last activity: 2026-03-08 — Phase 14-02 completed; removed premature update_status from persist_rules(); 21 tests GREEN (5+5+11); 246 passing; MEM-06 closed.
 
 ## Progress
 
@@ -142,6 +142,9 @@ See: `.planning/PROJECT.md` (updated 2026-03-08 — Phase 5 complete)
 - git stash round-trip technique: stash working-tree fix, run tests to confirm RED, pop stash, confirm GREEN — validates TDD test quality without needing a separate branch (14-01)
 - persist_rules() working-tree fix already applied before Plan 01 ran: update_status("active") removed from rule_generator.py in working tree; Plan 02 commits this fix (14-01)
 - _patch_validator_audit() helper pattern: wraps RuleValidator.__init__ via patch.object to redirect audit_path to tmp_path without changing production interface (14-01)
+- MEM-06 gate order enforced: persist_rules() for loop calls only add_rule(); validator.validate_proposed_rules() is sole promoter via 2-of-3 backtest harness; update_status("active") removed from loop (14-02)
+- Stale direct-promotion test pattern: Phase 12 tests asserting immediate active promotion after persist_rules() must be updated with backtest mocks when production behavior changes to validator-mediated promotion (14-02)
+- Phase 14 COMPLETE: 246 tests passing (excluding test_order_router + test_persistence known-broken files); MEM-06 closed (14-02)
 
 ## v1.1 Phase Dependency Chain
 
