@@ -40,7 +40,7 @@ Requirements for the MBS Persona System milestone. Each maps to roadmap phases s
 ### ARS Drift Auditor (Tier 2d)
 
 - [x] **ARS-01**: Standalone ARS Auditor computes five observable drift metrics from MEMORY.md evolution logs (Diff Rejection Rate, KAMI Dimension Variance, Alignment Section Mutation Count, Self-Reflection Sentiment Shift, Role Boundary Vocabulary Violations) using stdlib regex + Counter cosine; integrates with existing systemd timer or `/ars:audit` CLI; 30-cycle warm-up before alerts fire
-- [ ] **ARS-02**: `evolution_suspended` boolean column in `agent_merit_scores` PostgreSQL table; ARS suspension gates MEMORY.md evolution writes only — no code path connects ARS suspension to order_router_node or route_after_institutional_guard
+- [x] **ARS-02**: `evolution_suspended` boolean column in `agent_merit_scores` PostgreSQL table; ARS suspension gates MEMORY.md evolution writes only — no code path connects ARS suspension to order_router_node or route_after_institutional_guard
 
 ---
 
@@ -102,7 +102,7 @@ Which phases cover which requirements. Updated during roadmap creation.
 | TOM-01 | Phase 18 | Complete |
 | TOM-02 | Phase 18 | Complete |
 | ARS-01 | Phase 19 | Complete |
-| ARS-02 | Phase 19 | Pending |
+| ARS-02 | Phase 19 | Complete |
 
 **Coverage:**
 - v1.3 requirements: 18 total

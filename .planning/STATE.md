@@ -2,14 +2,14 @@
 gsd_state_version: 1.0
 milestone: v1.3
 milestone_name: MBS Persona System
-status: completed
-last_updated: "2026-03-08T16:03:02.000Z"
-last_activity: "2026-03-08 — 19-01 complete: standalone ARS auditor with 5 drift metrics, flag-then-suspend, CLI, 65 tests GREEN; ARS-01 satisfied"
+status: verifying
+last_updated: "2026-03-08T16:11:33.065Z"
+last_activity: "2026-03-08 — 19-02 complete: evolution_suspended gate in memory_writer_node, ARS systemd timer, scope boundary verified"
 progress:
   total_phases: 5
-  completed_phases: 4
-  total_plans: 11
-  completed_plans: 11
+  completed_phases: 5
+  total_plans: 13
+  completed_plans: 13
 ---
 
 # Project State
@@ -26,9 +26,9 @@ Previous: v1.2 Risk Governance — SHIPPED 2026-03-08 (260+ tests, 6 phases)
 ## Current Phase
 
 Phase: 19 of 19 (ARS Drift Auditor — IN PROGRESS)
-Plan: 01/01 complete
-Status: Phase 19 Plan 01 complete — ARS drift auditor with 5 stdlib-only metrics, 30-cycle warm-up, flag-then-suspend escalation, CLI, ars_state DDL, 65 tests GREEN; ARS-01 satisfied
-Last activity: 2026-03-08 — 19-01 complete: standalone ARS auditor (proposal_rejection_rate, drift_flag_frequency, kami_variance, alignment_mutations, sentiment_shift, role_boundary_violations); context-aware violation counting; breach persistence in ars_state table
+Plan: 02/02 complete
+Status: Phase 19 complete — ARS drift auditor with evolution_suspended gate in memory_writer, systemd timer, scope boundary verified; ARS-01 + ARS-02 satisfied
+Last activity: 2026-03-08 — 19-02 complete: evolution_suspended gate in memory_writer_node, ARS systemd timer, scope boundary verified
 
 ## Decisions
 
@@ -66,6 +66,9 @@ Last activity: 2026-03-08 — 19-01 complete: standalone ARS auditor (proposal_r
 - [Phase 19-01]: Sentiment shift requires BOTH distance AND polarity delta to exceed thresholds — prevents false flags on minor wording drift
 - [Phase 19-01]: ars_state is a separate table from agent_merit_scores — merit = learned performance, ARS = control/safety state machine
 - [Phase 19-01]: _load_merit_dimensions lazy-imports from src.core.db to avoid DB connection at import time
+- [Phase 19-02]: _check_evolution_suspended queries DB directly rather than relying on merit_loader — keeps plan minimal and avoids touching SwarmState schema
+- [Phase 19-02]: Fail-open on DB errors: _check_evolution_suspended returns False if DB unavailable — memory evolution proceeds, only suspension enforcement lost
+- [Phase 19-02]: ARS timer uses separate service name (quantum-swarm-ars-auditor) from Obsidian timer (quantum-swarm-tracking)
 
 ## Progress
 
