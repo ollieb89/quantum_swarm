@@ -1,0 +1,102 @@
+# Requirements: Quantum Swarm
+
+**Defined:** 2026-03-08
+**Core Value:** Institutional-quality trade signal generation through adversarial AI debate, with self-improving memory rules validated by backtesting, hard compliance guardrails, and immutable per-trade audit trails — from market data ingestion to PostgreSQL-persisted execution records.
+
+## v1.4 Requirements
+
+Requirements for the Beta: Observable Swarm release. Each maps to roadmap phases.
+
+### Persona Population
+
+- [ ] **PERS-01**: User can observe MOMENTUM (BullishResearcher) reasoning with distinct price/flow personality
+- [ ] **PERS-02**: User can observe CASSANDRA (BearishResearcher) reasoning with distinct tail-risk personality
+- [ ] **PERS-03**: User can observe SIGMA (QuantModeler) reasoning with distinct quantitative personality
+- [ ] **PERS-04**: User can observe GUARDIAN (RiskManager) reasoning with distinct risk-control personality
+- [ ] **PERS-05**: Each persona has HEXACO-6 diversity profile with minimum pairwise distance >3.0
+- [ ] **PERS-06**: Each persona has functional YAML drift_guard block enabling ARS drift detection
+
+### Cycle Persistence
+
+- [ ] **CYCL-01**: Each pipeline run persists agent memos, debate, consensus, merit scores, and decision card to a numbered cycle folder
+- [ ] **CYCL-02**: CycleSnapshot Pydantic model defines the canonical artifact schema
+- [ ] **CYCL-03**: PostgreSQL cycle_snapshots table indexes cycles with monotonic numbering and queryable metadata
+- [ ] **CYCL-04**: Cycle manifest includes timestamp, symbol, status, and cycle_id
+
+### End-to-End Pipeline
+
+- [ ] **PIPE-01**: User can run "Analyze BTC" and the full pipeline executes from intent to decision card
+- [ ] **PIPE-02**: Data fetcher has caching/retry layer resilient to yfinance rate limits
+- [ ] **PIPE-03**: Messages list is bounded to prevent checkpoint state bloat across cycles
+- [ ] **PIPE-04**: Structured logging (structlog) captures pipeline execution for production debugging
+- [ ] **PIPE-05**: Soul cache can be reloaded without process restart for development iteration
+
+### Replay CLI
+
+- [ ] **REPL-01**: User can list all available cycles with summary metadata
+- [ ] **REPL-02**: User can step through a cycle (agent memos → debate → consensus → decision card)
+- [ ] **REPL-03**: User can navigate between cycles (previous/next)
+- [ ] **REPL-04**: Merit weights are visualized per cycle showing agent influence
+- [ ] **REPL-05**: Drift flags and ARS signals are displayed when viewing a cycle
+- [ ] **REPL-06**: User can compare two cycles side-by-side to see how the institution changed
+
+## Future Requirements
+
+### Observability Extensions
+
+- **OBS-01**: Real-time WebSocket dashboard for live cycle monitoring
+- **OBS-02**: Token cost tracking per cycle for budget analysis
+- **OBS-03**: Obsidian vault integration for cycle data browsing
+
+### Persona Extensions
+
+- **PERS-07**: PersonaScore 5D LLM-as-Judge fidelity evaluation pipeline (SOUL-09)
+- **PERS-08**: HEXACO-6 automated diversity enforcement gate
+
+## Out of Scope
+
+| Feature | Reason |
+|---------|--------|
+| Real-time WebSocket dashboard | High complexity, beta is CLI-first |
+| Global SOUL.md (shared swarm identity) | Collapses adversarial diversity |
+| Real-time SOUL.md mutation mid-graph-run | lru_cache race condition |
+| LLM-as-Judge for ARS drift | Circular evaluation, adds API cost |
+| High-frequency trading | Swarm is cognitive, not latency-optimized |
+| Mobile/web UI | CLI-first beta; UI deferred to post-beta |
+
+## Traceability
+
+Which phases cover which requirements. Updated during roadmap creation.
+
+| Requirement | Phase | Status |
+|-------------|-------|--------|
+| PERS-01 | — | Pending |
+| PERS-02 | — | Pending |
+| PERS-03 | — | Pending |
+| PERS-04 | — | Pending |
+| PERS-05 | — | Pending |
+| PERS-06 | — | Pending |
+| CYCL-01 | — | Pending |
+| CYCL-02 | — | Pending |
+| CYCL-03 | — | Pending |
+| CYCL-04 | — | Pending |
+| PIPE-01 | — | Pending |
+| PIPE-02 | — | Pending |
+| PIPE-03 | — | Pending |
+| PIPE-04 | — | Pending |
+| PIPE-05 | — | Pending |
+| REPL-01 | — | Pending |
+| REPL-02 | — | Pending |
+| REPL-03 | — | Pending |
+| REPL-04 | — | Pending |
+| REPL-05 | — | Pending |
+| REPL-06 | — | Pending |
+
+**Coverage:**
+- v1.4 requirements: 21 total
+- Mapped to phases: 0
+- Unmapped: 21 ⚠️
+
+---
+*Requirements defined: 2026-03-08*
+*Last updated: 2026-03-08 after initial definition*
