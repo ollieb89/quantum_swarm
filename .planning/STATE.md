@@ -3,13 +3,13 @@ gsd_state_version: 1.0
 milestone: v1.1
 milestone_name: Self-Improvement
 status: completed
-last_updated: "2026-03-08T04:34:53.961Z"
-last_activity: 2026-03-08 — Phase 13-02 completed; institutional_guard_node wired into live graph; 244 tests passing; both graph wiring tests GREEN.
+last_updated: "2026-03-08T05:54:58.087Z"
+last_activity: 2026-03-08 — Phase 14-01 completed; 5 MEM-06 gate order RED tests written; 4/5 FAIL against Phase 12 buggy code; all pass against working-tree fix; 249 tests passing.
 progress:
   total_phases: 10
   completed_phases: 8
-  total_plans: 17
-  completed_plans: 19
+  total_plans: 19
+  completed_plans: 20
 ---
 
 # Project State
@@ -25,10 +25,10 @@ Previous: v1.1 Self-Improvement Loop — SHIPPED 2026-03-06 (169 tests, 3 phases
 
 ## Current Phase
 
-Phase: 13 — Wire Institutional Guard
-Plan: 02 (complete)
-Status: Complete (2/2 plans done — RISK-07 + RISK-08 closed)
-Last activity: 2026-03-08 — Phase 13-02 completed; institutional_guard_node wired into live graph; 244 tests passing; both graph wiring tests GREEN.
+Phase: 14 — Fix Validation Gate Call Order
+Plan: 01 (complete)
+Status: In Progress (1/2 plans done — MEM-06 RED test scaffold complete)
+Last activity: 2026-03-08 — Phase 14-01 completed; 5 MEM-06 gate order RED tests written; 4/5 FAIL against Phase 12 buggy code; all pass against working-tree fix; 249 tests passing.
 
 ## Progress
 
@@ -138,6 +138,10 @@ See: `.planning/PROJECT.md` (updated 2026-03-08 — Phase 5 complete)
 - LangGraph conditional edges stored in workflow.branches not workflow.edges — edge inspection tests must check both (13-02)
 - Rejected trades route to 'synthesize' for explanatory summary rather than silently ending at END (13-02)
 - test_l3_chain_order stale assertion pattern: when a direct edge is replaced by a guarded chain, any test asserting the old edge must be updated (13-02)
+- MEM-06 gate order tests use recording side_effect to observe registry state during validator backtest calls — captures intermediate proposed status before validator decides (14-01)
+- git stash round-trip technique: stash working-tree fix, run tests to confirm RED, pop stash, confirm GREEN — validates TDD test quality without needing a separate branch (14-01)
+- persist_rules() working-tree fix already applied before Plan 01 ran: update_status("active") removed from rule_generator.py in working tree; Plan 02 commits this fix (14-01)
+- _patch_validator_audit() helper pattern: wraps RuleValidator.__init__ via patch.object to redirect audit_path to tmp_path without changing production interface (14-01)
 
 ## v1.1 Phase Dependency Chain
 
