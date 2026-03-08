@@ -488,5 +488,74 @@ class TestDecisionCardWriter(unittest.TestCase):
         self.assertIn("disk full", result["decision_card_error"])
 
 
+class TestDecisionCardBugFixes(unittest.TestCase):
+    """Regression tests for Bug 2: build_decision_card reads wrong consensus field.
+
+    Production scenario: DebateSynthesizer writes weighted_consensus_score;
+    consensus_score stays at its initial value of 0.0.  The card must use the
+    weighted value, not the stale initialised one.
+    """
+
+    def _make_state(self, **overrides) -> dict:
+        base = {
+            "task_id": "task-regression",
+            "user_input": "Buy AAPL",
+            "intent": "trade",
+            "messages": [],
+            "macro_report": None,
+            "quant_proposal": None,
+            "bullish_thesis": None,
+            "bearish_thesis": None,
+            "debate_resolution": None,
+            "weighted_consensus_score": None,
+            "debate_history": [],
+            "risk_approval": None,
+            "consensus_score": 0.0,
+            "compliance_flags": [],
+            "risk_approved": True,
+            "risk_notes": None,
+            "final_decision": None,
+            "metadata": {},
+            "blackboard_session": None,
+            "total_tokens": 0,
+            "trade_history": [],
+            "execution_mode": "paper",
+            "data_fetcher_result": None,
+            "knowledge_base_result": None,
+            "backtest_result": None,
+            "execution_result": {
+                "order_id": "ord-reg-001",
+                "execution_price": 150.0,
+                "success": True,
+                "message": "Filled",
+                "metadata": {},
+            },
+        }
+        base.update(overrides)
+        return base
+
+    def test_uses_weighted_consensus_score_not_stale_zero(self):
+        """Bug 2: card must reflect weighted_consensus_score (0.75) not stale consensus_score (0.0)."""
+        from src.core.decision_card import build_decision_card
+
+        state = self._make_state(weighted_consensus_score=0.75, consensus_score=0.0)
+        card = build_decision_card(state)
+
+        self.assertEqual(
+            card.risk_snapshot.consensus_score, 0.75,
+            "Expected consensus_score=0.75 from weighted_consensus_score; "
+            f"got {card.risk_snapshot.consensus_score}"
+        )
+
+    def test_falls_back_to_consensus_score_when_weighted_is_none(self):
+        """When weighted_consensus_score is None, fall back to consensus_score."""
+        from src.core.decision_card import build_decision_card
+
+        state = self._make_state(weighted_consensus_score=None, consensus_score=0.6)
+        card = build_decision_card(state)
+
+        self.assertEqual(card.risk_snapshot.consensus_score, 0.6)
+
+
 if __name__ == "__main__":
     unittest.main()

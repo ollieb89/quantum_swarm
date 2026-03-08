@@ -146,8 +146,10 @@ def build_decision_card(
         "trade_risk_score"
     )
 
+    _weighted = state.get("weighted_consensus_score")
+    _consensus = _weighted if _weighted is not None else state.get("consensus_score", 0.0)
     risk_snapshot = RiskSnapshot(
-        consensus_score=state.get("consensus_score", 0.0),
+        consensus_score=_consensus,
         risk_approval=state.get("risk_approval") or {},
         compliance_flags=state.get("compliance_flags") or [],
         portfolio_risk_score=portfolio_risk_score,

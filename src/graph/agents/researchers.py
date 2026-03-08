@@ -38,10 +38,10 @@ from src.graph.agents.l3.trade_logger import get_recent_trades, TRADE_HISTORY_WI
 logger = logging.getLogger(__name__)
 
 # ---------------------------------------------------------------------------
-# Shared LLM — gemini-2.0-flash
+# Shared LLM — gemini-2.5-flash
 # ---------------------------------------------------------------------------
 
-_MODEL_ID = "gemini-2.0-flash"
+_MODEL_ID = "gemini-2.5-flash"
 
 # Lazy singletons — deferred to first call so import never requires GOOGLE_API_KEY
 _bullish_llm: "ChatGoogleGenerativeAI | None" = None
@@ -305,7 +305,7 @@ def BullishResearcher(state: SwarmState, budget: Optional[BudgetManager] = None)
         content=content,
         name="bullish_research",
     )
-    return {"messages": [response], "total_tokens": tokens_to_add}
+    return {"messages": [response], "total_tokens": tokens_to_add, "bullish_thesis": {"text": content}}
 
 
 def BearishResearcher(state: SwarmState, budget: Optional[BudgetManager] = None) -> dict[str, Any]:
@@ -375,7 +375,7 @@ def BearishResearcher(state: SwarmState, budget: Optional[BudgetManager] = None)
         content=content,
         name="bearish_research",
     )
-    return {"messages": [response], "total_tokens": tokens_to_add}
+    return {"messages": [response], "total_tokens": tokens_to_add, "bearish_thesis": {"text": content}}
 
 
 # ---------------------------------------------------------------------------

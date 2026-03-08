@@ -32,10 +32,10 @@ from src.tools.analyst_tools import (
 logger = logging.getLogger(__name__)
 
 # ---------------------------------------------------------------------------
-# Shared LLM — gemini-2.0-flash
+# Shared LLM — gemini-2.5-flash
 # ---------------------------------------------------------------------------
 
-_MODEL_ID = "gemini-2.0-flash"
+_MODEL_ID = "gemini-2.5-flash"
 
 # Lazy singletons — deferred to first call so import never requires GOOGLE_API_KEY
 _macro_agent = None
@@ -156,7 +156,7 @@ def MacroAnalyst(state: SwarmState, budget: Optional[BudgetManager] = None) -> d
     )
 
     logger.info("MacroAnalyst node complete")
-    return {"messages": [response], "total_tokens": tokens_to_add}
+    return {"messages": [response], "total_tokens": tokens_to_add, "macro_report": {"text": content}}
 
 
 def QuantModeler(state: SwarmState, budget: Optional[BudgetManager] = None) -> dict[str, Any]:
@@ -213,7 +213,7 @@ def QuantModeler(state: SwarmState, budget: Optional[BudgetManager] = None) -> d
     )
 
     logger.info("QuantModeler node complete")
-    return {"messages": [response], "total_tokens": tokens_to_add}
+    return {"messages": [response], "total_tokens": tokens_to_add, "quant_proposal": {"text": content}}
 
 
 # ---------------------------------------------------------------------------

@@ -168,6 +168,35 @@ def test_quant_modeler_empty_agent_output():
     )
 
 
+# ---------------------------------------------------------------------------
+# Bug 1: analyst nodes must write named state fields (not just messages)
+# ---------------------------------------------------------------------------
+
+
+def test_macro_analyst_writes_macro_report_to_state():
+    """Bug 1: MacroAnalyst must return macro_report key so DecisionCard can read it."""
+    analysts_mod._macro_agent = _make_mock_agent("macro analysis: bullish trend, VIX low")
+    result = MacroAnalyst(_make_state())
+
+    assert "macro_report" in result, (
+        "MacroAnalyst must include 'macro_report' in its returned state dict; "
+        f"got keys: {list(result.keys())}"
+    )
+    assert result["macro_report"] is not None, "macro_report must not be None"
+
+
+def test_quant_modeler_writes_quant_proposal_to_state():
+    """Bug 1: QuantModeler must return quant_proposal key so DecisionCard can read it."""
+    analysts_mod._quant_agent = _make_mock_agent("quant proposal: BUY AAPL, confidence 0.8")
+    result = QuantModeler(_make_state())
+
+    assert "quant_proposal" in result, (
+        "QuantModeler must include 'quant_proposal' in its returned state dict; "
+        f"got keys: {list(result.keys())}"
+    )
+    assert result["quant_proposal"] is not None, "quant_proposal must not be None"
+
+
 def test_quant_modeler_uses_macro_context():
     """QuantModeler called with macro_report in state doesn't crash; agent invoked once."""
     macro_context = {

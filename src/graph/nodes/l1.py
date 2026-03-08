@@ -76,6 +76,7 @@ def risk_manager_node(state: dict, board: Optional[Blackboard] = None) -> dict:
     return {
         "risk_approved": approved,
         "risk_notes": risk_notes,
+        "risk_approval": {"approved": approved, "notes": risk_notes},
         "messages": [
             {"role": "assistant", "content": f"RiskManager: approved={approved} | {risk_notes}"}
         ],

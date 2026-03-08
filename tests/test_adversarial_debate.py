@@ -254,3 +254,34 @@ def test_scenario_c_provenance():
             f"Entry from '{entry.get('source')}' has blank/non-string hypothesis: "
             f"'{hypothesis}'"
         )
+
+
+# ---------------------------------------------------------------------------
+# Bug 1: DebateSynthesizer must write debate_resolution to state
+# ---------------------------------------------------------------------------
+
+
+def test_debate_synthesizer_writes_debate_resolution_to_state():
+    """Bug 1: DebateSynthesizer must return debate_resolution key so DecisionCard can read it."""
+    state = _make_base_state(
+        messages=[
+            {
+                "role": "assistant",
+                "name": "bullish_research",
+                "content": "Bullish: strong momentum. hypothesis=bullish_momentum",
+            },
+            {
+                "role": "assistant",
+                "name": "bearish_research",
+                "content": "Bearish: macro headwinds. hypothesis=bearish_macro",
+            },
+        ]
+    )
+
+    result = DebateSynthesizer(state)
+
+    assert "debate_resolution" in result, (
+        "DebateSynthesizer must include 'debate_resolution' in its returned state dict; "
+        f"got keys: {list(result.keys())}"
+    )
+    assert result["debate_resolution"] is not None, "debate_resolution must not be None"

@@ -142,4 +142,8 @@ def DebateSynthesizer(state: SwarmState) -> dict[str, Any]:
     return {
         "weighted_consensus_score": weighted_consensus_score,
         "debate_history": debate_history,
+        "debate_resolution": {
+            "weighted_consensus_score": weighted_consensus_score,
+            "debate_history": debate_history,
+        },
     }

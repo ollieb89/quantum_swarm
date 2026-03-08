@@ -255,3 +255,36 @@ def test_bearish_researcher_empty_llm_output():
     assert len(result["messages"][0].content) > 0, (
         "Fallback message content must be non-empty string"
     )
+
+
+# ---------------------------------------------------------------------------
+# Bug 1: researcher nodes must write named state fields (not just messages)
+# ---------------------------------------------------------------------------
+
+
+def test_bullish_researcher_writes_bullish_thesis_to_state():
+    """Bug 1: BullishResearcher must return bullish_thesis key so DecisionCard can read it."""
+    mock_llm, _ = _make_mock_llm("bullish thesis: strong momentum, institutional buying")
+    researchers_mod._bullish_llm = mock_llm
+
+    result = BullishResearcher(_make_state())
+
+    assert "bullish_thesis" in result, (
+        "BullishResearcher must include 'bullish_thesis' in its returned state dict; "
+        f"got keys: {list(result.keys())}"
+    )
+    assert result["bullish_thesis"] is not None, "bullish_thesis must not be None"
+
+
+def test_bearish_researcher_writes_bearish_thesis_to_state():
+    """Bug 1: BearishResearcher must return bearish_thesis key so DecisionCard can read it."""
+    mock_llm, _ = _make_mock_llm("bearish thesis: overbought RSI, macro headwinds")
+    researchers_mod._bearish_llm = mock_llm
+
+    result = BearishResearcher(_make_state())
+
+    assert "bearish_thesis" in result, (
+        "BearishResearcher must include 'bearish_thesis' in its returned state dict; "
+        f"got keys: {list(result.keys())}"
+    )
+    assert result["bearish_thesis"] is not None, "bearish_thesis must not be None"
