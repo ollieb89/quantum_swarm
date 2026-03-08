@@ -269,3 +269,101 @@ phase17:
     - section_patch
   rate_limit_rejection_k: 3
   rate_limit_window_days: 7
+
+# Phase 19: ARS Drift Auditor — per-metric thresholds, lexicons, forbidden vocabulary
+ars:
+  # Minimum MEMORY.md entries before alerts fire (warm-up period)
+  warmup_min_entries: 30
+  # N consecutive breaches before auto-suspend
+  consecutive_breaches_to_suspend: 3
+  # Trailing window for drift_flag_frequency and proposal scanning
+  trailing_window: 20
+  # Rolling window for sentiment baseline
+  sentiment_baseline_window: 10
+
+  # Per-metric thresholds
+  proposal_rejection_rate_threshold: 0.5
+  drift_flag_frequency_threshold: 0.3
+  kami_variance_threshold: 0.04
+  alignment_mutation_count_threshold: 3
+  sentiment_distance_threshold: 0.3
+  sentiment_polarity_threshold: 0.15
+  role_boundary_score_threshold: 0.02
+  role_boundary_min_hits: 3
+
+  # Sentiment lexicons
+  bullish_terms:
+    - rally
+    - breakout
+    - opportunity
+    - upside
+    - acceleration
+    - momentum
+    - bullish
+    - growth
+    - outperform
+    - surge
+
+  bearish_terms:
+    - capitulation
+    - structural impairment
+    - downside spiral
+    - crash
+    - collapse
+    - bearish
+    - deterioration
+    - weakness
+    - underperform
+    - plunge
+
+  uncertainty_terms:
+    - uncertain
+    - unclear
+    - volatile
+    - ambiguous
+    - mixed
+    - conflicting
+    - unpredictable
+
+  assertion_markers:
+    - is
+    - likely
+    - expect
+    - suggests
+    - indicates
+    - confirms
+    - signals
+    - remains
+
+  negation_markers:
+    - not
+    - unlikely
+    - despite
+    - however
+    - risk
+    - but
+    - although
+    - without
+    - neither
+
+  # Per-agent forbidden vocabulary (role boundary violations)
+  forbidden_vocabulary:
+    CASSANDRA:
+      - breakout
+      - opportunity
+      - upside
+      - acceleration
+      - rally
+      - surge
+      - outperform
+    MOMENTUM:
+      - capitulation
+      - structural impairment
+      - downside spiral
+      - crash
+      - collapse
+      - plunge
+      - underperform
+    AXIOM: []
+    SIGMA: []
+    GUARDIAN: []

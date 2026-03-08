@@ -117,4 +117,16 @@ async def setup_persistence():
             CREATE INDEX IF NOT EXISTS idx_merit_soul_handle ON agent_merit_scores(soul_handle);
             """)
 
+        # 5. ARS Drift Auditor State (Phase 19: ARS-01)
+        async with pool.connection() as conn:
+            await conn.execute("""
+            CREATE TABLE IF NOT EXISTS ars_state (
+                soul_handle    VARCHAR(64) NOT NULL,
+                metric_name    VARCHAR(64) NOT NULL,
+                breach_count   INTEGER DEFAULT 0,
+                last_audit_ts  TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+                PRIMARY KEY (soul_handle, metric_name)
+            );
+            """)
+
     logger.info("PostgreSQL schemas initialized.")
