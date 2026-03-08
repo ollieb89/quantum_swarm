@@ -42,11 +42,30 @@ RESEARCHER_HANDLE_MAP: Dict[str, str] = {
 }
 
 # Error types that indicate self-induced failure (not upstream).
+# Legacy: used by error_type fallback path (pre-Phase 22).
 _SELF_INDUCED_ERRORS = frozenset({
     "INVALID_INPUT",
     "SCHEMA_FAILURE",
     "MALFORMED_OUTPUT",
     "TOOL_ERROR",
+})
+
+# Phase 22: failure_cause classification taxonomy.
+# Self-induced causes penalise Recovery (signal -> 0.0).
+_SELF_INDUCED_CAUSES = frozenset({
+    "INVALID_ORDER",
+    "BAD_PARAMETERS",
+    "RISK_RULE_VIOLATION",
+    "INSUFFICIENT_FUNDS_FROM_SIZING",
+    "UNSUPPORTED_INSTRUMENT",
+})
+
+# External causes spare Recovery (signal -> 1.0, no penalty).
+_EXTERNAL_CAUSES = frozenset({
+    "EXCHANGE_DOWN",
+    "BROKER_API_ERROR",
+    "NETWORK_TIMEOUT",
+    "VENUE_UNAVAILABLE",
 })
 
 
@@ -124,12 +143,20 @@ def apply_ema(prev: float, signal: float, lam: float) -> float:
 def _extract_recovery_signal(state: dict) -> float:
     """Derive the recovery dimension signal from execution_result in state.
 
-    Rules:
-    - No execution_result key → no execution occurred → 1.0 (no penalty).
-    - success=True → 1.0.
-    - producer_agent_id present and != active_persona → upstream error → 1.0.
-    - error_type in _SELF_INDUCED_ERRORS → 0.0.
-    - Any other failure → 0.0.
+    Phase 22 update: checks ``failure_cause`` field FIRST for classified
+    failure taxonomy.  Falls through to legacy ``error_type`` logic when
+    ``failure_cause`` is absent or None (backward compatibility).
+
+    Rules (evaluated in order):
+    - No execution_result key -> no execution occurred -> 1.0 (no penalty).
+    - success=True -> 1.0.
+    - failure_cause in _SELF_INDUCED_CAUSES -> 0.0.
+    - failure_cause in _EXTERNAL_CAUSES -> 1.0 (no penalty).
+    - failure_cause is some other non-None string -> 1.0 (fail-open).
+    - failure_cause is None/missing -> fall through to legacy error_type path:
+      - producer_agent_id present and != active_persona -> 1.0.
+      - error_type in _SELF_INDUCED_ERRORS -> 0.0.
+      - Catch-all -> 0.0.
 
     Args:
         state: SwarmState dict (or dict with same keys).
@@ -144,6 +171,16 @@ def _extract_recovery_signal(state: dict) -> float:
 
     if result.get("success") is True:
         return 1.0
+
+    # --- Phase 22: failure_cause classification ---
+    failure_cause = result.get("failure_cause")
+    if failure_cause is not None:
+        if failure_cause in _SELF_INDUCED_CAUSES:
+            return 0.0
+        # External or unknown cause — fail-open (no penalty).
+        return 1.0
+
+    # --- Legacy path (pre-Phase 22 execution_results without failure_cause) ---
 
     # Check if error was upstream (not self-induced).
     producer = result.get("producer_agent_id")

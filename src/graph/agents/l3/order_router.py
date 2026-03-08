@@ -74,6 +74,7 @@ async def order_router_node(state: SwarmState) -> dict[str, Any]:
                 "success": False,
                 "order_id": None,
                 "reason": "risk_not_approved",
+                "failure_cause": "RISK_RULE_VIOLATION",
                 "mode": state.get("execution_mode", "paper"),
             },
             "messages": [
@@ -127,7 +128,8 @@ async def order_router_node(state: SwarmState) -> dict[str, Any]:
             "execution_price": result_obj.execution_price,
             "mode": execution_mode,
             "message": result_obj.message,
-            "metadata": result_obj.metadata
+            "metadata": result_obj.metadata,
+            "failure_cause": None,
         }
     except ValueError as compliance_err:
         # MANDATORY: Capture compliance rejections (stop-loss errors) in audit logs
@@ -137,6 +139,7 @@ async def order_router_node(state: SwarmState) -> dict[str, Any]:
             "order_id": None,
             "reason": "compliance_rejection",
             "error": str(compliance_err),
+            "failure_cause": "RISK_RULE_VIOLATION",
             "mode": execution_mode,
         }
     except Exception as exc:  # noqa: BLE001
@@ -146,6 +149,7 @@ async def order_router_node(state: SwarmState) -> dict[str, Any]:
             "order_id": None,
             "reason": "execution_failure",
             "error": str(exc),
+            "failure_cause": "EXECUTION_FAILURE",
             "mode": execution_mode,
         }
 
