@@ -3,14 +3,13 @@ gsd_state_version: 1.0
 milestone: v1.3
 milestone_name: MBS Persona System
 status: executing
-last_updated: "2026-03-08T09:21:33.005Z"
-last_activity: "2026-03-08 — 15-02 complete: 15 soul files authored; AXIOM fully populated; 4 skeleton personas seeded; MacroAnalyst soul injection wired"
-stopped_at: "Completed 15-02-PLAN.md"
+last_updated: "2026-03-08T09:29:23.660Z"
+last_activity: "2026-03-08 — 15-03 complete: soul wired into all 5 L2 nodes; _strip_excluded in audit hash; warmup_soul_cache in orchestrator; 292 tests passing"
 progress:
   total_phases: 5
-  completed_phases: 0
+  completed_phases: 1
   total_plans: 3
-  completed_plans: 2
+  completed_plans: 3
 ---
 
 # Project State
@@ -26,10 +25,10 @@ Previous: v1.2 Risk Governance — SHIPPED 2026-03-08 (260+ tests, 6 phases)
 
 ## Current Phase
 
-Phase: 15 of 19 (Soul Foundation — in progress)
-Plan: 02 complete; 03 next
-Status: In progress
-Last activity: 2026-03-08 — 15-02 complete: 15 soul files authored; AXIOM fully populated; 4 skeleton personas; MacroAnalyst soul injection wired (SOUL-05)
+Phase: 15 of 19 (Soul Foundation — COMPLETE)
+Plan: 03/03 complete
+Status: Phase complete — next: Phase 16 (KAMI Merit Index)
+Last activity: 2026-03-08 — 15-03 complete: soul wired into all 5 L2 nodes (MacroAnalyst, QuantModeler, BullishResearcher, BearishResearcher); _strip_excluded in audit _calculate_hash; warmup_soul_cache in orchestrator; 292 tests passing (SOUL-04, SOUL-05, SOUL-07 closed)
 
 ## Decisions
 
@@ -37,6 +36,8 @@ Last activity: 2026-03-08 — 15-02 complete: 15 soul files authored; AXIOM full
 - **[15-01]** Added `system_prompt` and `active_persona` Optional[str] fields to `SwarmState` in Plan 01 — required for `TestSwarmStateFields` to pass in this plan's verify step; backward-compatible (None default)
 - [Phase 15-02]: MacroAnalyst wired to call load_soul('macro_analyst') and return system_prompt + active_persona in state — SOUL-05 injection at node level
 - [Phase 15-02]: Soul files use free-flowing prose with no YAML frontmatter; H1 for persona name, H2 for canonical sections — locked pattern for Phase 17 Agent Church diff targeting
+- [Phase 15]: _strip_excluded() added as module-level function in audit_logger — _calculate_hash and verify_chain strip soul fields consistently before SHA-256 computation
+- [Phase 15]: soul_system_message added as Optional param to _run_researcher_agent — soul prepended locally to messages list, never written to state['messages']
 
 ## Progress
 
@@ -56,7 +57,7 @@ Status: Green
 See: `.planning/PROJECT.md` (updated 2026-03-08 after v1.3 milestone start)
 
 **Core value:** Institutional-quality trade signal generation through adversarial AI debate, with self-improving memory rules validated by backtesting, hard compliance guardrails, and immutable per-trade audit trails
-**Current focus:** v1.3 Phase 15 — Soul Foundation
+**Current focus:** v1.3 Phase 16 — KAMI Merit Index (Phase 15 Soul Foundation complete 2026-03-08)
 
 ## Architecture
 

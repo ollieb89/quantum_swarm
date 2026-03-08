@@ -55,7 +55,7 @@ See: `.planning/milestones/v1.2-ROADMAP.md` for full archive
 
 **Milestone Goal:** Give every L2 agent a persistent, character-consistent identity via the Mind-Body-Soul architecture — covering foundation (SoulLoader, soul files, LangGraph wiring), merit-based reward scoring (KAMI), agent self-evolution (MEMORY.md + Agent Church), Theory of Mind debate layer, and ARS drift auditing.
 
-- [ ] **Phase 15: Soul Foundation** - SoulLoader, soul files, SwarmState wiring, audit exclusion, deterministic test suite
+- [x] **Phase 15: Soul Foundation** - SoulLoader, soul files, SwarmState wiring, audit exclusion, deterministic test suite (completed 2026-03-08)
 - [ ] **Phase 16: KAMI Merit Index** - Multi-dimensional merit formula, EMA decay, SwarmState + PostgreSQL persistence, DebateSynthesizer rewiring
 - [ ] **Phase 17: MEMORY.md Evolution + Agent Church** - Structured self-reflection log, SOUL.md diff proposals, standalone Agent Church approval gate
 - [ ] **Phase 18: Theory of Mind Soul-Sync** - Pre-debate soul handshake node, public soul summaries, Empathetic Refutation few-shots
@@ -140,7 +140,7 @@ Plans:
 | 12. Wire MEM-03 End-to-End | v1.1 | 2/2 | Complete | 2026-03-08 |
 | 13. Wire InstitutionalGuard | v1.2 | 2/2 | Complete | 2026-03-08 |
 | 14. Fix MEM-06 Validation Gate | v1.2 | 2/2 | Complete | 2026-03-08 |
-| 15. Soul Foundation | 2/3 | In Progress|  | - |
+| 15. Soul Foundation | 3/3 | Complete   | 2026-03-08 | - |
 | 16. KAMI Merit Index | v1.3 | 0/TBD | Not started | - |
 | 17. MEMORY.md Evolution + Agent Church | v1.3 | 0/TBD | Not started | - |
 | 18. Theory of Mind Soul-Sync | v1.3 | 0/TBD | Not started | - |
