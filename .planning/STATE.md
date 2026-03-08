@@ -3,13 +3,13 @@ gsd_state_version: 1.0
 milestone: v1.3
 milestone_name: MBS Persona System
 status: completed
-last_updated: "2026-03-08T19:26:14.761Z"
-last_activity: "2026-03-08 — 21-01 complete: peer soul summaries wired into debate_history via _OPPONENT_MAP, INT-02 closed"
+last_updated: "2026-03-08T20:43:42.975Z"
+last_activity: "2026-03-08 — 22-01 complete: failure_cause classification in order_router, KAMI recovery signal awareness, CYCLE_STATUS in MEMORY.md"
 progress:
   total_phases: 8
   completed_phases: 7
-  total_plans: 16
-  completed_plans: 16
+  total_plans: 18
+  completed_plans: 18
 ---
 
 # Project State
@@ -25,10 +25,10 @@ Previous: v1.2 Risk Governance — SHIPPED 2026-03-08 (260+ tests, 6 phases)
 
 ## Current Phase
 
-Phase: 21 (Consume Soul-Sync Context — COMPLETE)
-Plan: 01/01 complete
-Status: Phase 21 complete — peer soul summaries wired into debate_history via _OPPONENT_MAP, INT-02 closed
-Last activity: 2026-03-08 — 21-01 complete: peer soul summaries wired into debate_history via _OPPONENT_MAP, INT-02 closed
+Phase: 22 (Failure Path KAMI + Memory Logging — IN PROGRESS)
+Plan: 01 complete
+Status: 22-01 complete — failure_cause classification, KAMI recovery signal awareness, CYCLE_STATUS in MEMORY.md
+Last activity: 2026-03-08 — 22-01 complete: failure_cause classification in order_router, KAMI recovery signal awareness, CYCLE_STATUS in MEMORY.md
 
 ## Decisions
 
@@ -76,6 +76,10 @@ Last activity: 2026-03-08 — 21-01 complete: peer soul summaries wired into deb
 - [Phase 20-02]: Canonical text extraction for drift eval reuses same key priority as _extract_thesis_summary but takes FULL text (not first sentence) for evaluation accuracy
 - [Phase 21-01]: _OPPONENT_MAP lives in debate.py not kami.py — presentation-adjacent logic, not merit logic
 - [Phase 21-01]: peer_soul_summary omitted entirely when absent/empty — no None values, no warnings logged
+- [Phase 22-01]: failure_cause checked BEFORE legacy error_type in _extract_recovery_signal — new taxonomy takes precedence, old path preserved for backward compat
+- [Phase 22-01]: Unknown failure_cause values get 1.0 (fail-open) — penalising unclassified causes would violate user decision "Unknown: neutral/no penalty"
+- [Phase 22-01]: _EXTERNAL_CAUSES duplicated in memory_writer.py — avoids cross-layer coupling between graph and core layers
+- [Phase 22-01]: EXECUTION_FAILURE (generic exception) treated as external — cannot classify without more context, fail-open applies
 
 ## Progress
 
@@ -95,7 +99,7 @@ Status: Green
 See: `.planning/PROJECT.md` (updated 2026-03-08 after v1.3 milestone start)
 
 **Core value:** Institutional-quality trade signal generation through adversarial AI debate, with self-improving memory rules validated by backtesting, hard compliance guardrails, and immutable per-trade audit trails
-**Current focus:** v1.3 Phase 21 complete — soul_sync_context consumed in DebateSynthesizer, INT-02 closed
+**Current focus:** v1.3 Phase 22 in progress — failure_cause classification and CYCLE_STATUS in MEMORY.md (Plan 01 complete)
 
 ## Architecture
 

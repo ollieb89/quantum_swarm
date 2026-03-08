@@ -106,8 +106,8 @@ Which phases cover which requirements. Updated during roadmap creation.
 | EVOL-02 | Phase 20 | Complete |
 | ARS-01 | Phase 20 | Complete |
 | TOM-01 | Phase 21 | Complete |
-| KAMI-03 | Phase 22 | Pending |
-| EVOL-01 | Phase 22 | Pending |
+| KAMI-03 | Phase 22 | Complete |
+| EVOL-01 | Phase 22 | Complete |
 
 **Coverage:**
 - v1.3 requirements: 18 total
