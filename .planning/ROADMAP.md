@@ -88,7 +88,12 @@ Plans:
   2. An agent's merit score starts at 0.5 (cold start), updates via EMA with configurable λ (default 0.9), and persists to the `agent_merit_scores` PostgreSQL table after each cycle; the value loaded at session start matches the last persisted value
   3. `DebateSynthesizer` uses KAMI merit scores from `SwarmState["merit_scores"]` for consensus weighting; a skeleton agent with an empty `IDENTITY.md` receives `weight_multiplier=0.0` and cannot dominate consensus
   4. `SwarmState` carries `merit_scores: Dict[str, float]` as a dedicated field; the field survives a full LangGraph cycle without accumulation or duplication
-**Plans**: TBD
+**Plans**: 3 plans
+
+Plans:
+- [ ] 16-01-PLAN.md — kami.py pure arithmetic core (KAMIDimensions, compute_merit, apply_ema, signal helpers) + config section + DB table DDL + SwarmState field + TDD test suite
+- [ ] 16-02-PLAN.md — merit_loader node (session-start DB read → state) + merit_updater node (post-execution EMA → DB persist) + orchestrator wiring
+- [ ] 16-03-PLAN.md — DebateSynthesizer surgical rewire (len() → merit scores) + thesis_records stub + audit hash test + full phase verification
 
 ### Phase 17: MEMORY.md Evolution + Agent Church
 **Goal**: Each agent maintains a capped structured self-reflection log after every task cycle, can propose edits to its own SOUL.md, and those proposals are reviewed by a standalone out-of-band Agent Church script before any soul file is mutated
@@ -140,8 +145,8 @@ Plans:
 | 12. Wire MEM-03 End-to-End | v1.1 | 2/2 | Complete | 2026-03-08 |
 | 13. Wire InstitutionalGuard | v1.2 | 2/2 | Complete | 2026-03-08 |
 | 14. Fix MEM-06 Validation Gate | v1.2 | 2/2 | Complete | 2026-03-08 |
-| 15. Soul Foundation | 3/3 | Complete    | 2026-03-08 | - |
-| 16. KAMI Merit Index | v1.3 | 0/TBD | Not started | - |
+| 15. Soul Foundation | v1.3 | 3/3 | Complete | 2026-03-08 |
+| 16. KAMI Merit Index | v1.3 | 0/3 | Not started | - |
 | 17. MEMORY.md Evolution + Agent Church | v1.3 | 0/TBD | Not started | - |
 | 18. Theory of Mind Soul-Sync | v1.3 | 0/TBD | Not started | - |
 | 19. ARS Drift Auditor | v1.3 | 0/TBD | Not started | - |
