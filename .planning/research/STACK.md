@@ -1,223 +1,372 @@
-# Stack Research — MBS Persona System (v1.3)
+# Stack Research — v1.4 Beta: Observable Swarm
 
-**Domain:** Multi-Agent Persona Architecture (SoulLoader, KAMI, Theory of Mind, ARS)
+**Domain:** Cycle persistence, cycle replay CLI, HEXACO-6 persona population, E2E pipeline hardening
 **Researched:** 2026-03-08
 **Confidence:** HIGH
 
 ---
 
-## Verdict: No New Dependencies Required
-
-All four MBS persona system features are achievable with Python stdlib and the libraries already installed in `pyproject.toml`. This is the core finding and the primary architectural decision.
+## Verdict: Two New Dependencies, One Promotion
 
 | Feature | Implementation | New Dep? |
 |---------|---------------|----------|
-| SoulLoader + lru_cache | `pathlib.Path`, `functools.lru_cache`, `dataclasses` | None |
-| KAMI Merit Index + EMA decay | `numpy` (already installed), pure arithmetic | None |
-| Theory of Mind Soul-Sync | String slicing on loaded `AgentSoul` objects | None |
-| ARS Drift Auditor | `re`, `datetime`, `pathlib`, `json` (all stdlib) | None |
-| KAMI persistence to PostgreSQL | `psycopg` (already installed, async) | None |
-| Per-agent MEMORY.md evolution log | `pathlib.Path.write_text()` (stdlib) | None |
-| Agent Church approval gate | LangGraph conditional edge (already installed) | None |
+| Per-cycle artifact persistence | `pathlib`, `json`, `shutil` (stdlib) + existing `psycopg` | None |
+| Cycle replay CLI | `typer` + `rich` (both already installed as transitive deps) | **Promote to explicit** |
+| HEXACO-6 persona profiles | Pure content authoring in SOUL.md files + `pydantic` validation | None |
+| E2E pipeline hardening | Existing stack + `structlog` for structured logging | **New: structlog** |
+
+**Net result:** Add `typer>=0.24.0` and `rich>=14.0.0` to `pyproject.toml` as explicit dependencies (already installed via langgraph transitive chain). Add `structlog>=24.0.0` as new dependency for structured logging in production runs.
 
 ---
 
 ## Recommended Stack
 
-### Core Technologies (Existing — No Change)
+### New Explicit Dependencies
 
-| Technology | Version in pyproject.toml | Role in MBS System |
-|------------|--------------------------|-------------------|
-| Python 3.12 | `>=3.12` (runtime) | EMA arithmetic, dataclasses, functools |
-| LangGraph | `>=0.2.0` | Graph nodes for Soul-Sync, Church gate, ARS auditor |
-| langchain-google-genai | `>=2.0.0` | LLM calls inside nodes that use injected soul prompts |
-| numpy | `>=1.24` | EMA decay calculation for KAMI (already in stack) |
-| psycopg | `>=3.3.3` | KAMI score persistence to PostgreSQL |
-| pyyaml | `>=6.0.2` | Optional: SOUL.md frontmatter parsing if metadata section added |
+| Technology | Version | Purpose | Why |
+|------------|---------|---------|-----|
+| typer | `>=0.24.0` | Cycle replay CLI framework | Already installed (transitive via langgraph). Type-hint-driven CLI with zero boilerplate. Built on Click internally, so complex subcommands available if needed. Promotes to explicit dep to prevent accidental removal. |
+| rich | `>=14.0.0` | Terminal formatting for replay CLI | Already installed (transitive). Tables, syntax highlighting, panels, progress bars -- all needed for step-through cycle replay display. |
+| structlog | `>=24.0.0` | Structured JSON logging for E2E runs | stdlib `logging` produces unstructured text. Production market data runs need machine-parseable JSON logs with correlation IDs (task_id), timing, and error context. structlog wraps stdlib logging -- no migration needed, additive. |
+
+### Core Technologies (Existing -- No Change)
+
+| Technology | Current Version | v1.4 Role |
+|------------|----------------|-----------|
+| Python 3.12 | runtime | All features |
+| LangGraph | 1.0.10 | Graph orchestration, checkpointing |
+| psycopg | 3.3.3 | Cycle metadata persistence to PostgreSQL |
+| pydantic | 2.12.5 | HEXACO-6 profile validation, cycle artifact schemas |
+| pyyaml | 6.0.3 | Soul file YAML drift_guard blocks, config parsing |
+| langgraph-checkpoint-postgres | 3.0.4 | Crash recovery for E2E pipeline runs |
 
 ### Supporting Stdlib Modules (Zero Install Cost)
 
 | Module | Purpose | Specific Use |
 |--------|---------|-------------|
-| `functools.lru_cache` | Persona file caching | `@lru_cache(maxsize=None)` on `load_soul()` — cache is frozen because soul files are immutable at runtime |
-| `pathlib.Path` | File I/O for soul dirs | Read SOUL.md, IDENTITY.md, AGENTS.md; write MEMORY.md evolution entries |
-| `dataclasses.dataclass(frozen=True)` | Immutable soul container | `AgentSoul` dataclass — frozen ensures lru_cache hashability |
-| `re` | Drift pattern matching | ARS auditor parses MEMORY.md evolution log entries for sentiment/topic drift |
-| `datetime` / `timezone` | Timestamping | KAMI score timestamps, MEMORY.md log entries, ARS audit windows |
-| `json` | Structured persistence | KAMI score snapshots in state; ARS report output |
-| `math` | EMA formula | `math.exp(-λ * t)` for time-decay weight (alternative to numpy for scalar EMA) |
-| `collections.deque` | Sliding ARS window | Fixed-length window over MEMORY.md log entries for drift scoring |
-| `difflib.unified_diff` | SOUL.md diff generation | Agent Church approval gate — shows proposed SOUL.md change as readable diff |
+| `pathlib.Path` | Cycle folder creation | `data/cycles/{cycle_number}/` numbered directories |
+| `json` | Artifact serialization | Agent memos, debate transcripts, consensus snapshots as JSON |
+| `shutil` | Cycle folder management | Atomic directory operations, archive old cycles |
+| `os.replace` | Atomic file writes | Prevent partial-write corruption on cycle artifacts (existing pattern from MemoryRegistry) |
+| `textwrap` | CLI output formatting | Wrap long thesis summaries in replay display |
+| `itertools.count` | Cycle numbering | Monotonic cycle counter from last persisted cycle |
 
 ---
 
-## Feature-by-Feature Implementation Notes
+## Feature-by-Feature Stack Decisions
 
-### 1. SoulLoader + lru_cache (SOUL-01 through SOUL-07)
+### 1. Per-Cycle Artifact Persistence
 
-**Implementation:** Pure stdlib. No new libraries.
+**Implementation:** Filesystem (numbered directories) + PostgreSQL metadata index.
 
+**Why filesystem, not pure PostgreSQL:**
+- Decision cards are already written to `data/audit.jsonl` (filesystem)
+- MEMORY.md entries are already filesystem-based
+- Numbered cycle folders (`data/cycles/0001/`, `data/cycles/0002/`) provide instant human browsability
+- PostgreSQL stores the cycle metadata index (cycle_number, task_id, timestamp, outcome, artifact_paths) for queries
+
+**Artifact schema (Pydantic -- already installed):**
 ```python
-from pathlib import Path
-from functools import lru_cache
-from dataclasses import dataclass
+class CycleArtifact(BaseModel):
+    cycle_number: int
+    task_id: str
+    timestamp: datetime
+    agent_memos: dict[str, dict]       # {handle: memo_content}
+    debate_transcript: list[dict]       # Full debate_history from SwarmState
+    consensus: dict                     # weighted_consensus_score + debate_resolution
+    merit_scores: dict[str, dict]       # KAMI scores snapshot
+    decision_card: Optional[dict]       # Full DecisionCard if trade executed
+    execution_result: Optional[dict]    # OrderRouter result
+    cycle_status: str                   # "executed" | "held" | "rejected" | "failed"
 ```
 
-`lru_cache` on `load_soul(agent_id: str)` works because:
-- `AgentSoul` is a `frozen=True` dataclass (hashable)
-- The cache key is a single string (`agent_id`)
-- Soul files are read-only at runtime — no cache invalidation needed
-- `warmup_soul_cache()` iterates `souls/` at graph creation, populating the cache during `create_orchestrator_graph()`
+**File layout per cycle:**
+```
+data/cycles/0001/
+    manifest.json          # CycleArtifact serialized (single source of truth)
+    decision_card.json     # Extracted for standalone audit (duplicate of field in manifest)
+    debate_transcript.json # Extracted for replay CLI readability
+```
 
-Path-traversal guard is pure Python string checking (no `os.path.realpath` needed given the simple `"/" in agent_id or ".." in agent_id` check).
+**No new library needed.** `pydantic.BaseModel.model_dump(mode="json")` + `json.dumps()` + `pathlib.Path.write_text()` covers all persistence. The `os.replace()` atomic write pattern from `MemoryRegistry` should be reused for manifest.json to prevent corruption.
 
-**Confidence:** HIGH — plan already contains the complete implementation (`persona_plan.md` §4).
+**PostgreSQL index table:**
+```sql
+CREATE TABLE cycle_index (
+    cycle_number INTEGER PRIMARY KEY,
+    task_id VARCHAR(64) NOT NULL,
+    started_at TIMESTAMPTZ NOT NULL,
+    completed_at TIMESTAMPTZ,
+    cycle_status VARCHAR(32) NOT NULL,
+    consensus_score REAL,
+    artifact_path TEXT NOT NULL
+);
+```
+
+Uses existing `psycopg` async pattern -- no new library.
+
+**Confidence:** HIGH -- all components are proven patterns already in use.
 
 ---
 
-### 2. KAMI Merit Index + EMA Decay (KAMI-01 through KAMI-04)
+### 2. Cycle Replay CLI
 
-**Implementation:** numpy (already installed) or pure Python `math` — either works. numpy is preferred because it's already a dependency and handles vectorised score history naturally.
+**Implementation:** `typer` CLI + `rich` terminal output.
 
-EMA formula:
+**Why typer (not argparse or click directly):**
+- Already installed (v0.24.1, transitive dependency)
+- Type-hint-driven -- matches project's Pydantic/typing-heavy style
+- Built on Click internally, so advanced features (chaining, groups) available
+- Auto-generated --help with rich formatting
+- Python 3.12 compatible (requires >=3.10)
+
+**Why rich (not plain print or tabulate):**
+- Already installed (v14.3.3, transitive dependency)
+- `rich.table.Table` for merit score comparison across cycles
+- `rich.panel.Panel` for agent memo display with borders
+- `rich.syntax.Syntax` for JSON highlighting of decision cards
+- `rich.console.Console.pager()` for long debate transcripts
+- `rich.progress.Progress` for scanning cycle directories
+
+**CLI structure:**
 ```
-KAMI_new = λ * score_new + (1 - λ) * KAMI_old
+quantum-swarm replay list                    # List all cycles with summary
+quantum-swarm replay show <cycle_number>     # Full cycle display
+quantum-swarm replay step <cycle_number>     # Step-through navigation (n/p/q)
+quantum-swarm replay compare <c1> <c2>       # Side-by-side merit/consensus diff
+quantum-swarm replay merit-trend             # Merit score trend across cycles
 ```
 
-Bounds enforcement: `max(0.1, min(1.0, KAMI_new))`
-Cold start: initialise to `0.5` when no prior score exists in SwarmState.
+**Step-through navigation:** Not a TUI (Textual would be overkill). Instead, use `rich.prompt.Prompt` for simple n(ext)/p(rev)/q(uit) navigation between cycle phases:
+1. Agent Memos (macro_report, quant_proposal, bullish_thesis, bearish_thesis)
+2. Soul-Sync Handshake context
+3. Debate Transcript + Consensus
+4. Risk Gate Decision
+5. Execution Result + Decision Card
+6. KAMI Merit Update
 
-Multi-dimensional formula from PROJECT.md:
-```
-Merit = α·Accuracy + β·Recovery + γ·Consensus + δ·Fidelity
-```
+This is a sequential pager, not a reactive TUI. Much simpler to build and maintain.
 
-All four components are scalar floats derived from existing SwarmState fields:
-- Accuracy: derived from `backtest_result` Sharpe ratio (already computed by RuleValidator)
-- Recovery: boolean success after tool failure (observable from `messages` list)
-- Consensus: peer agreement signal from `weighted_consensus_score` (already in SwarmState)
-- Fidelity: PersonaScore proxy — keyword match rate against `AgentSoul.identity` content
+**Do NOT use Textual:** Full TUI framework is unnecessary complexity for a replay viewer. The replay CLI is a diagnostic tool, not a dashboard. rich + typer covers the need completely.
 
-**No new library needed.** `numpy.clip` and scalar arithmetic cover all cases.
-
-**KAMI persistence (KAMI-04):** Add a `kami_scores: dict[str, float]` field to SwarmState and mirror to PostgreSQL via the existing `psycopg` async connection in `src/core/db.py`. A new `kami_scores` table with `(agent_id, score, timestamp)` is the minimal schema — no ORM, just raw psycopg INSERT.
-
-**Confidence:** HIGH — EMA and bounds are standard numpy/math, no exotic libraries.
+**Confidence:** HIGH -- both libraries already installed and well-documented.
 
 ---
 
-### 3. Theory of Mind Soul-Sync Handshake (TOM-01, TOM-02)
+### 3. HEXACO-6 Personality Model for Diverse Personas
 
-**Implementation:** Pure string operations on loaded `AgentSoul` objects. No new libraries.
+**Implementation:** Pure content authoring + Pydantic validation schema. No personality library needed.
 
-Soul-Sync works by truncating `AgentSoul.system_prompt_injection` to a token budget before debate:
-- Budget: ~200 tokens per peer summary (per persona_plan.md §2 file budgets)
-- Truncation: `summary = soul.system_prompt_injection[:800]` (characters, ≈200 tokens at 4 chars/token average)
+**What HEXACO-6 is:** A six-factor personality model (Honesty-Humility, Emotionality, eXtraversion, Agreeableness, Conscientiousness, Openness). Each factor has 4 facets (24 facets total). It extends the Big Five with the Honesty-Humility dimension -- relevant for financial agents where trustworthiness and manipulation-resistance matter.
 
-This summary is injected into the `user` role of the debate messages before BullishResearcher/BearishResearcher nodes execute — a pure state mutation, no extra library.
+**Why HEXACO-6 (not Big Five or MBTI):**
+- Honesty-Humility dimension directly maps to financial ethics (manipulation avoidance, fairness in analysis)
+- Six orthogonal dimensions provide more personality space for 5 agents than Big Five's 5 dimensions
+- Academic foundation with published scales (hexaco.org) -- not pop psychology
+- Each agent can be profiled on all 6 dimensions with concrete behavioral predictions
 
-Empathetic Refutation (TOM-02) is a prompt engineering change in the researcher system prompt, not a code library. The Drift Guard pattern from `IDENTITY.md` already handles this: each agent's Drift Guard section instructs it to address peer persona logic rather than flat-reject.
+**Implementation approach:**
+1. Define a `HexacoProfile` Pydantic model with 6 float fields (1.0-5.0 scale matching HEXACO-PI-R)
+2. Each agent's SOUL.md gains a `hexaco_profile:` YAML block alongside existing `drift_guard:`
+3. The profile is loaded by `soul_loader.py` (extend `AgentSoul` with a `hexaco: HexacoProfile` field)
+4. Profiles inform SOUL.md prose content (manual authoring, not generated)
+5. Diversity validation: ensure all 5 agents span the HEXACO space (no two agents with identical high-H, high-C profiles)
 
-**Confidence:** HIGH — zero-library feature; implementation is in prompt content and message ordering.
+**Proposed agent HEXACO profiles (authoring guide, not code):**
+
+| Agent | H | E | X | A | C | O | Design Rationale |
+|-------|---|---|---|---|---|---|-----------------|
+| AXIOM (macro) | 4.5 | 2.0 | 2.5 | 3.0 | 4.5 | 4.0 | High honesty (no manipulation), low emotionality (stoic veteran), high conscientiousness (methodical) |
+| MOMENTUM (bull) | 3.5 | 3.0 | 4.5 | 2.5 | 3.0 | 4.5 | High extraversion (bold, energetic), low agreeableness (willing to fight for thesis), high openness (creative) |
+| CASSANDRA (bear) | 4.0 | 4.0 | 2.0 | 2.0 | 4.0 | 3.5 | High emotionality (anxiety-driven risk awareness), low extraversion (cautious), low agreeableness (contrarian) |
+| SIGMA (quant) | 4.0 | 1.5 | 2.0 | 3.5 | 5.0 | 3.0 | Lowest emotionality (pure logic), highest conscientiousness (rigorous), moderate agreeableness (data-driven compromise) |
+| GUARDIAN (risk) | 5.0 | 3.0 | 2.0 | 3.0 | 5.0 | 2.0 | Highest honesty (incorruptible gate), highest conscientiousness, lowest openness (conservative, rule-bound) |
+
+**Pydantic schema (already installed):**
+```python
+class HexacoProfile(BaseModel):
+    honesty_humility: float = Field(ge=1.0, le=5.0)
+    emotionality: float = Field(ge=1.0, le=5.0)
+    extraversion: float = Field(ge=1.0, le=5.0)
+    agreeableness: float = Field(ge=1.0, le=5.0)
+    conscientiousness: float = Field(ge=1.0, le=5.0)
+    openness: float = Field(ge=1.0, le=5.0)
+```
+
+**Diversity validation (stdlib):** Euclidean distance between all agent profile pairs; flag if any pair distance < 1.5 (too similar). This is a build-time check, not runtime -- pure `math.sqrt` and `sum`, no numpy needed.
+
+**No personality generation library.** The HEXACO profile is a structured metadata tag that guides human SOUL.md authoring. The LLM does not "run" the HEXACO model -- it receives the authored prose that was informed by the profile. This is intentional: personality is in the prose, not in a runtime trait engine.
+
+**Confidence:** HIGH -- HEXACO-6 is well-documented, Pydantic validation is trivial, authoring is manual.
 
 ---
 
-### 4. ARS Drift Auditor (ARS-01, ARS-02)
+### 4. End-to-End Pipeline Hardening
 
-**Implementation:** `re`, `pathlib`, `datetime`, `collections.deque` — all stdlib. No new libraries.
+**Implementation:** `structlog` (new) + existing `psycopg` + configuration hardening.
 
-ARS drift score algorithm:
-1. Read all agents' `MEMORY.md` files via `pathlib.Path`
-2. Parse timestamped self-reflection entries with `re` (consistent format enforced by EVOL-01)
-3. Compute semantic drift proxy: cosine similarity of word-frequency vectors across rolling N-entry windows
-4. Flag if drift score exceeds threshold (configurable, default 0.35)
+**Why structlog (not stdlib logging alone):**
+- Production market data runs need JSON-structured logs for post-mortem analysis
+- structlog wraps stdlib logging -- existing `logging.getLogger()` calls continue to work
+- Adds contextual fields (task_id, cycle_number, agent_handle) to every log line without explicit passing
+- Zero-migration: configure once at application entry point, all existing loggers gain structure
+- Lightweight: pure Python, no C extensions, no heavy dependencies
 
-For semantic similarity without a vector library: use `collections.Counter` over word frequencies + manual dot-product. This is sufficient for the ARS audit use case — the signal being detected (topic/sentiment drift in agent writing) is coarse enough that full embedding models are not needed and would add unnecessary dependency weight.
+**Why NOT alternatives:**
 
-If higher-fidelity drift detection is needed in future: `sentence-transformers` is already in `pyproject.toml` (`>=5.2.3`) and could be used without a new install. Hold this option for v2.0.
+| Alternative | Rejected Because |
+|-------------|-----------------|
+| `python-json-logger` | Less flexible binding model; structlog's processors are more powerful |
+| `loguru` | Replaces stdlib logging entirely -- too invasive for 30,600 LOC codebase |
+| `stdlib logging` (as-is) | Unstructured text is not parseable for production incident analysis |
 
-**Alert mechanism:** Log to `data/audit.jsonl` (existing audit pipeline) and set a flag in SwarmState. No external alerting library needed for v1.3 scope.
+**Hardening additions (no new deps):**
 
-**Confidence:** HIGH — ARS drift is an internal metric over text files; stdlib Counter-based cosine is proven sufficient.
+| Area | What | Library |
+|------|------|---------|
+| Retry with backoff | Wrap `data_fetcher_node` for transient API failures (yfinance, ccxt) | stdlib `time.sleep` + manual exponential backoff (3 retries, 1s/2s/4s) |
+| Circuit breaker | Track consecutive failures per external API; skip after N failures | stdlib `collections.defaultdict` + counter logic |
+| Timeout enforcement | Wrap LLM calls with configurable timeout | `asyncio.wait_for()` (stdlib) |
+| Graceful degradation | If data_fetcher fails, populate partial state and continue to consensus | Existing LangGraph conditional edges |
+| Cycle numbering | Monotonic counter from PostgreSQL `cycle_index` sequence | `psycopg` (existing) |
+
+**Production configuration (no new deps):**
+```yaml
+# config/swarm_config.yaml additions
+pipeline:
+  max_retries: 3
+  retry_backoff_base: 1.0
+  llm_timeout_seconds: 60
+  circuit_breaker_threshold: 5
+  circuit_breaker_reset_seconds: 300
+```
+
+**Confidence:** HIGH for structlog integration. MEDIUM for circuit breaker (pattern is clear but needs careful testing with real market data APIs).
 
 ---
 
 ## Installation
 
-No changes to `pyproject.toml` are required. All capabilities exist in the current installed environment.
-
 ```bash
-# Nothing to install — all features use:
-# - stdlib: functools, pathlib, dataclasses, re, datetime, json, math, collections, difflib
-# - Already in pyproject.toml: numpy>=1.24, psycopg>=3.3.3, langgraph>=0.2.0, pyyaml>=6.0.2
+# Promote transitive deps to explicit (already installed, no download)
+# Add new dependency
+uv add typer rich structlog
+```
+
+**Changes to pyproject.toml:**
+```toml
+dependencies = [
+    # ... existing ...
+    # v1.4: Observable Swarm
+    "typer>=0.24.0",
+    "rich>=14.0.0",
+    "structlog>=24.0.0",
+]
 ```
 
 ---
 
 ## Alternatives Considered
 
-| Feature | Considered | Rejected Because |
-|---------|-----------|-----------------|
-| KAMI EMA | `scipy.stats.exponential_smoothing` | Already have numpy; scipy adds no value for a single EMA formula |
-| ARS drift | `sentence-transformers` embeddings | Already in pyproject.toml but adds 200-500ms latency per audit run; Counter-cosine is sufficient for v1.3 coarse detection |
-| ARS drift | `chromadb` vector store | Already broken in env (known issue); not appropriate for file-level drift detection |
-| Soul-Sync truncation | tiktoken for exact token counting | Would add a new dep; 4 chars/token approximation is safe at 200-token budget |
-| SOUL.md parsing | `markdown-it-py` | pyyaml (already installed) handles any frontmatter; plain string reads handle body |
-| KAMI persistence | SQLAlchemy ORM | Project uses raw psycopg3 async throughout; introducing ORM contradicts existing pattern |
-| Agent Church diffs | `pygit2` or `gitpython` | `difflib.unified_diff` (stdlib) produces readable diffs; no git operation needed |
+| Category | Recommended | Alternative | Why Not |
+|----------|-------------|-------------|---------|
+| CLI framework | typer | argparse | Verbose, no auto-complete, no rich integration |
+| CLI framework | typer | click (direct) | More boilerplate; typer wraps click with type hints |
+| Terminal output | rich | tabulate | No panels, no syntax highlighting, no pager |
+| TUI framework | rich (panels) | textual | Full TUI is overkill for replay; textual adds async complexity |
+| Structured logging | structlog | loguru | loguru replaces stdlib logging entirely; too invasive |
+| Structured logging | structlog | python-json-logger | Less flexible processor pipeline |
+| Personality model | HEXACO-6 | Big Five (OCEAN) | Missing Honesty-Humility; only 5 dimensions for 5 agents |
+| Personality model | HEXACO-6 | MBTI | Not empirically validated; 16 types are categorical not continuous |
+| Cycle persistence | Filesystem + PG index | Pure PostgreSQL JSONB | Loses human-browsable artifact files; JSONB querying is slower for large blobs |
+| Cycle persistence | Filesystem + PG index | SQLite per cycle | Adds second DB engine; PostgreSQL already handles metadata well |
+| Retry logic | Manual backoff | tenacity library | One more dependency for 15 lines of retry code; not justified |
 
 ---
 
-## What NOT to Use
+## What NOT to Add
 
 | Avoid | Why | Use Instead |
 |-------|-----|------------|
-| `sentence-transformers` for ARS (v1.3) | GPU/CPU overhead not justified for coarse drift scoring at v1.3 scale; adds 30s+ cold start | `collections.Counter` cosine similarity on MEMORY.md word frequencies |
-| `asyncio.run()` inside node functions | Known project pitfall — breaks async event loop; caused MEM-06 defect | `ThreadPoolExecutor` for sync file I/O in async contexts, or use synchronous `Path.read_text()` directly (soul files are small, sync read is fine) |
-| Module-level `AgentSoul` instantiation | LLM lazy-init pattern applies here too — `warmup_soul_cache()` should only be called at graph creation time, not at import | Use `warmup_soul_cache()` inside `create_orchestrator_graph()`, not at module level |
-| `MEMORY.md` as SQLite/JSON store | Defeats the RLAF self-reflection narrative: agents write prose reasoning, not structured records | Append-only markdown with timestamped H2 sections; ARS auditor parses the prose |
-| Pydantic for `AgentSoul` | `lru_cache` requires hashable arguments/returns; Pydantic models are not hashable by default | `dataclasses.dataclass(frozen=True)` — immutable, hashable, zero-dep, IDE-friendly |
+| textual (TUI framework) | Async TUI framework for a sequential replay tool is architectural overkill; adds 2MB+ dep | rich panels + typer prompts for step-through |
+| tenacity (retry library) | 15 lines of manual backoff code does not justify a new dependency | `for attempt in range(max_retries): time.sleep(backoff)` |
+| loguru | Replaces stdlib logging; 30,600 LOC codebase uses `logging.getLogger()` everywhere | structlog (wraps stdlib, non-invasive) |
+| SQLAlchemy / Alembic | Project uses raw psycopg3 throughout; ORM adds complexity without value at this scale | Raw `CREATE TABLE` + `psycopg.execute()` |
+| pandas for cycle analysis | Already installed but importing pandas for simple merit trend display is wasteful | List comprehensions + rich.table |
+| Any HEXACO personality library | HEXACO profiles are static metadata tags, not runtime simulations | Pydantic model + manual SOUL.md authoring |
+| sentence-transformers for replay search | Full-text search over cycles is not a v1.4 requirement | grep-style filtering by cycle_status or consensus_score range |
 
 ---
 
 ## SwarmState Extensions Required
 
-These are state schema changes, not library additions:
-
 ```python
-# To add to src/graph/state.py for v1.3
-active_persona: Optional[str]         # SOUL-04: agent_id of active soul
-system_prompt: Optional[str]          # SOUL-04: composed soul injection (not in messages)
-kami_scores: Optional[dict]           # KAMI-04: {agent_id: float} merit index scores
-soul_sync_summaries: Optional[dict]   # TOM-01: {agent_id: str} truncated soul for debate
-ars_flags: Optional[list]             # ARS-02: list of agent_ids with drift flag set
+# To add to src/graph/state.py for v1.4
+cycle_number: Optional[int]              # Monotonic cycle counter from PostgreSQL sequence
+cycle_artifact_path: Optional[str]       # Path to data/cycles/{number}/ for current run
 ```
 
-None of these require new types beyond what `typing` stdlib provides.
+Minimal additions. The cycle artifact writer node reads existing state fields (macro_report, quant_proposal, bullish_thesis, bearish_thesis, debate_history, weighted_consensus_score, merit_scores, decision_card_audit_ref, execution_result) and persists them to the cycle folder. No new data flows through state.
+
+---
+
+## PostgreSQL Schema Extensions
+
+```sql
+-- Cycle index table (new)
+CREATE TABLE cycle_index (
+    cycle_number SERIAL PRIMARY KEY,
+    task_id VARCHAR(64) NOT NULL UNIQUE,
+    started_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    completed_at TIMESTAMPTZ,
+    cycle_status VARCHAR(32) NOT NULL DEFAULT 'running',
+    consensus_score REAL,
+    artifact_path TEXT NOT NULL,
+    CONSTRAINT valid_status CHECK (cycle_status IN ('running', 'executed', 'held', 'rejected', 'failed'))
+);
+
+CREATE INDEX idx_cycle_status ON cycle_index(cycle_status);
+CREATE INDEX idx_cycle_started ON cycle_index(started_at);
+```
+
+Uses existing `psycopg` async pool from `src/core/db.py`. The `SERIAL` type provides monotonic cycle numbering without application-level coordination.
+
+---
+
+## Integration Points
+
+| New Component | Integrates With | How |
+|---------------|----------------|-----|
+| Cycle artifact writer (new node) | orchestrator.py | New node after `memory_writer`, before `trade_logger` in graph edge chain |
+| Cycle number allocator | db.py `get_pool()` | INSERT INTO cycle_index RETURNING cycle_number at graph entry |
+| Replay CLI | data/cycles/ filesystem | Reads manifest.json files; no graph dependency |
+| HEXACO profiles | soul_loader.py | Extend `AgentSoul` dataclass with `hexaco: Optional[HexacoProfile]` |
+| structlog | orchestrator.py entry | Configure at `create_orchestrator_graph()` -- all downstream loggers gain structure |
 
 ---
 
 ## Version Compatibility
 
-| Package | Installed Constraint | MBS Usage | Known Issues |
-|---------|---------------------|-----------|-------------|
-| numpy | `>=1.24` | EMA arithmetic, `np.clip()` | None — scalar ops are stable across all numpy versions |
-| psycopg | `>=3.3.3` | KAMI score INSERT | Async-only pattern — use `await conn.execute()`, not sync psycopg2 API |
-| langgraph | `>=0.2.0` | ARS + Church conditional edges | `workflow.branches` (conditional) + `workflow.edges` (direct) — check both when inspecting graph topology |
-| pyyaml | `>=6.0.2` | Optional SOUL.md frontmatter | Only needed if SOUL.md gains structured YAML front matter; not required for Tier 1 |
+| Package | Version | Python 3.12 | Notes |
+|---------|---------|-------------|-------|
+| typer | 0.24.1 (installed) | Yes (>=3.10) | Pin `>=0.24.0` to stay on current major |
+| rich | 14.3.3 (installed) | Yes | Pin `>=14.0.0` for Panel/Table API stability |
+| structlog | latest (new) | Yes | Pure Python, no binary deps |
+| pydantic | 2.12.5 (installed) | Yes | Already used for DecisionCard; reuse for CycleArtifact + HexacoProfile |
+| psycopg | 3.3.3 (installed) | Yes | Async pool pattern unchanged |
 
 ---
 
 ## Sources
 
-- `persona_plan.md` (project file, 2026-03-05) — SoulLoader API design, file format, lru_cache pattern. HIGH confidence.
-- `docs/SOT_PERSONA_REWARD_SYSTEM.md` (project file, 2026-03-05) — KAMI formula, ARS audit specification, Agent Church governance. HIGH confidence.
-- `pyproject.toml` (project file, current) — Verified installed dependency set. HIGH confidence.
-- `src/graph/state.py` (project file, current) — SwarmState TypedDict shape, existing fields. HIGH confidence.
-- `src/graph/debate.py` (project file, current) — DebateSynthesizer integration point for KAMI weighting. HIGH confidence.
-- Python 3.12 docs — `functools.lru_cache`, `dataclasses`, `pathlib`, `difflib`. HIGH confidence (stdlib).
-- numpy docs — `np.clip()`, scalar EMA arithmetic. HIGH confidence.
+- [HEXACO-PI-R Scale Descriptions](https://hexaco.org/scaledescriptions) -- Official HEXACO factor/facet definitions. HIGH confidence.
+- [Rich PyPI](https://pypi.org/project/rich/) -- v14.3.3 confirmed current. HIGH confidence.
+- [Typer PyPI](https://pypi.org/project/typer/) -- v0.24.1 confirmed current. HIGH confidence.
+- pyproject.toml (project file, current) -- Verified installed dependency set. HIGH confidence.
+- `uv pip list` (local env) -- Confirmed rich 14.3.3, typer 0.24.1, pydantic 2.12.5 already installed. HIGH confidence.
+- src/core/decision_card.py, src/graph/nodes/memory_writer.py (project files) -- Existing persistence patterns. HIGH confidence.
+- src/graph/orchestrator.py (project file) -- Graph edge topology for integration point planning. HIGH confidence.
 
 ---
-*Stack research for: Quantum Swarm v1.3 MBS Persona System*
+*Stack research for: Quantum Swarm v1.4 Beta: Observable Swarm*
 *Researched: 2026-03-08*

@@ -1,17 +1,17 @@
 # Project Research Summary
 
-**Project:** Quantum Swarm v1.3 — MBS Persona System
-**Domain:** Multi-agent LLM persona persistence, merit-based reward, and drift governance for a financial analysis swarm
+**Project:** Quantum Swarm v1.4 Beta: Observable Swarm
+**Domain:** Multi-agent LLM trading swarm observability, persona diversity, cycle persistence and replay
 **Researched:** 2026-03-08
 **Confidence:** HIGH
 
 ## Executive Summary
 
-Quantum Swarm v1.3 adds a full Multi-agent Belief System (MBS) persona layer to an existing 260+ test LangGraph financial swarm that is already in production use. The research is unusually high-confidence because all four areas were grounded against live production code rather than hypotheticals: the entire stack is already installed (no new dependencies required whatsoever), all four KAMI signal sources exist in current SwarmState fields, the graph topology is known, and the pitfalls were identified from concrete interactions between the new design and the existing audit logger, DebateSynthesizer, and lru_cache mechanics.
+Quantum Swarm v1.4 transforms a functioning but opaque multi-agent trading system into an observable one. The existing v1.3 codebase (300+ tests, ~30,600 LOC) has strong infrastructure -- LangGraph StateGraph orchestration, PostgreSQL-backed audit logging with SHA-256 hash chains, KAMI merit scoring, and a soul/persona system -- but 4 of 5 agent personas are skeletons, no complete cycle has run against real market data, and there is no way to review what the swarm decided or why. The v1.4 milestone closes these gaps: populate all personas with HEXACO-6-informed personality diversity, run end-to-end against real data, persist complete cycle snapshots, and provide a CLI replay tool for post-mortem analysis.
 
-The recommended approach follows a strict four-tier build order that matches the internal dependency graph of the features. Tier 1 (SoulLoader foundation) must be complete and green before any Tier 2 work begins — there is no safe way to reorder this. The highest-value change in the milestone is the DebateSynthesizer KAMI-weighted consensus rewiring (Tier 2a), which replaces the current character-length quality proxy with a multi-dimensional merit signal. This is also the highest-risk change because it modifies a node with currently passing tests. The ARS Drift Auditor (Tier 2d) must run out-of-band as a scheduled process and must never gate trade execution — conflating governance scope with the trading circuit breaker is the most operationally dangerous mistake identified.
+The recommended approach is strictly additive: the existing graph topology stays unchanged. New capabilities wrap the graph (CycleRunner for snapshot capture), extend it minimally (one new SwarmState field, one new PostgreSQL table), or consume its output read-only (replay CLI). The stack additions are minimal -- promote two transitive dependencies (typer, rich) to explicit, add structlog for structured logging. No new frameworks. HEXACO-6 persona profiles are a design-time authoring guide validated by Pydantic, not a runtime personality engine. The architecture research strongly recommends post-graph snapshot extraction rather than adding snapshot nodes inside the graph, avoiding the complexity of routing four distinct exit paths.
 
-The primary risks are not architectural novelty but integration precision: system prompt injection into the wrong SwarmState location corrupts the hash-chained MiFID II audit trail; lru_cache process-global state will contaminate the test suite without an autouse fixture; and EMA cold-start values of 0.5 will silently dilute established agent weights if skeleton soul directories are activated before their content is populated. Every one of these risks has a specific, low-cost prevention pattern that must be applied in Tier 1 before any later-tier work lands.
+The primary risks are: (1) checkpoint state bloat from operator.add accumulator fields if cycle artifacts are naively stored in SwarmState, (2) yfinance rate limiting killing end-to-end pipeline runs during development, (3) persona collapse where Gemini's RLHF training overrides HEXACO-diverse persona instructions, and (4) silent failures from missing drift_guard YAML blocks and dummy paper fill prices masking data quality issues. All have concrete mitigations identified in the research. The critical ordering constraint is that persona population must come first -- everything downstream depends on agents producing meaningful, differentiated output.
 
 ---
 
@@ -19,175 +19,117 @@ The primary risks are not architectural novelty but integration precision: syste
 
 ### Recommended Stack
 
-No new dependencies are required. Every feature in the MBS persona system is achievable with the libraries already in `pyproject.toml` and Python 3.12 stdlib. The implementation surface is: `functools.lru_cache` + `dataclasses.dataclass(frozen=True)` for the SoulLoader; `numpy` (already installed) for EMA arithmetic; `psycopg` (already installed, async) for KAMI PostgreSQL persistence; `re`, `pathlib`, `collections.deque` (all stdlib) for the ARS drift auditor; and `difflib.unified_diff` (stdlib) for Agent Church diff generation.
+The v1.4 stack is deliberately conservative. Two dependencies already installed as transitive deps (typer, rich) get promoted to explicit in pyproject.toml. One new dependency (structlog) is added for structured JSON logging. Everything else uses stdlib or existing installed packages.
 
-The one deliberate choice to hold: `sentence-transformers` is already in `pyproject.toml` but should not be used for ARS drift detection at v1.3 scale — it adds 200-500ms latency per audit run and 30s+ cold start. `collections.Counter` cosine similarity over MEMORY.md word frequencies is sufficient for coarse drift scoring. This can be revisited at v2.0 if finer-grained drift detection is needed.
+**New explicit dependencies:**
+- **typer** (>=0.24.0): CLI framework for replay tool -- already installed, type-hint-driven, built on Click
+- **rich** (>=14.0.0): Terminal formatting for replay display -- already installed, provides tables/panels/syntax highlighting
+- **structlog** (>=24.0.0): Structured JSON logging for production runs -- wraps stdlib logging, non-invasive
 
-**Core technologies:**
-- Python 3.12 + `functools.lru_cache` + `dataclasses`: SoulLoader with immutable `AgentSoul` frozen dataclass — required for hashability and concurrent read safety
-- `numpy.clip` + scalar arithmetic: EMA decay formula for KAMI Merit Index — already a project dependency, covers all cases
-- `psycopg` (async): KAMI score persistence to `agent_merit_scores` PostgreSQL table — existing pattern, raw psycopg3 INSERT, no ORM
-- LangGraph `>=0.2.0` (existing): Soul-Sync conditional node, Agent Church routing branch, `workflow.branches` + `workflow.edges` inspection
-- `difflib.unified_diff` (stdlib): Agent Church SOUL.md diff generation for human-readable review
+**Existing stack unchanged:** Python 3.12, LangGraph 1.0.10, psycopg 3.3.3, pydantic 2.12.5, pyyaml 6.0.3, langgraph-checkpoint-postgres 3.0.4.
 
-**Critical version note:** `asyncio.run()` inside node functions is a known project-breaking pattern (caused MEM-06 defect). All soul file I/O inside async contexts must use synchronous `Path.read_text()` — soul files are small and sync reads are appropriate.
+**Explicitly rejected:** textual (TUI overkill), tenacity (15 lines of manual backoff suffice), loguru (replaces stdlib logging -- too invasive), SQLAlchemy (raw psycopg3 pattern works), any HEXACO personality runtime library (profiles are static metadata, not simulations).
 
 ### Expected Features
 
-The feature set is organized across four tiers with strict prerequisite dependencies.
+**Must have (table stakes for "observable beta" label):**
+- Fully populated personas (MOMENTUM, CASSANDRA, SIGMA, GUARDIAN) with AXIOM-quality content and drift_guard YAML
+- End-to-end pipeline execution against real market data (yfinance equities path)
+- Per-cycle artifact persistence (CycleSnapshot to PostgreSQL cycle_snapshots table)
+- Cycle list and single-cycle detail CLI commands
+- Step-through replay CLI walking execution order
+- Merit weight and drift flag time series from existing MEMORY.md data
 
-**Must have — Tier 1 (table stakes, v1.3.0):**
-- `SoulLoader` with `lru_cache`, path-traversal guard (`../`, `/abs`, `\back` cases), `AgentSoul` frozen dataclass — foundation for everything
-- 5-file soul directory per agent (SOUL.md, IDENTITY.md, AGENTS.md, USER.md, MEMORY.md) — `macro_analyst` fully populated; 4 others as populated skeletons
-- SwarmState fields: `active_persona`, `system_prompt` (NOT in `messages` reducer) — injection surface for all Tier 2
-- `macro_analyst_node` soul injection — reference implementation and test anchor
-- Drift Guard embedded in each agent's IDENTITY.md — cheapest persona stability mechanism, runs inside the model's reasoning loop
-- Deterministic test suite with zero LLM calls — CI gate for the entire persona layer
+**Should have (differentiators, post-beta validation):**
+- HEXACO-6 persona diversity profiles with pairwise distance validation
+- Debate tension score quantifying Bull/Bear disagreement
+- Cross-cycle comparison CLI (side-by-side diff of two cycles)
+- Dashboard-ready JSON export for external visualization
 
-**Must have — Tier 2a (KAMI Merit Index, v1.3.1):**
-- Multi-dimensional merit formula: `Merit = α·Accuracy + β·Recovery + γ·Consensus + δ·Fidelity` (default weights: α=0.30, β=0.35, γ=0.25, δ=0.10)
-- EMA decay with configurable λ (default 0.9 for financial domain), cold start 0.5, bounds [0.1, 1.0]
-- `merit_scores: Dict[str, float]` in SwarmState (prerequisite — must land before DebateSynthesizer rewiring)
-- DebateSynthesizer KAMI-weighted consensus (breaking change — replaces character-length proxy)
-- PostgreSQL persistence for merit scores across sessions
-
-**Should have — Tier 2b-2d (v1.3.2+):**
-- Per-agent MEMORY.md structured log append (post-task, capped at 50 entries, with machine-readable markers)
-- SOUL.md diff proposal format + Agent Church approval gate (standalone script, not LangGraph node) + `load_soul.cache_clear()` on approval
-- Soul-Sync Handshake via `soul_sync_node` before researcher fan-out (reads from lru_cache, writes `peer_soul_contexts` to state)
-- Empathetic Refutation few-shot examples in researcher system prompts (prompt engineering, no code)
-- ARS Drift Auditor (5 observable metrics, scheduled process, evolution-only scope)
-
-**Defer to v2+:**
-- Emotional state model (valence/arousal, HMM-based) — no existing observable event hooks in v1.2 swarm
-- SoulZip relational USER.md history — requires accumulated MEMORY.md cross-session peer data to populate
-- PersonaScore 5D LLM-as-Judge fidelity evaluation — cost/benefit decision needed; Fidelity KAMI dimension covers the key signal
-- HEXACO-6 automated diversity enforcement gate — deferred until all 4 researcher personas are fully populated
-
-**Confirmed anti-features (do not build):**
-- LLM-as-Judge for ARS drift detection — circular evaluation, shared base model blind spots, adds API cost to background audit
-- Global SOUL.md (one shared swarm identity) — collapses adversarial diversity, defeats the debate architecture
-- Real-time SOUL.md mutation mid-graph-run — lru_cache race condition with fan-out concurrent reads
-- `merit_scores` stored in `messages` list — `operator.add` reducer causes unbounded accumulation
+**Defer (v2+):**
+- Checkpoint fork / what-if replay (re-runs LLM calls, non-deterministic, expensive)
+- PersonaScore 5D fidelity evaluation (5 extra LLM calls per evaluation)
+- Real-time streaming dashboard (massive frontend complexity, low marginal value)
+- Automated HEXACO diversity enforcement gate (diversity is design-time, not runtime)
 
 ### Architecture Approach
 
-The MBS system adds components in layers on top of the existing graph topology without restructuring it. The v1.2 graph remains intact; new nodes are inserted at specific points, and two nodes are modified. The SoulLoader is not a graph node — it is called inside each L2 node as the first operation, leveraging the lru_cache to make this effectively free after warmup. The DebateSynthesizer node is modified to use KAMI weights instead of character length. One new pre-debate node (`soul_sync_handshake`) is inserted between the researcher fan-in and the synthesizer. One new intent branch (`soul_evolution -> agent_church_node`) is added to the classify_intent router. The ARS Auditor and Agent Church operate entirely out-of-band.
+The architecture follows one principle: the existing graph topology is frozen. All new capabilities attach outside or alongside. CycleRunner wraps graph invocation, assigns a cycle_id, extracts a curated CycleSnapshot from the final state after ainvoke() returns, and persists it to a dedicated PostgreSQL table. The replay CLI is a pure read-only consumer of that table. Persona population is content-only changes to existing soul directories.
 
 **Major components:**
-1. `src/core/soul_loader.py` — Load, cache, and invalidate AgentSoul from filesystem; shared primitive for all tiers
-2. `src/core/souls/[agent_id]/` — Per-agent soul directories (5 files each); immutable at runtime, mutable only via Agent Church
-3. `src/core/merit_index.py` — KAMI formula, EMA decay, dimension weights, bounds; computes per-agent merit deltas post-cycle
-4. `src/core/ars_auditor.py` — Scheduled out-of-band drift detection from MEMORY.md logs; governs evolution only, never trade execution
-5. `soul_sync_handshake` node — Pre-debate barrier node that reads peer soul summaries (public-facing only) into state before fan-out
-6. `agent_church_node` — L1 routing branch for `soul_evolution` intent; LLM-as-Judge for SOUL.md diff proposals; out-of-band, not inline
-7. `merit_update_node` — Post-cycle merit computation and PostgreSQL persistence; wired after `write_trade_memory`
-8. Modified `src/graph/debate.py` — DebateSynthesizer reads `merit_scores` from state for weighted consensus (breaking change)
-9. Modified `src/graph/state.py` — Four new fields: `active_persona`, `system_prompt`, `merit_scores`, `soul_sync_context`
+1. **CycleRunner** (new, `src/core/cycle_runner.py`) -- wraps graph invocation, assigns cycle_id, captures and persists CycleSnapshot post-invocation
+2. **cycle_snapshots table** (new PostgreSQL DDL) -- denormalized JSONB storage with indexed columns for fast filtering
+3. **swarm-replay CLI** (new, `src/cli/replay.py`) -- list, show, diff, timeline commands using typer + rich
+4. **src/runner.py** (new) -- proper end-to-end entry point replacing legacy main.py simulation stub
+5. **Soul persona content** (modified files only) -- 4 agents x 3 files (IDENTITY.md, SOUL.md with drift_guard, AGENTS.md)
 
 **Key patterns to follow:**
-- Lazy soul system prompt composition: each L2 node composes `system_prompt` via `soul.system_prompt_injection` property; never stored in `state["messages"]`
-- Dual-layer persistence: `merit_scores` in SwarmState (live session) + `agent_merit_scores` PostgreSQL table (durable across sessions)
-- Out-of-band governance: Agent Church runs as standalone script analogous to `PerformanceReviewAgent`; ARS Auditor runs on existing systemd timer
-- Cache invalidation protocol: `load_soul.cache_clear()` + `warmup_soul_cache()` immediately after any approved SOUL.md diff; never during a graph run
+- Post-graph snapshot extraction (not an in-graph node) -- handles all 4 exit paths uniformly
+- Cycle ID separate from LangGraph thread_id -- domain concept vs. checkpoint management concept
+- Replay via direct PostgreSQL query (not LangGraph time-travel) -- one snapshot per cycle, decoupled from checkpoint internals
+- LangGraphOrchestrator gets a new run_cycle_async() method; existing run_task_async() delegates to it (non-breaking)
 
 ### Critical Pitfalls
 
-The top pitfalls, ordered by severity and phase impact:
-
-1. **System prompt injected into `state["messages"]`** — `messages` uses `operator.add` reducer; soul content accumulates across nodes, corrupts `DebateSynthesizer` message extraction, and pollutes the hash-chained MiFID II audit record. Prevention: `system_prompt` goes exclusively in its dedicated SwarmState field; assembled inline at LLM call time; never written to `messages`. Test assertion required: `soul.system_prompt_injection not in [m.get("content","") for m in state["messages"]]`.
-
-2. **`lru_cache` process-global state contaminates test suite** — Soul content cached across tests causes order-dependent failures in the 260+ test suite. Prevention: `autouse` pytest fixture calling `load_soul.cache_clear()` before and after every test; must be added to `tests/core/conftest.py` before any soul test is written.
-
-3. **`system_prompt` field included in hash-chained audit records** — `AuditLogger.log_transition()` captures all SwarmState fields; a 500-token soul injection across 10+ node transitions adds ~5,000 tokens per task cycle to PostgreSQL JSONB and `audit.jsonl`. Once in production, this cannot be retroactively removed without violating audit immutability. Prevention: add `AUDIT_EXCLUDED_FIELDS = {"system_prompt", "active_persona", "peer_soul_contexts"}` before wiring `macro_analyst_node` into the audit-logged graph.
-
-4. **KAMI Recovery metric gameable via intentional failure farming** — Recovery is weighted highest (beta=0.35) but all recoveries are treated equally regardless of whether the failure was self-induced (`INVALID_INPUT`) or external (`INSUFFICIENT_DATA`). Prevention: error classification must feed KAMI from day one; self-induced failures penalize rather than reward; cap Recovery credits at 2 per debate round.
-
-5. **EMA cold start 0.5 dilutes established agent weights when skeleton agents are activated** — Skeleton agents with empty soul files receive Merit=0.5 and immediately influence DebateSynthesizer weighting. Prevention: gate KAMI weighting on `soul.identity != ""`; skeleton agents receive `weight_multiplier = 0.0` until IDENTITY.md is populated with minimum required fields.
-
-6. **Agent Church as blocking LangGraph node creates deadlock and conflict-of-interest** — L1 Orchestrator cannot be its own governance arbiter; inline approval blocks trade cycles. Prevention: implement Agent Church as a standalone script (`python -m src.core.agent_church`); L1 self-proposals require `RequiresHumanApproval` exception; proposals accumulate without blocking trade execution.
-
-7. **ARS drift false positives block production trading if scope is not strictly limited** — ARS suspension applied to the trade execution path (e.g., via `route_after_institutional_guard`) stops live trades when ARS fires on a new agent with no baseline. Prevention: ARS governs MEMORY.md evolution writes only; no code path connects ARS suspension to `order_router_node` or `route_after_institutional_guard`; warm-up period of 30 cycles before alerts fire.
+1. **Checkpoint state bloat** -- Do NOT store cycle artifacts in SwarmState. Write to dedicated PostgreSQL table or filesystem. operator.add fields checkpoint the FULL accumulated list at every step. Fix BEFORE implementing persistence.
+2. **operator.add message list growth** -- messages accumulate 15-20 entries per cycle with no trimming. Implement message trimming or a custom sliding-window reducer. Fix BEFORE adding cycle persistence.
+3. **yfinance rate limiting** -- No retry logic in data_fetcher_node. Add exponential backoff (3 retries), data caching layer for development, and a --cached-data flag. Fix FIRST in end-to-end hardening.
+4. **Missing drift_guard YAML** -- 4 skeleton personas silently disable drift detection (empty rules = no flags). Require drift_guard YAML as a mandatory deliverable per persona. Validate at warmup_soul_cache().
+5. **Audit hash chain breakage** -- Every new SwarmState field enters the audit hash by default. Add cycle_id and any new fields to AUDIT_EXCLUDED_FIELDS immediately. Test verify_chain() after integration.
 
 ---
 
 ## Implications for Roadmap
 
-Based on research, the dependency graph is deterministic. There is only one valid build order. The phase structure below reflects the actual prerequisite chain identified across all four research files.
+Based on research, suggested phase structure:
 
-### Phase 1: Soul Foundation (Tier 1)
+### Phase 1: Full Persona Population + HEXACO-6 Profiles
 
-**Rationale:** SoulLoader and AgentSoul are the shared primitive for every subsequent phase. KAMI Fidelity dimension reads AGENTS.md via AgentSoul. Soul-Sync reads SOUL.md via AgentSoul. ARS reads MEMORY.md from soul directories. Nothing in Tier 2 is implementable without this. This phase has zero dependency on runtime behavior — all tests are deterministic string assertions with no LLM calls.
+**Rationale:** Critical path blocker. Everything downstream depends on agents producing meaningful, differentiated output. Skeleton personas produce shallow, convergent memos that make observability uninteresting. Zero code risk -- pure content authoring. HEXACO-6 profiling should happen during authoring, not after, because it informs SOUL.md prose.
+**Delivers:** 4 fully populated personas (MOMENTUM, CASSANDRA, SIGMA, GUARDIAN) with AXIOM-quality IDENTITY.md, SOUL.md (including drift_guard YAML), AGENTS.md, and HEXACO.yaml profiles. Pairwise diversity validation passing minimum distance threshold.
+**Addresses:** Fully populated personas (P1 table stake), HEXACO-6 diversity framework (P2 differentiator -- pulled forward because authoring is concurrent)
+**Avoids:** Pitfall 4 (stale cache -- add --reload-souls flag), Pitfall 6 (persona collapse -- behavioral descriptions not raw trait scores), Pitfall 10 (missing drift YAML -- mandatory deliverable per persona)
 
-**Delivers:** `src/core/soul_loader.py`, all 5 soul directories with `macro_analyst` fully populated and 4 skeletons, SwarmState fields `active_persona` + `system_prompt`, `macro_analyst_node` soul injection, Drift Guard in all IDENTITY.md files, deterministic test suite.
+### Phase 2: Cycle Persistence Infrastructure
 
-**Addresses:** SOUL-01 through SOUL-07; all 4 remaining L2 nodes get the same injection pattern after the reference implementation is validated.
+**Rationale:** Core data contract. Without a CycleSnapshot schema and persistence layer, there is nothing to replay or compare. Must be built before the runner or CLI. The snapshot schema serves as the contract between producer (CycleRunner) and consumer (replay CLI).
+**Delivers:** CycleSnapshot Pydantic model, cycle_snapshots PostgreSQL table with denormalized columns, CycleRunner class wrapping graph invocation, extract_cycle_snapshot() function, SwarmState.cycle_id field, AUDIT_EXCLUDED_FIELDS update.
+**Uses:** pydantic (existing), psycopg (existing), pathlib/json (stdlib)
+**Implements:** CycleRunner component, cycle_snapshots table, post-graph extraction pattern
+**Avoids:** Pitfall 1 (state bloat -- artifacts go to dedicated table, not SwarmState), Pitfall 2 (message growth -- add trimming), Pitfall 3 (sync I/O -- use asyncio.to_thread), Pitfall 8 (audit hash -- update exclusion set)
 
-**Avoids:** Pitfalls 1, 2, 3, 11 — all Tier 1 pitfalls must be prevented here before any Tier 2 work begins. The audit exclusion list must be defined in this phase even though `system_prompt` is populated in Tier 1 data — the exclusion must exist before the field exists in a graph-run state snapshot.
+### Phase 3: End-to-End Pipeline Runner + Hardening
 
-**Research flag:** Standard patterns. No additional research needed. All implementation details are fully specified in persona_plan.md and SOT_PERSONA_REWARD_SYSTEM.md.
+**Rationale:** Must exercise the full pipeline with real data before building the replay tool. Validates that all 5 agents produce non-None output, debate synthesis works, risk gate fires, and CycleRunner persists a complete snapshot. Pipeline hardening (retry logic, structured logging, fallback price elimination) is inseparable from this phase.
+**Delivers:** src/runner.py entry point, data_fetcher retry with exponential backoff, structlog integration, paper fill price validation (fail explicitly on bad data), data caching layer for development, deprecation of legacy main.py.
+**Uses:** structlog (new), psycopg (existing), asyncio (stdlib)
+**Addresses:** End-to-end pipeline execution (P1 table stake)
+**Avoids:** Pitfall 5 (yfinance rate limiting -- retry + caching), Pitfall 9 (fallback prices -- fail explicitly), Pitfall 14 (wrong entrypoint -- new runner.py), Pitfall 15 (sleep blocking -- documented for future fix)
 
-### Phase 2: KAMI Merit Index (Tier 2a)
+### Phase 4: Replay CLI + Observability Commands
 
-**Rationale:** Merit weighting of DebateSynthesizer is the highest-value change in the milestone — it directly improves trade signal quality by replacing a character-length proxy with actual agent reliability signal. It depends on Tier 1 soul files (for the Fidelity dimension's AGENTS.md output contract check) and PostgreSQL (already available). The `merit_scores` SwarmState field must land before the DebateSynthesizer rewiring because the synthesizer will KeyError without it.
-
-**Delivers:** `src/core/merit_index.py`, `agent_merit_scores` PostgreSQL table, `merit_scores` in SwarmState, DebateSynthesizer KAMI-weighted consensus, `merit_update_node` wired after `write_trade_memory`, PostgreSQL persistence with session load at `run_task_async()` start.
-
-**Uses:** `numpy.clip` for EMA arithmetic (existing), `psycopg` async for persistence (existing), LangGraph conditional edges for merit update routing.
-
-**Implements:** KAMI-01 through KAMI-04; `merit_index.py` architecture component.
-
-**Avoids:** Pitfalls 4 and 5 — error classification taxonomy and skeleton agent weight gating must be implemented here, not deferred.
-
-**Research flag:** Standard patterns. EMA formula is straightforward; dual-layer state+PostgreSQL persistence mirrors the existing `institutional_guard` portfolio heat pattern.
-
-### Phase 3: MEMORY.md Evolution and Agent Church (Tier 2b)
-
-**Rationale:** Per-agent MEMORY.md structured logs are the prerequisite for both the Agent Church (which reads proposals from MEMORY.md) and the ARS Auditor (which reads evolution history from MEMORY.md). The self-reflection content is also more meaningful with Merit delta context available, making Tier 2a a natural upstream dependency. The Agent Church must be implemented as a standalone script in this phase — not a LangGraph node — to prevent the conflict-of-interest and blocking pitfalls.
-
-**Delivers:** Per-agent MEMORY.md structured log append (post-task, async, capped at 50 entries, machine-readable `[KAMI_DELTA:]` markers), SOUL.md diff proposal format in `data/soul_proposals/{agent_id}.json`, `agent_church_node` LangGraph routing branch for `soul_evolution` intent, standalone `agent_church.py` script with `RequiresHumanApproval` guard for L1 self-proposals, `load_soul.cache_clear()` + `warmup_soul_cache()` on approved diffs.
-
-**Avoids:** Pitfalls 6 and 7 — Agent Church as blocking node must be avoided; MEMORY.md unbounded growth must be controlled before EVOL-01 starts writing.
-
-**Research flag:** Moderate complexity on the Agent Church out-of-band pattern and the structured proposal JSON lifecycle. The `MemoryRegistry` atomic save pattern (already in codebase) should be reused for soul proposals. May benefit from a short research-phase to confirm the JSON proposal lifecycle against the existing registry pattern before implementation.
-
-### Phase 4: Theory of Mind Soul-Sync (Tier 2c)
-
-**Rationale:** Soul-Sync depends on Tier 1 soul files (reads SOUL.md summaries via AgentSoul) and benefits from populated Merit scores in the soul summary (makes the opponent's reliability visible). It requires graph topology surgery — replacing the direct `[bullish_researcher, bearish_researcher] -> debate_synthesizer` edge with a `soul_sync_handshake` pre-debate barrier node. Doing this after Merit (Tier 2a) and Evolution (Tier 2b) ensures the soul content and scores are stable before the handshake reads them.
-
-**Delivers:** `soul_sync_context: Optional[dict]` SwarmState field, `soul_sync_handshake_node` (deterministic, no LLM calls, reads from lru_cache), `public_soul_summary()` method on AgentSoul (excludes Core Wounds and Drift Guard triggers from peer view), updated researcher `USER.md` files with peer soul summaries for Empathetic Refutation, graph edge update replacing direct fan-in with handshake node.
-
-**Avoids:** Pitfalls 8 and 9 — soul_sync_handshake as a pre-debate barrier preserves parallel fan-out; `public_soul_summary()` prevents Core Wounds leakage into debate history and audit records.
-
-**Research flag:** Standard patterns once `public_soul_summary()` API is defined. The graph topology change (replacing one edge with a node + two edges) is a routine LangGraph operation.
-
-### Phase 5: ARS Drift Auditor (Tier 2d)
-
-**Rationale:** ARS produces meaningful signal only after MEMORY.md evolution logs have accumulated across multiple sessions (Tier 2b). It reads `[KAMI_DELTA:]` markers from structured logs — if those markers are not present or the format is inconsistent, all five drift metrics degrade to noise. Building this last ensures there is data to audit. The warm-up period logic (30 cycles before alerts fire) is critical and must be in the ARS spec before a line of code is written.
-
-**Delivers:** `src/core/ars_auditor.py` with five observable drift metrics (Diff Rejection Rate, KAMI Dimension Variance, Persona Section Mutation Count, Self-Reflection Sentiment Shift, Role Boundary Vocabulary), `evolution_suspended` column in `agent_merit_scores` PostgreSQL table, evolution suspension gate in MEMORY.md write logic, integration with existing systemd timer or `/ars:audit` CLI command, warm-up period with data-driven threshold derivation (mean + 2 std dev, not hardcoded constant).
-
-**Avoids:** Pitfall 10 — warm-up period and strict scope boundary (evolution-only, never trade gate) must be built-in from the start; ARS suspension flag must have no code path to `order_router_node` or `route_after_institutional_guard`.
-
-**Research flag:** Low complexity for the drift metric computation (pure stdlib). The per-agent cross-domain vocabulary lists (for Role Boundary Vocabulary metric) will need to be defined by domain knowledge rather than library research.
+**Rationale:** Read-only consumer of data from phases 2-3. Building last means real cycle data exists to test against. Merit and drift time series can be built in parallel since they read existing MEMORY.md data.
+**Delivers:** swarm-replay CLI (list, show, diff, timeline), merit history command, drift history command, debate tension score computation. All using typer + rich.
+**Uses:** typer (promoted), rich (promoted)
+**Implements:** swarm-replay CLI component
+**Avoids:** Pitfall 7 (event loop -- asyncio.run() only at CLI entry point, async internals), Pitfall 13 (schema dependency -- CycleSnapshot schema defined in Phase 2)
 
 ### Phase Ordering Rationale
 
-- Tier 1 before everything: SoulLoader and AgentSoul are the shared runtime primitive; no Tier 2 component can be tested or implemented without them.
-- Tier 2a before 2b-2d: Merit scores must populate SwarmState before the evolution loop writes Merit deltas to MEMORY.md (Tier 2b self-reflection includes Merit context) and before Soul-Sync includes Merit in peer summaries (Tier 2c).
-- Tier 2b before 2c and 2d: MEMORY.md structured logs are the data source for both the ARS Auditor (Tier 2d) and the Agent Church's USER.md peer context accumulation.
-- Tier 2c before 2d is flexible — these two tiers have no direct dependency. If ARS baseline accumulation needs more time, Tier 2c can ship first. The order above (2c then 2d) is preferred because the Soul-Sync graph topology change is reversible; the ARS audit database schema additions are harder to undo.
+- **Personas before infrastructure:** Content authoring has zero code risk and unblocks meaningful output from every subsequent phase. Running the pipeline with skeleton agents produces uninteresting data.
+- **Persistence before runner:** The CycleSnapshot schema is the data contract. Defining it first prevents the runner and CLI from making incompatible format assumptions (Pitfall 13).
+- **Runner before CLI:** The replay tool needs real data to test against. Without completed cycles in cycle_snapshots, the CLI is untestable.
+- **Hardening bundled with runner:** Retry logic, structured logging, and fallback price elimination are prerequisites for producing trustworthy observable output, not afterthoughts.
 
 ### Research Flags
 
 Phases likely needing deeper research during planning:
-- **Phase 3 (Agent Church):** The out-of-band proposal lifecycle should be validated against the existing `MemoryRegistry` atomic save pattern before implementation. Confirm whether `data/soul_proposals/` JSON files or MEMORY.md append-only format is the right machine-readable medium for proposals.
+- **Phase 1 (Persona Population):** Needs research into effective HEXACO-to-prose translation patterns. Risk of persona collapse under Gemini Flash (Pitfall 6) requires iterative testing. The drift_guard YAML schema per persona needs careful design.
+- **Phase 3 (Pipeline Runner):** Data fetcher retry strategy and caching layer design need implementation research. structlog configuration with existing logging infrastructure needs verification.
 
 Phases with standard patterns (skip research-phase):
-- **Phase 1 (Soul Foundation):** Fully specified in persona_plan.md and SOT_PERSONA_REWARD_SYSTEM.md. lru_cache + frozen dataclass is textbook Python.
-- **Phase 2 (KAMI Merit Index):** EMA arithmetic is standard; dual-layer state/PostgreSQL mirrors existing patterns in the codebase.
-- **Phase 4 (Theory of Mind):** Pre-debate barrier node is a standard LangGraph fan-in pattern; public_soul_summary() API is straightforward once scope is defined.
-- **Phase 5 (ARS Auditor):** All five metrics are pure stdlib regex + arithmetic; no library research required.
+- **Phase 2 (Cycle Persistence):** Well-documented patterns. Pydantic model + PostgreSQL JSONB + post-invocation extraction is straightforward. Architecture research provides complete schema and code patterns.
+- **Phase 4 (Replay CLI):** Standard typer + rich CLI patterns. Read-only PostgreSQL queries. No novel design decisions.
 
 ---
 
@@ -195,47 +137,45 @@ Phases with standard patterns (skip research-phase):
 
 | Area | Confidence | Notes |
 |------|------------|-------|
-| Stack | HIGH | All capabilities verified against live `pyproject.toml`; no new dependencies; version constraints checked against existing installs |
-| Features | HIGH | Grounded in `persona_plan.md` and `SOT_PERSONA_REWARD_SYSTEM.md` (primary sources of truth); four claudedocs deep-dive research files; live codebase inspection of `debate.py` and `state.py` |
-| Architecture | HIGH | Derived from live production code (`orchestrator.py`, `state.py`, `debate.py`); integration questions answered against actual graph topology with concrete code patterns |
-| Pitfalls | HIGH | Grounded in concrete interactions between new design and live system components (audit_logger.py, DebateSynthesizer, operator.add reducer, lru_cache lifecycle); not generic LLM pitfalls |
+| Stack | HIGH | Minimal additions. Two deps already installed, one new. All verified against pyproject.toml and uv pip list. |
+| Features | HIGH | Feature landscape well-mapped. Clear P1/P2/P3 prioritization. Dependency chain validated against codebase. |
+| Architecture | HIGH | All patterns grounded in existing codebase analysis. Integration points identified with line-level specificity. |
+| Pitfalls | HIGH | 15 pitfalls identified, all verified against specific source files. Critical pitfalls have concrete prevention strategies. |
 
 **Overall confidence:** HIGH
 
 ### Gaps to Address
 
-- **KAMI lambda parameter tuning:** The recommended lambda=0.9 (slow decay for financial domain) has not been validated against actual weekly trade cycle frequency. With sparse weekly updates, lambda=0.9 may cause excessive decay between sessions — the performance trap research flags lambda > 0.7 as risky at weekly cadence. Validate lambda calibration in Tier 2a against actual session frequency before shipping.
-- **Soul content for 4 skeleton agents:** The research specifies content requirements (HEXACO-6 personality diversity, opposing trait profiles for BullishResearcher vs BearishResearcher) but does not draft the actual IDENTITY.md, SOUL.md, AGENTS.md files for the 4 non-macro agents. These must be authored during Tier 1 implementation, not deferred to later tiers, because `warmup_soul_cache()` will error on malformed files.
-- **KAMI weight defaults (alpha=0.30, beta=0.35, gamma=0.25, delta=0.10):** These weights are sourced from EMNLP 2025 and UCL MARL research for general multi-agent settings. They have not been validated for the specific financial swarm context. The Recovery weight (beta=0.35) may be too high given the gaming risk identified in Pitfall 4. Treat as configurable from day one and plan to tune after the first 10-20 live cycles.
-- **Agent Church LLM-as-Judge prompt:** The Church uses Gemini Flash to evaluate soul evolution proposals against alignment constraints. The evaluation prompt itself is not specified in any research file. This will need to be drafted carefully during Tier 2b implementation — a poorly constrained judge prompt is worse than no judge at all.
+- **Gemini Flash persona fidelity:** No empirical data on whether Gemini Flash maintains HEXACO-diverse personas across multi-turn interactions. Pitfall 6 is based on general LLM research, not Gemini-specific testing. Validate during Phase 1 with comparative output analysis.
+- **yfinance reliability for beta:** Rate limiting is well-documented but the exact threshold for "rapid development" is unknown. The data caching layer in Phase 3 is the mitigation, but cache invalidation strategy needs definition.
+- **KAMI Accuracy dimension frozen at 0.5:** 30% of merit score is permanently inert (Pitfall 11). Decision needed: reduce Accuracy weight to 0.0 for beta, or implement thesis_records. This is a product decision, not a research gap.
+- **PostgreSQL connection pool race (Pitfall 12):** Pool open pattern is scattered across 10+ call sites. Low severity (psycopg3 pool open is idempotent) but should be consolidated during Phase 3 runner work.
 
 ---
 
 ## Sources
 
 ### Primary (HIGH confidence)
-- `.planning/PHASES/persona_plan.md` — SoulLoader API, 5-file soul directory format, SwarmState fields, node injection pattern, test strategy
-- `docs/SOT_PERSONA_REWARD_SYSTEM.md` — MBS architecture, KAMI formula and components, ToM/ARS specification, Agent Church governance
-- `src/graph/orchestrator.py` (v1.2 live code) — Graph topology, node registration, routing functions, `with_audit_logging` wrapper
-- `src/graph/state.py` (v1.2 live code) — SwarmState schema, reducer patterns, existing fields
-- `src/graph/debate.py` (v1.2 live code) — DebateSynthesizer internals, message extraction, character-length scoring
-- `src/core/audit_logger.py` (v1.2 live code) — State snapshot inclusion logic; grounding for Pitfall 11
-- `pyproject.toml` (current) — Verified installed dependency set; confirms zero new dependencies
-- Python 3.12 docs — `functools.lru_cache`, `dataclasses`, `pathlib`, `difflib`, `collections`
+- Project codebase (v1.3, ~30,600 LOC) -- orchestrator, state, persistence, soul_loader, audit_logger, memory_writer, drift_eval, order_router, decision_card, kami
+- [HEXACO-PI-R Official Scale Descriptions](https://hexaco.org/scaledescriptions)
+- [LangGraph Persistence Documentation](https://docs.langchain.com/oss/python/langgraph/persistence)
+- [LangGraph Time Travel Documentation](https://docs.langchain.com/oss/python/langgraph/use-time-travel)
+- pyproject.toml + uv pip list (verified dependency set)
+- [Rich PyPI](https://pypi.org/project/rich/), [Typer PyPI](https://pypi.org/project/typer/)
 
 ### Secondary (MEDIUM confidence)
-- `claudedocs/research_soul_rewards_deep_dive_20260305.md` — KAMI naming, 4-dimensional merit formula, PersonaScore 5D, HEXACO-6 rationale
-- `claudedocs/research_personas_merit_20260305.md` — Merit-based routing, ARS security requirements, adversarial RLAF approach
-- `claudedocs/research_agent_persona_soul_20260305.md` — MBS architecture overview, SoulZip, Theory of Mind pattern
-- PersonaGym (arxiv:2407.18416) — Drift Guard design, PersonaScore 5 evaluation dimensions
-- BIG5-CHAT (ACL 2025) — Prompting insufficiency for deep persona traits; Drift Guard necessity
-- EMNLP 2025 "Reward-driven Self-organizing LLM-based Multi-Agent System" — Multi-dimensional reward rationale
-- UCL RLC 2024 Trust-based Consensus MARL — Binary consensus reward formula
-- Reflexion (2023) — Self-reflection as downstream performance improver; basis for EVOL-01
+- [LangGraph Issue #2943: operator.add field clearing](https://github.com/langchain-ai/langgraph/issues/2943)
+- [Applying Psychometrics to LLM Simulated Populations (arxiv:2508.00742)](https://arxiv.org/html/2508.00742v1)
+- [Turing Institute: Patterns Not People](https://cetas.turing.ac.uk/publications/patterns-not-people-personality-structures-llm-powered-persona-agents)
+- [yfinance Rate Limiting Issues #2422, #2431](https://github.com/ranaroussi/yfinance/issues/2422)
+- [LangGraph Checkpointing Best Practices 2025](https://sparkco.ai/blog/mastering-langgraph-checkpointing-best-practices-for-2025)
+- [Observability for AI Agents](https://www.getmaxim.ai/articles/observability-for-ai-agents-langgraph-openai-agents-and-crew-ai/)
+- [Psychologically Enhanced AI Agents (2025)](https://www.emergentmind.com/papers/2509.04343)
+- [Nature: Psychometric framework for LLM personality traits](https://www.nature.com/articles/s42256-025-01115-6)
 
 ### Tertiary (LOW confidence)
-- arxiv:2511.08042 (real KAMI paper) — Confirms naming conflict with project's internal use of "KAMI"; the underlying mechanism is valid regardless of naming
-- arxiv:2511.20657 (affective state survey) — Emotional state model rationale; deferred to v2.0
+- [TradingAgents Framework](https://github.com/TauricResearch/TradingAgents) -- multi-agent LLM trading reference, not deeply analyzed
+- [Best LLM Observability Tools 2026](https://awesomeagents.ai/tools/best-llm-observability-tools-2026/)
 
 ---
 *Research completed: 2026-03-08*

@@ -1,470 +1,397 @@
-# Architecture Patterns: MBS Persona System Integration
+# Architecture Patterns
 
-**Domain:** Multi-Agent Financial Swarm — Persona / Identity Layer
+**Domain:** Observable multi-agent trading swarm (v1.4 Beta)
 **Researched:** 2026-03-08
-**Project:** Quantum Swarm v1.3
+**Confidence:** HIGH (based on existing codebase analysis + LangGraph official docs)
 
----
+## Recommended Architecture
 
-## Scope
-
-This document answers five concrete integration questions for the v1.3 MBS Persona System milestone, then derives a build order that respects both the existing graph topology and the internal dependencies of the new components.
-
----
-
-## Existing Graph Topology (v1.2 Baseline)
+Four integration areas building on the existing LangGraph StateGraph. The core principle is: **the existing graph topology stays unchanged**. New features wrap, extend, or consume -- they do not restructure the pipeline.
 
 ```
-classify_intent
-    │ (conditional: macro | quant | end)
-    ▼
-macro_analyst ──────────┐
-quant_modeler ──────────┤  fan-out
-                        ▼
-          bullish_researcher ──┐
-          bearish_researcher ──┘  fan-in
-                        ▼
-              debate_synthesizer
-                        │
-              write_research_memory
-                        │ (conditional: >0.6 | hold)
-                        ▼
-                  risk_manager
-                        │
-                  claw_guard
-                        │
-              institutional_guard
-                        │ (conditional: approved | rejected→synthesize)
-                        ▼
-                  data_fetcher
-                  write_external_memory
-                  knowledge_base
-                  backtester
-                  order_router
-                        │ (conditional: success→decision_card | trade_logger)
-                  decision_card_writer
-                  trade_logger
-                  write_trade_memory
-                        │
-                    synthesize ──▶ END
+EXISTING GRAPH (unchanged topology)
+    merit_loader -> classify_intent -> analysts -> researchers -> soul_sync
+    -> debate_synthesizer -> risk_manager -> ... -> trade_logger -> synthesize -> END
+
+NEW: Cycle Persistence Layer (wraps existing graph invocation)
+    CycleRunner.run(user_input)
+        -> assigns cycle_id (UUID)
+        -> invokes existing graph via ainvoke()
+        -> extracts CycleSnapshot from final_state (post-invocation)
+        -> persists snapshot to PostgreSQL cycle_snapshots table
+        -> returns cycle_id for downstream replay
+
+NEW: Cycle Replay CLI (read-only consumer of cycle_snapshots)
+    swarm-replay list                    -> query cycle_snapshots table
+    swarm-replay show <cycle_id>         -> load + render full snapshot
+    swarm-replay diff <cycle_a> <cycle_b> -> side-by-side comparison
+    swarm-replay timeline <symbol>       -> merit/tension over time for symbol
+
+NEW: Full Persona Population (filesystem only, no code changes)
+    src/core/souls/bullish_researcher/  -> MOMENTUM fully authored
+    src/core/souls/bearish_researcher/  -> CASSANDRA fully authored
+    src/core/souls/quant_modeler/       -> SIGMA fully authored
+    src/core/souls/risk_manager/        -> GUARDIAN fully authored
+    Each: IDENTITY.md, SOUL.md (with drift_guard YAML), AGENTS.md
+
+NEW: End-to-End Pipeline Runner (replaces main.py simulation)
+    src/runner.py
+        -> initializes PostgreSQL persistence (setup_persistence())
+        -> constructs LangGraphOrchestrator with AsyncPostgresSaver
+        -> wraps invocation with CycleRunner
+        -> paper mode by default
+        -> structured logging + cycle_id tracking
 ```
 
-**Key constraints on integration:**
-- All nodes are registered via `workflow.add_node()` in `create_orchestrator_graph()`.
-- `with_audit_logging()` wraps every node. Any new node must also be wrapped.
-- `SwarmState` is a `TypedDict`. New fields require explicit additions; no dynamic keys.
-- The `DebateSynthesizer` is a pure aggregation function with no LLM calls. Its scoring formula (character-length proxy) is the current weighted consensus mechanism.
-- Soul files live on disk. `lru_cache` on `load_soul()` means soul data is process-stable after first read.
-
----
-
-## Integration Question Answers
-
-### Q1: Where does SoulLoader call live — before node, inside node, or graph-level middleware?
-
-**Answer: Inside each L2 node, as the first operation before LLM invocation.**
-
-Rationale grounded in the existing graph:
-
-- LangGraph has no middleware layer between the graph runtime and individual node functions. The `with_audit_logging()` wrapper is the closest analogue, but it is a node-level decorator, not a graph-level intercept. There is no pre-node hook exposed in the LangGraph `StateGraph` API that would allow a single "SoulLoader node" to inject into the state before every other node fires.
-- A dedicated `soul_loader` node inserted before each L2 node would double the edge count in the fan-out section and require a new conditional edge for each agent path. That complexity has no benefit: `load_soul()` is cached via `lru_cache` and runs in microseconds after warmup.
-- The correct pattern, as specified in `persona_plan.md`, is: the L2 node calls `load_soul(agent_id)` at its top, writes `active_persona` and `system_prompt` to the returned state partial, then uses `system_prompt` to prefix the LLM call. This keeps the graph topology unchanged while ensuring the soul is always current for the executing node.
-- `warmup_soul_cache()` is called once in `create_orchestrator_graph()` before `workflow.compile()`. This makes the first `load_soul()` call inside any node effectively free.
-
-**Modification required:** Each L2 node function (`macro_analyst_node`, `quant_modeler_node`, `bullish_researcher_node`, `bearish_researcher_node`) gains a two-line preamble. No new graph edges.
-
-```
-graph init:  warmup_soul_cache()
-node start:  soul = load_soul("macro_analyst")
-             state_update["active_persona"] = soul.agent_id
-             state_update["system_prompt"]  = soul.system_prompt_injection
-node LLM:    messages = [{"role": "system", "content": state["system_prompt"]}, *state["messages"]]
-```
-
-### Q2: How should KAMI scores be stored — SwarmState field, PostgreSQL table, or both?
-
-**Answer: Both, with SwarmState as the live session surface and PostgreSQL as the durable ledger.**
-
-Rationale:
-
-- **SwarmState field (`merit_scores: dict[str, float]`):** Scores must be readable by `DebateSynthesizer` during the same graph invocation that generates them. LangGraph's fan-in pattern means `debate_synthesizer` executes after both researchers complete — it can read `merit_scores` from state to weight their contributions. Storing only in PostgreSQL would require an async DB read inside `DebateSynthesizer`, making a currently LLM-free aggregation node dependent on I/O.
-- **PostgreSQL table (`agent_merit_scores`):** Merit scores are cumulative EMA values that persist across sessions. They cannot live only in ephemeral state — the next graph invocation would cold-start every agent at 0.5. A dedicated table (columns: `agent_id`, `score`, `accuracy`, `recovery`, `consensus`, `fidelity`, `updated_at`) is the correct durability layer.
-- **Load pattern:** At graph init (or inside `classify_intent_node`), load current merit scores from PostgreSQL into `initial_state["merit_scores"]`. The `DebateSynthesizer` reads them. After the cycle completes, a `merit_update_node` (or the existing `write_trade_memory` hook) writes updated scores back to PostgreSQL.
-- **Confidence:** HIGH — this dual-layer pattern mirrors how `institutional_guard` handles portfolio heat: computed in-state, persisted to PostgreSQL audit record.
-
-**SwarmState additions:**
-
-```python
-merit_scores: Optional[dict]   # {"macro_analyst": 0.72, "bullish_researcher": 0.65, ...}
-```
-
-**PostgreSQL table (new, in existing schema):**
-
-```sql
-CREATE TABLE agent_merit_scores (
-    agent_id        TEXT PRIMARY KEY,
-    score           FLOAT NOT NULL DEFAULT 0.5,
-    accuracy        FLOAT NOT NULL DEFAULT 0.5,
-    recovery        FLOAT NOT NULL DEFAULT 0.5,
-    consensus       FLOAT NOT NULL DEFAULT 0.5,
-    fidelity        FLOAT NOT NULL DEFAULT 0.5,
-    updated_at      TIMESTAMPTZ DEFAULT NOW()
-);
-```
-
-### Q3: Where does Theory of Mind Soul-Sync Handshake fit — before DebateSynthesizer or as a new node between L2 fan-out and DebateSynthesizer?
-
-**Answer: As a new node inserted between the fan-in join and `debate_synthesizer`, replacing the direct `[bullish_researcher, bearish_researcher] → debate_synthesizer` edge.**
-
-Rationale:
-
-- The Soul-Sync Handshake (TOM-01) requires that both researcher nodes have already completed — it reads each agent's `SOUL.md` summary and appends it to `debate_history` so that `DebateSynthesizer` (and downstream agents) can see the persona context behind each position. This is a fan-in dependency, so it must execute after both researchers.
-- The Empathetic Refutation step (TOM-02) does not require an additional node — it is prompt content injected into the researcher nodes' system prompts via the soul's `USER.md` peer-modelling section. When `bullish_researcher_node` loads its soul, `USER.md` will contain a truncated summary of the bearish researcher's soul. This means TOM-02 is delivered via the same SoulLoader mechanism as Tier 1, without graph topology changes.
-- Inserting `soul_sync_handshake` as an explicit node (rather than folding the logic into `DebateSynthesizer`) keeps `DebateSynthesizer` pure-aggregation. It has no LLM calls today; mixing soul-exchange logic into it would add conditional logic and make it harder to test in isolation.
-
-**Graph change:**
-
-```
-Before:  [bullish_researcher, bearish_researcher] → debate_synthesizer
-After:   [bullish_researcher, bearish_researcher] → soul_sync_handshake → debate_synthesizer
-```
-
-`soul_sync_handshake` is a deterministic node (no LLM calls): it loads the SOUL.md summaries for both researchers via `load_soul()`, appends them to `debate_history`, and writes an optional `soul_sync_context` field to state for downstream visibility.
-
-### Q4: Where does ARS Auditor run — inline in graph or as a separate scheduled process?
-
-**Answer: As a separate scheduled process, not inline in the graph.**
-
-Rationale:
-
-- ARS drift detection (ARS-01, ARS-02) operates by comparing an agent's current SOUL.md and MEMORY.md evolution log against a baseline. This is a longitudinal analysis that spans multiple sessions, not a single-run computation. It has no natural position in the single-task graph because it requires historical data that accumulates across invocations.
-- The existing self-improvement pipeline (PerformanceReviewAgent, RuleGenerator, RuleValidator) runs on the same weekly-scheduled pattern and is invoked via the `/review` command, not via graph nodes. ARS Auditor follows the same pattern: a standalone Python module (`src/core/ars_auditor.py`) run by the existing systemd timer or triggered manually.
-- Inline placement would add latency to every graph execution for a check whose value is proportional to accumulated history. At cold start it produces no signal.
-- When the ARS Auditor detects a drift threshold breach (ARS-02), the alert mechanism is: (a) write a WARN-level entry to `data/audit.jsonl` with the affected `agent_id`, (b) set a flag in the PostgreSQL `agent_merit_scores` table (`evolution_suspended: bool`). The next graph invocation's soul-loading step reads this flag and skips MEMORY.md evolution writes for the flagged agent.
-
-**New file:** `src/core/ars_auditor.py`
-**Invocation:** `python -m src.core.ars_auditor` — same pattern as `src/agents/review_agent.py`
-
-### Q5: How does Agent Church approval gate integrate — sync during `/sg:save` or async review loop?
-
-**Answer: As an async review loop implemented inside the L1 Orchestrator node, triggered by a special intent classification.**
-
-Rationale:
-
-- The Agent Church (EVOL-02) reviews proposed SOUL.md diffs written by agents to their per-agent `MEMORY.md`. "Sync during `/sg:save`" implies a blocking operation inside the graph execution path, which contradicts the existing pattern: the self-improvement pipeline runs outside the hot graph path to avoid latency impact on trade signal generation.
-- The L1 Orchestrator (`classify_intent_with_registry`) already handles special intents (`trade`, `analysis`, `macro`, `risk`). A new intent class — `soul_evolution` — routes to a dedicated `agent_church_node` that:
-  1. Reads proposed diffs from all per-agent `MEMORY.md` files.
-  2. Uses an LLM-as-Judge call (Gemini, same lazy-init pattern) to evaluate each diff against alignment constraints.
-  3. Applies approved diffs to the corresponding `SOUL.md` file, invalidates `lru_cache` for that agent via `load_soul.cache_clear()`.
-  4. Writes rejected diffs with reason back to `MEMORY.md`.
-  5. Appends an audit record to `data/audit.jsonl`.
-- This intent is triggered by the `/sg:save` command (which maps to a graph invocation with `user_input: "/sg:save"`), making it user-initiated but processed through the standard graph machinery. It does not block trade analysis runs.
-- `lru_cache` invalidation is the critical detail: after a SOUL.md diff is applied, `load_soul.cache_clear()` must be called so the next graph run picks up the new content. The cache is process-scoped; a production deployment would need a file-watcher or explicit invalidation signal if multiple workers share the same process space.
-
-**Graph change:** New conditional branch from `classify_intent`:
-
-```python
-# route_by_intent extended:
-if intent == "soul_evolution":
-    return "agent_church"
-```
-
-**New node:** `agent_church_node` registered in `create_orchestrator_graph()`.
-
----
-
-## Recommended Component Boundaries
+### Component Boundaries
 
 | Component | Responsibility | Communicates With | New/Modified |
-|-----------|---------------|-------------------|-------------|
-| `src/core/soul_loader.py` | Load, cache, and invalidate AgentSoul from filesystem | All L2 nodes, `soul_sync_handshake`, `agent_church_node` | **New** |
-| `src/core/souls/[agent_id]/` | Persona files (SOUL.md, IDENTITY.md, AGENTS.md, USER.md, MEMORY.md) | `soul_loader.py` | **New** |
-| `src/core/merit_index.py` | Compute and update Merit Index (EMA, dimensions, bounds) | `merit_update_node`, `debate_synthesizer` | **New** |
-| `src/core/ars_auditor.py` | Periodic drift/ego-hijacking detection across MEMORY.md logs | PostgreSQL (`agent_merit_scores`), `audit.jsonl` | **New** |
-| `src/graph/state.py` | SwarmState TypedDict | Entire graph | **Modified** (new fields) |
-| `src/graph/orchestrator.py` | Graph construction, node registration, routing | All nodes | **Modified** (new nodes, new edges, warmup call) |
-| `src/graph/debate.py` | DebateSynthesizer — aggregate researcher outputs | `soul_sync_handshake`, `write_research_memory` | **Modified** (reads `merit_scores` for weighting) |
-| `soul_sync_handshake` node | Exchange truncated SOUL.md summaries before debate | `bullish_researcher`, `bearish_researcher`, `debate_synthesizer` | **New** |
-| `agent_church_node` | L1 soul-evolution intent handler; approve/reject SOUL.md diffs | All per-agent `MEMORY.md` files, `lru_cache`, `audit.jsonl` | **New** |
-| `merit_update_node` | Post-cycle merit score computation and PostgreSQL persistence | `agent_merit_scores` table, SwarmState | **New** |
+|-----------|---------------|-------------------|--------------|
+| `CycleRunner` | Wraps graph invocation, assigns cycle_id, captures full state post-invocation | LangGraphOrchestrator.run_cycle_async() | **NEW** (`src/core/cycle_runner.py`) |
+| `extract_cycle_snapshot()` | Extracts curated snapshot from final SwarmState dict | CycleRunner | **NEW** (function in cycle_runner.py) |
+| `cycle_snapshots` table | Stores per-cycle artifact bundle (JSONB) | CycleRunner (write), ReplayCLI (read) | **NEW** (DDL in persistence.py) |
+| `swarm-replay` CLI | Reads cycle_snapshots, renders formatted output | PostgreSQL | **NEW** (`src/cli/replay.py`) |
+| Soul persona files (4 agents) | HEXACO-diverse persona content with drift_guard YAML | SoulLoader (existing, unchanged code) | **MODIFIED** (content only) |
+| `src/runner.py` | End-to-end pipeline entry point | CycleRunner, persistence.py | **NEW** |
+| `LangGraphOrchestrator` | Existing graph wrapper | CycleRunner calls it | **MODIFIED** (add run_cycle_async method) |
+| `SwarmState` | Graph state TypedDict | All nodes | **MODIFIED** (add cycle_id field) |
+| `persistence.py` | Schema setup | Existing tables + cycle_snapshots DDL | **MODIFIED** |
+| `decision_card.py` | Immutable audit artifact | Optionally includes cycle_id | **MODIFIED** (optional field) |
 
----
-
-## Data Flow Changes
-
-### Tier 1 — Soul injection (per L2 node execution)
+### Data Flow: Cycle Persistence
 
 ```
-create_orchestrator_graph()
-  └─ warmup_soul_cache()          (all souls loaded into lru_cache)
-
-macro_analyst_node(state):
-  └─ soul = load_soul("macro_analyst")          (lru_cache hit)
-  └─ state_update["active_persona"] = soul.agent_id
-  └─ state_update["system_prompt"]  = soul.system_prompt_injection
-  └─ LLM call with [system_prompt_msg, *state["messages"]]
+CycleRunner.run(user_input)
+    |
+    +-> cycle_id = uuid4()[:8]
+    +-> inject cycle_id into initial_state
+    +-> (decision, final_state) = await orchestrator.run_cycle_async(user_input, cycle_id)
+    +-> snapshot = extract_cycle_snapshot(cycle_id, final_state)
+    +-> await persist_snapshot(snapshot)   # INSERT INTO cycle_snapshots
+    +-> return CycleResult(cycle_id, decision, snapshot_summary)
 ```
 
-### Tier 2a — Merit Index flow
+### Data Flow: Replay CLI
 
 ```
-run_task_async():
-  └─ initial_state["merit_scores"] = load_merit_scores_from_postgres()
-
-[debate_synthesizer]:
-  └─ reads state["merit_scores"] to weight bullish/bearish scores
-  └─ weighted_consensus_score = merit-weighted formula (replaces char-length proxy)
-
-[merit_update_node] (new, after write_trade_memory):
-  └─ computes Merit delta for each contributing agent
-  └─ applies EMA decay: Merit(t) = λ·Merit(t-1) + (1-λ)·NewSignal(t)
-  └─ persists to PostgreSQL agent_merit_scores
-  └─ writes updated scores to state["merit_scores"]
+swarm-replay show <cycle_id>
+    |
+    +-> SELECT snapshot FROM cycle_snapshots WHERE cycle_id = ?
+    +-> deserialize JSONB -> CycleSnapshot dict
+    +-> render_snapshot(snapshot)
+    |   +-> Agent Memos section (macro_report, quant_proposal, bullish/bearish theses)
+    |   +-> Debate section (consensus_score, debate_tension, soul_sync_context)
+    |   +-> Risk section (risk_approved, compliance_flags)
+    |   +-> Execution section (execution_result, decision_card_audit_ref)
+    |   +-> Merit section (merit_scores at cycle end, per-agent deltas)
+    +-> print to stdout (or write to file with --output flag)
 ```
 
-### Tier 2b — Evolution loop (triggered by /sg:save intent)
+## Cycle Snapshot Schema
 
-```
-classify_intent → "soul_evolution" → agent_church_node
-  └─ reads all per-agent MEMORY.md files for proposed diffs
-  └─ LLM-as-Judge evaluates each diff
-  └─ approved: apply diff to SOUL.md, call load_soul.cache_clear()
-  └─ rejected: write reason back to MEMORY.md
-  └─ all events → audit.jsonl
-```
-
-### Tier 2c — Theory of Mind (per debate cycle)
-
-```
-[bullish_researcher, bearish_researcher] fan-in
-  └─ soul_sync_handshake_node
-      └─ load_soul("bullish_researcher").identity[:200] → append to debate_history
-      └─ load_soul("bearish_researcher").identity[:200] → append to debate_history
-      └─ state_update["soul_sync_context"] = {both summaries}
-  └─ debate_synthesizer (reads soul_sync_context)
-```
-
-### Tier 2d — ARS Auditor (scheduled, out-of-band)
-
-```
-systemd timer (weekly) or manual:
-  src/core/ars_auditor.py
-    └─ for each agent: read MEMORY.md evolution log
-    └─ compute drift score vs SOUL.md baseline
-    └─ if drift > threshold:
-        └─ WARN entry → audit.jsonl
-        └─ SET evolution_suspended = True IN agent_merit_scores
-```
-
----
-
-## New SwarmState Fields
+The snapshot is the core data contract between CycleRunner (producer) and ReplayCLI (consumer). It is a curated extraction from SwarmState -- not the raw state.
 
 ```python
-# v1.3 Persona System additions to src/graph/state.py
+CycleSnapshot = {
+    # Identity
+    "cycle_id": str,              # UUID assigned by CycleRunner
+    "task_id": str,               # from SwarmState (LangGraph thread_id)
+    "timestamp": str,             # ISO 8601 UTC
+    "user_input": str,
+    "intent": str,
+    "symbol": str,                # extracted from quant_proposal or user_input
 
-# Tier 1: Soul injection (set by each L2 node, read by LLM call layer)
-active_persona: Optional[str]        # agent_id of the executing node's soul
-system_prompt:  Optional[str]        # composed soul system prompt (NOT in messages)
+    # Agent memos (raw outputs from L2 nodes)
+    "macro_report": dict | None,
+    "quant_proposal": dict | None,
+    "bullish_thesis": dict | None,
+    "bearish_thesis": dict | None,
 
-# Tier 2a: Merit Index
-merit_scores:   Optional[dict]       # {"agent_id": float, ...} — loaded at run start, updated post-cycle
+    # Debate
+    "debate_resolution": dict | None,
+    "weighted_consensus_score": float | None,
+    "debate_history": list[dict],
+    "soul_sync_context": dict | None,
 
-# Tier 2c: Theory of Mind
-soul_sync_context: Optional[dict]    # {"bullish": truncated_soul, "bearish": truncated_soul}
+    # Risk gating
+    "risk_approved": bool | None,
+    "risk_notes": str | None,
+    "compliance_flags": list[str],
+
+    # Execution
+    "execution_result": dict | None,
+    "execution_mode": str,
+    "decision_card_status": str | None,
+    "decision_card_audit_ref": str | None,
+
+    # Merit (full KAMI scores at cycle end)
+    "merit_scores": dict | None,
+
+    # Derived observability fields (computed at extraction time)
+    "debate_tension": float | None,  # abs(bull_merit - bear_merit)
+    "drift_flags": dict,             # {handle: "flags_string"} from latest MEMORY.md
+    "final_decision": dict | None,
+    "cycle_outcome": str,            # "executed" | "hold" | "rejected" | "unknown_intent"
+}
 ```
 
-**Not added to SwarmState:** ARS drift scores, per-agent MEMORY.md content, evolution approval state. These live in PostgreSQL and filesystem respectively — they are not needed during a graph execution run.
+**Fields explicitly excluded from snapshot:**
+- `messages` -- unbounded list from operator.add reducer, multi-MB, not useful for replay
+- `system_prompt` -- soul content, excluded from audit trail per AUDIT_EXCLUDED_FIELDS
+- `active_persona` -- changes per-node during fan-out; final value is not meaningful
+- `trade_history` -- cumulative across sessions; snapshot only needs current cycle's trade
+- `total_tokens` -- operational metric, not observability
 
----
+## PostgreSQL Table: cycle_snapshots
+
+```sql
+CREATE TABLE IF NOT EXISTS cycle_snapshots (
+    cycle_id        VARCHAR(64) PRIMARY KEY,
+    task_id         VARCHAR(64) NOT NULL,
+    timestamp       TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    symbol          VARCHAR(32),
+    intent          VARCHAR(32),
+    user_input      TEXT,
+    cycle_outcome   VARCHAR(32),           -- executed/hold/rejected/unknown_intent
+    decision        VARCHAR(16),           -- BUY/SELL/HOLD from final_decision
+    consensus_score NUMERIC(6, 4),
+    debate_tension  NUMERIC(6, 4),         -- for fast query/sort
+    merit_scores    JSONB,                 -- KAMI scores at cycle end
+    snapshot        JSONB NOT NULL         -- full CycleSnapshot
+);
+CREATE INDEX IF NOT EXISTS idx_cycle_timestamp ON cycle_snapshots(timestamp);
+CREATE INDEX IF NOT EXISTS idx_cycle_symbol ON cycle_snapshots(symbol);
+CREATE INDEX IF NOT EXISTS idx_cycle_outcome ON cycle_snapshots(cycle_outcome);
+```
+
+**Denormalized columns** (consensus_score, debate_tension, symbol, intent, cycle_outcome) exist for fast filtering and sorting in the replay CLI without parsing the JSONB blob.
 
 ## Patterns to Follow
 
-### Pattern 1: Lazy Soul System Prompt Composition
+### Pattern 1: Post-Graph Snapshot Extraction (not an in-graph node)
 
-Each L2 node composes `system_prompt` by calling `soul.system_prompt_injection` (a `@property` on `AgentSoul`). The property concatenates IDENTITY.md + SOUL.md + AGENTS.md. It does not read files on every call — the `AgentSoul` dataclass is frozen and loaded once by `load_soul()`.
+**What:** Extract the cycle snapshot AFTER `ainvoke()` returns, not as a graph node.
 
+**When:** Always.
+
+**Why:** The graph has four distinct exit paths:
+1. Unknown intent -> END (no analysis)
+2. Hold (consensus <= 0.6) -> END (no execution)
+3. Institutional guard rejection -> synthesize -> END
+4. Success path -> full L3 chain -> synthesize -> END
+
+A snapshot node would need edges from all terminal paths. Post-invocation extraction is one line of code that handles all paths uniformly.
+
+**Example:**
 ```python
-def macro_analyst_node(state: SwarmState, **kwargs) -> dict:
-    soul = load_soul("macro_analyst")
-    messages_with_soul = [
-        {"role": "system", "content": soul.system_prompt_injection},
-        *state.get("messages", []),
-    ]
-    # ... LLM call using messages_with_soul
-    return {
-        "active_persona": soul.agent_id,
-        "system_prompt": soul.system_prompt_injection,
-        # ... rest of state update
-    }
+class CycleRunner:
+    def __init__(self, orchestrator: LangGraphOrchestrator):
+        self.orchestrator = orchestrator
+
+    async def run(self, user_input: str) -> CycleResult:
+        cycle_id = str(uuid.uuid4())[:8]
+        decision, final_state = await self.orchestrator.run_cycle_async(
+            user_input, cycle_id=cycle_id
+        )
+        snapshot = extract_cycle_snapshot(cycle_id, final_state)
+        await persist_snapshot(snapshot)
+        return CycleResult(cycle_id=cycle_id, decision=decision, snapshot=snapshot)
 ```
 
-### Pattern 2: Merit-Weighted Consensus (replaces char-length proxy in DebateSynthesizer)
+### Pattern 2: LangGraphOrchestrator.run_cycle_async() Exposes Final State
+
+**What:** Add a method that returns both GraphDecision and final_state dict.
+
+**Why:** Current `run_task_async()` converts final_state to GraphDecision and discards the state. CycleRunner needs the raw state for snapshot extraction.
+
+**Implementation:** Non-breaking refactor. Extract the core of `run_task_async()` into `run_cycle_async()` that returns a tuple. `run_task_async()` calls it and returns only the decision.
 
 ```python
-def DebateSynthesizer(state: SwarmState) -> dict:
-    merit_scores = state.get("merit_scores") or {}
-    bull_merit = merit_scores.get("bullish_researcher", 0.5)
-    bear_merit = merit_scores.get("bearish_researcher", 0.5)
-    # Weighted by merit rather than character length
-    total = bull_strength * bull_merit + bear_strength * bear_merit
-    weighted_consensus_score = (bull_strength * bull_merit) / total if total > 0 else 0.5
+async def run_cycle_async(self, user_input: str, cycle_id: str = None) -> tuple[GraphDecision, dict]:
+    task_id = str(uuid.uuid4())[:8]
+    initial_state = self._build_initial_state(task_id, user_input, cycle_id)
+    config = {"configurable": {"thread_id": task_id}}
+    final_state = await self.app.ainvoke(initial_state, config=config)
+    decision = self._build_decision(task_id, final_state)
+    return decision, final_state
+
+async def run_task_async(self, user_input: str) -> GraphDecision:
+    decision, _ = await self.run_cycle_async(user_input)
+    return decision
 ```
 
-### Pattern 3: Cache Invalidation After Soul Evolution
+### Pattern 3: Cycle ID Separate from Thread ID
 
-```python
-def agent_church_node(state: SwarmState) -> dict:
-    # ... apply approved diff to SOUL.md file ...
-    from src.core.soul_loader import load_soul
-    load_soul.cache_clear()   # invalidate entire cache — simple, safe
-    # Re-warm immediately so next invocation doesn't pay file-read latency
-    from src.core.soul_loader import warmup_soul_cache
-    warmup_soul_cache()
-    return { ... }
-```
+**What:** `cycle_id` is a new plain field in SwarmState, distinct from the LangGraph `thread_id`.
 
-### Pattern 4: Evolution Suspension Gate
+**Why:** `thread_id` is used by LangGraph's checkpointer for checkpoint management. It is an internal concern. `cycle_id` is a domain concept: one complete analysis-to-decision pass. They currently have a 1:1 mapping (each invocation creates a new thread_id), but the concepts are different and should not be conflated.
 
-```python
-def _write_agent_memory(agent_id: str, reflection: str) -> None:
-    """Only write MEMORY.md evolution log if agent is not suspended."""
-    # Query agent_merit_scores for evolution_suspended flag
-    if is_evolution_suspended(agent_id):
-        logger.warning("Evolution suspended for %s — skipping MEMORY.md write", agent_id)
-        return
-    # ... write reflection to src/core/souls/{agent_id}/MEMORY.md
-```
+### Pattern 4: Replay via Direct PostgreSQL (not LangGraph Time-Travel)
 
----
+**What:** The replay CLI reads from `cycle_snapshots`, not from LangGraph's checkpoint history.
+
+**Why:** LangGraph's `get_state_history()` returns checkpoints at every superstep (15-25 per cycle). Replay needs exactly one snapshot per cycle. Storing a denormalized snapshot is dramatically simpler and decouples the replay tool from LangGraph internals.
+
+LangGraph time-travel via `get_state_history()` remains available for deep debugging of intermediate states within a single cycle, but is not the primary replay API.
+
+### Pattern 5: Persona Population is Content-Only
+
+**What:** The 4 skeleton personas need only markdown content changes.
+
+**Why:** SoulLoader, KAMI fidelity signal, drift evaluation, ARS auditor, soul_sync_handshake -- all operate on file content loaded by `load_soul()`. No code changes activate a fully populated persona. The only structural requirement is a valid `drift_guard` YAML block in each SOUL.md (currently missing from skeletons -- this is documented tech debt from v1.3).
+
+**Constraint:** `lru_cache` on `load_soul()` means persona changes require process restart. Intentional design -- frozen souls during trading.
+
+### Pattern 6: Runner Entry Point Replaces Simulation
+
+**What:** `src/runner.py` invokes the real LangGraph pipeline with real market data.
+
+**Why:** The existing `src/main.py` is a simulation stub from before the graph architecture. It hardcodes pipeline results, calls `route_order()` directly, and bypasses the entire LangGraph graph. A proper runner needs to:
+1. Initialize persistence (`setup_persistence()`)
+2. Construct LangGraphOrchestrator with AsyncPostgresSaver
+3. Wrap with CycleRunner
+4. Accept user_input from CLI args
+5. Log cycle_id and summary
 
 ## Anti-Patterns to Avoid
 
-### Anti-Pattern 1: Soul-Loader as a Separate Graph Node
+### Anti-Pattern 1: Snapshot Node Inside the Graph
 
-**What goes wrong:** Inserting a `load_soul_node` between `classify_intent` and the L2 analysts creates a sequential bottleneck before the fan-out. The `soul_loader` node would need to write the soul for all agents into state simultaneously — but different agents have different souls, so the node would need to load all four and put them all into state at once. This pollutes state with content that is only relevant to one node at a time.
+**What:** Adding a `cycle_snapshot_writer` as a LangGraph node in the topology.
 
-**Why bad:** Forces sequential soul-loading before parallel fan-out; loses the `active_persona` context that tells downstream nodes which soul is active right now.
+**Why bad:** Four exit paths require edges from each terminal node. If snapshot write fails, it blocks the graph or requires error-handling edges. Adds complexity with no benefit over post-invocation extraction.
 
-**Instead:** Each node loads its own soul. Cache makes this effectively free after warmup.
+**Instead:** Extract snapshot in CycleRunner after `ainvoke()` returns. All paths converge at the return point.
 
-### Anti-Pattern 2: Storing system_prompt in messages
+### Anti-Pattern 2: Storing Full SwarmState as Snapshot
 
-**What goes wrong:** Appending the soul system prompt to `state["messages"]` causes it to accumulate in the message list across nodes. When `bullish_researcher` fires after `macro_analyst`, the message list already contains macro_analyst's soul system prompt — the bearish researcher now sees another agent's persona instructions in its context.
+**What:** Persisting `final_state` dict as-is.
 
-**Why bad:** Persona cross-contamination. Each agent reads a different soul; keeping them in the append-reducer `messages` list means every subsequent node inherits all previous agents' souls.
+**Why bad:** Contains `messages` (unbounded, multi-MB), `system_prompt` (large soul content, excluded from audit per AUDIT_EXCLUDED_FIELDS), and `trade_history` (cumulative across sessions). Creates bloated rows, violates audit exclusion expectations, makes replay queries slow.
 
-**Instead:** `system_prompt` is a standalone SwarmState field. Each node constructs its local message list as `[{"role": "system", "content": state["system_prompt"]}, *state["messages"]]` without writing the system prompt back to `state["messages"]`.
+**Instead:** Extract a curated CycleSnapshot with only replay-relevant fields. Compute derived fields (debate_tension, cycle_outcome) at extraction time.
 
-### Anti-Pattern 3: Inline ARS in the Hot Graph Path
+### Anti-Pattern 3: Using LangGraph Time-Travel as Primary Replay
 
-**What goes wrong:** Running ARS drift detection inside `merit_update_node` (which is inline) requires reading all MEMORY.md files and computing a cosine similarity or embedding distance for every agent on every trade cycle.
+**What:** Using `graph.get_state_history(config)` for the cycle replay CLI.
 
-**Why bad:** ARS signal requires accumulated history — running it per-invocation produces noise at low session counts and wastes compute at high session counts.
+**Why bad:** Returns every intermediate checkpoint (15-25 per cycle). Couples replay tool to LangGraph's checkpoint schema which may change across versions. Adds query complexity (iterate to find final state).
 
-**Instead:** ARS runs on a schedule. The graph's `merit_update_node` only writes the current session's Merit delta. ARS reads the accumulated deltas from PostgreSQL at its scheduled interval.
+**Instead:** Single denormalized snapshot per cycle in a dedicated table. Time-travel reserved for debugging.
 
-### Anti-Pattern 4: Single Scalar Merit Score in State
+### Anti-Pattern 4: Modifying Orchestrator.run_task_async() Signature
 
-**What goes wrong:** Storing only a single float `merit_score: float` instead of `merit_scores: dict[str, float]` means the graph only tracks one active agent's merit at a time.
+**What:** Changing the return type of `run_task_async()` to include final_state.
 
-**Why bad:** `DebateSynthesizer` needs merit scores for at minimum both researchers simultaneously to compute the weighted consensus. A single scalar cannot serve a multi-agent weighting function.
+**Why bad:** Breaking change for all existing callers (tests, potential external consumers).
 
-**Instead:** `merit_scores` is a dict keyed by agent_id. All contributing agents' scores are loaded at run start and available throughout the execution.
+**Instead:** Add a new `run_cycle_async()` method. Refactor `run_task_async()` to call it internally. Existing callers unchanged.
 
----
+### Anti-Pattern 5: drift_guard YAML as Separate File
+
+**What:** Moving drift_guard rules out of SOUL.md into a separate YAML file per agent.
+
+**Why bad:** `parse_drift_guard_yaml()` in `src/core/drift_eval.py` already parses the YAML block from within SOUL.md. Creating a separate file would require changes to the parser, SoulLoader, and all tests. The existing inline pattern works and is tested.
+
+**Instead:** Add the `drift_guard` YAML block to each agent's SOUL.md as part of persona population. Same format as macro_analyst's existing block.
+
+## Integration Points: Detailed Change Analysis
+
+### 1. LangGraphOrchestrator (src/graph/orchestrator.py)
+
+**Change:** Add `run_cycle_async(user_input, cycle_id=None)` method. Refactor `run_task_async()` to delegate.
+
+**Lines affected:** ~30 lines (new method + refactor of existing method).
+
+**Risk:** LOW. Non-breaking; existing tests call `run_task_async()` which delegates to the new method.
+
+### 2. SwarmState (src/graph/state.py)
+
+**Change:** Add `cycle_id: Optional[str]` -- plain field, no reducer.
+
+**Lines affected:** 3 (field + comment).
+
+**Risk:** LOW. Optional with None default. No existing node reads it.
+
+### 3. persistence.py (src/core/persistence.py)
+
+**Change:** Add `cycle_snapshots` table DDL to `setup_persistence()`.
+
+**Lines affected:** ~20 (CREATE TABLE + indexes).
+
+**Risk:** LOW. New table, no impact on existing tables. Idempotent with IF NOT EXISTS.
+
+### 4. DecisionCard (src/core/decision_card.py)
+
+**Change:** Add optional `cycle_id: Optional[str] = None` to DecisionCard model. Populate from state in `build_decision_card()`.
+
+**Lines affected:** 4 (field + extraction).
+
+**Risk:** LOW. Optional field. `canonical_json` and `_compute_hash` handle it transparently.
+
+### 5. KAMI Fidelity Signal (src/core/kami.py)
+
+**Change:** None to code.
+
+**Impact:** After persona population, `_extract_fidelity_signal()` returns 1.0 for all agents (non-empty IDENTITY.md). Current skeletons return 1.0 already (they have content), so impact is limited to drift_guard YAML availability for drift evaluation.
+
+### 6. ARS Drift Auditor (src/core/ars_auditor.py)
+
+**Change:** None. Fully populated SOUL.md files with drift_guard blocks mean ARS produces meaningful alerts instead of skipping agents with no rules.
+
+### 7. memory_writer_node (src/graph/nodes/memory_writer.py)
+
+**Change:** None. Richer persona content means thesis_summary extraction produces better output. drift_flags evaluation works because drift_guard YAML exists.
 
 ## Suggested Build Order
 
-Dependencies flow upward: each tier depends on the one before it.
+Dependencies flow strictly downward:
 
-### Tier 1: Soul Foundation (SOUL-01 through SOUL-07)
+```
+Phase 1: Full Persona Population
+    No code deps. Unlocks fidelity scoring + drift evaluation.
+    Content-only: 4 agents x 3 files (IDENTITY.md, SOUL.md with drift_guard, AGENTS.md)
+    |
+    v
+Phase 2: Cycle Persistence Infrastructure
+    SwarmState.cycle_id + cycle_snapshots table + CycleRunner + extract_cycle_snapshot()
+    Depends on: nothing new (uses existing orchestrator + PostgreSQL)
+    |
+    v
+Phase 3: End-to-End Pipeline Runner
+    src/runner.py with AsyncPostgresSaver + CycleRunner integration
+    Depends on: CycleRunner (Phase 2)
+    Exercises full graph with real data, populates cycle_snapshots
+    |
+    v
+Phase 4: Replay CLI
+    src/cli/replay.py -- list, show, diff, timeline commands
+    Depends on: cycle_snapshots table (Phase 2) + data from Phase 3 runs
+    Read-only consumer -- build last so real data exists to test against
+```
 
-**Build first. Everything else depends on this.**
-
-1. `src/core/souls/` directory structure — all 5 agent directories, all 5 files per agent.
-2. `src/core/soul_loader.py` — `AgentSoul`, `load_soul()`, `warmup_soul_cache()`.
-3. `src/graph/state.py` — add `active_persona`, `system_prompt` (Optional[str] fields).
-4. `macro_analyst_node` soul injection — proves the integration pattern.
-5. Remaining L2 nodes (`quant_modeler`, `bullish_researcher`, `bearish_researcher`) — same pattern.
-6. `warmup_soul_cache()` call in `create_orchestrator_graph()`.
-7. Test suite (`tests/core/test_soul_loader.py`) — deterministic, no LLM calls.
-
-**Rationale:** `lru_cache` and `AgentSoul` are the shared primitive for all later tiers. The `system_prompt` SwarmState field is the injection surface that Tier 2a Merit and Tier 2c ToM both extend.
-
-### Tier 2a: KAMI Merit Index (KAMI-01 through KAMI-04)
-
-**Build second. Depends on Tier 1 soul files (for Fidelity dimension) and PostgreSQL (already available).**
-
-1. `src/core/merit_index.py` — Merit formula, EMA decay, dimension weights, bounds.
-2. PostgreSQL `agent_merit_scores` table migration.
-3. `src/graph/state.py` — add `merit_scores: Optional[dict]`.
-4. Load merit scores at `run_task_async()` start (read from PostgreSQL into `initial_state`).
-5. Modify `DebateSynthesizer` to use `merit_scores` for consensus weighting.
-6. New `merit_update_node` — post-cycle Merit delta computation and PostgreSQL persistence.
-7. Wire `merit_update_node` into graph after `write_trade_memory` (before `synthesize`).
-
-**Rationale:** Merit weighting of `DebateSynthesizer` (KAMI-03) is the highest-value change — it directly improves trade signal quality. Build it before ToM (which builds on soul files already available) and before ARS (which needs accumulated Merit history to work).
-
-### Tier 2b: MEMORY.md Evolution + Agent Church (EVOL-01 through EVOL-03)
-
-**Build third. Depends on Tier 1 soul files and Tier 2a Merit scores (self-reflection includes Merit delta).**
-
-1. Per-agent `MEMORY.md` write logic — appended after each task cycle, includes task outcome and Merit delta.
-2. SOUL.md diff proposal format — agent writes proposed changes in MEMORY.md under a `## Proposed Evolution` section.
-3. `agent_church_node` — LLM-as-Judge review loop, applies/rejects diffs, `cache_clear()` + `warmup_soul_cache()`.
-4. Extend `route_by_intent()` to handle `soul_evolution` intent.
-5. Wire `agent_church_node` in graph with `soul_evolution` conditional path.
-
-**Rationale:** The Agent Church's cache invalidation depends on `load_soul()` existing (Tier 1). Its LLM-as-Judge quality signal is more meaningful once Merit deltas are available (Tier 2a), since the evolution log includes Merit context.
-
-### Tier 2c: Theory of Mind (TOM-01, TOM-02)
-
-**Build fourth. Depends on Tier 1 soul files (reads SOUL.md summaries).**
-
-1. `src/graph/state.py` — add `soul_sync_context: Optional[dict]`.
-2. `soul_sync_handshake_node` — load soul summaries for both researchers, append to `debate_history`, set `soul_sync_context`.
-3. Update researcher soul `USER.md` files to contain peer soul summaries (TOM-02 — enables Empathetic Refutation via prompt content, no additional node needed).
-4. Replace direct `[bullish_researcher, bearish_researcher] → debate_synthesizer` edge with `→ soul_sync_handshake → debate_synthesizer`.
-
-**Rationale:** This is graph topology surgery on the existing fan-in. Do it after the soul files and Merit Index are stable so the `soul_sync_handshake` node has accurate, populated soul content to work with.
-
-### Tier 2d: ARS Auditor (ARS-01, ARS-02)
-
-**Build last. Depends on accumulated MEMORY.md evolution logs (Tier 2b) and PostgreSQL Merit history (Tier 2a).**
-
-1. `src/core/ars_auditor.py` — drift score computation from MEMORY.md logs.
-2. `evolution_suspended` column in `agent_merit_scores` PostgreSQL table.
-3. Gate in MEMORY.md write logic: check `evolution_suspended` before writing.
-4. Integration with existing systemd timer or standalone `/ars:audit` command.
-
-**Rationale:** ARS produces signal only after MEMORY.md evolution logs have accumulated across multiple sessions. Building it last ensures there is meaningful data to audit by the time it runs.
-
----
+**Phase ordering rationale:**
+- Personas first: zero code risk, pure content, and all subsequent phases benefit from richer agent output.
+- Cycle persistence second: it is the core infrastructure. Without snapshots, there is nothing to replay.
+- Runner third: actually exercises the full pipeline and validates integration.
+- Replay CLI last: read-only consumer of data from phases 2-3. Building it with real data available makes testing straightforward.
 
 ## Scalability Considerations
 
-| Concern | Current (v1.2) | v1.3 Addition | Mitigation |
-|---------|---------------|---------------|------------|
-| Soul file reads per invocation | Zero | 4 × `lru_cache` hits after warmup | `warmup_soul_cache()` at startup; cache is process-scoped |
-| PostgreSQL Merit reads per run | Zero | 1 SELECT (all agents) at run start | Single query loading all agent scores into state |
-| DebateSynthesizer latency | Deterministic, microseconds | Adds dict lookup for merit_scores | Negligible — dict is already in state |
-| Agent Church LLM-as-Judge calls | N/A | 1 LLM call per proposed diff | Triggered only on `soul_evolution` intent, not on every trade run |
-| ARS Auditor compute | N/A | File reads + MEMORY.md comparison per agent | Scheduled, out-of-band — no impact on hot path |
-| lru_cache invalidation | N/A | `cache_clear()` + `warmup_soul_cache()` on SOUL.md change | Rare operation (Agent Church only); warmup is < 10ms for 5 agents |
-
----
+| Concern | At 10 cycles/day | At 100 cycles/day | At 1000 cycles/day |
+|---------|-------------------|--------------------|--------------------|
+| cycle_snapshots row size | ~5 KB JSONB, negligible | ~500 KB/day, negligible | ~5 MB/day, vacuum weekly |
+| PostgreSQL connections | Current pool (min=2, max=10) sufficient | Sufficient | May need max=20 |
+| MEMORY.md cap | 50-entry cap per agent, fine | Same cap, faster rotation | Cap is per-agent; fine |
+| LangGraph checkpoints | ~25 per cycle, auto-managed | ~2500/day, monitor size | Add checkpoint pruning |
+| Replay query latency | <10ms with index | <10ms with index | <50ms; add pagination |
+| Snapshot extraction | <1ms (dict extraction) | <1ms | <1ms |
 
 ## Sources
 
-| Source | Confidence | Informs |
-|--------|------------|---------|
-| `src/graph/orchestrator.py` (v1.2) | HIGH — production code | Graph topology, node registration pattern, routing functions |
-| `src/graph/state.py` (v1.2) | HIGH — production code | SwarmState schema, existing field conventions |
-| `src/graph/debate.py` (v1.2) | HIGH — production code | DebateSynthesizer internals, consensus scoring |
-| `.planning/PHASES/persona_plan.md` | HIGH — design doc | SoulLoader API, file structure, SwarmState additions, node injection pattern |
-| `docs/SOT_PERSONA_REWARD_SYSTEM.md` | HIGH — finalized SOT | MBS architecture, KAMI components, ToM handshake, ARS, evolution loop |
-| `claudedocs/research_soul_rewards_deep_dive_20260305.md` | HIGH — deep research | Merit formula, EMA decay, cold start, bounds, KAMI naming conflict |
-| `claudedocs/research_agent_persona_soul_20260305.md` | MEDIUM — initial research | MBS architecture overview, SoulZip, ToM pattern |
-| `claudedocs/research_personas_merit_20260305.md` | MEDIUM — initial research | Merit-based routing, KAMI consensus weighting |
-| `.planning/PROJECT.md` (v1.3 requirements) | HIGH — authoritative | SOUL-0x, KAMI-0x, EVOL-0x, TOM-0x, ARS-0x requirement IDs |
+- Codebase analysis: `src/graph/orchestrator.py`, `src/graph/state.py`, `src/core/persistence.py`, `src/core/soul_loader.py`, `src/graph/nodes/memory_writer.py`, `src/graph/nodes/merit_updater.py`, `src/graph/debate.py`, `src/core/audit_logger.py`, `src/core/kami.py`, `src/core/decision_card.py`, `src/graph/agents/l3/trade_logger.py`
+- [LangGraph Persistence Documentation](https://docs.langchain.com/oss/python/langgraph/persistence)
+- [LangGraph Time Travel (get_state_history)](https://docs.langchain.com/oss/python/langgraph/use-time-travel)
+- [AsyncPostgresSaver Reference](https://reference.langchain.com/python/langgraph.checkpoint.postgres/aio/AsyncPostgresSaver)
+- [LangGraph Checkpoint Package](https://pypi.org/project/langgraph-checkpoint-postgres/)
+- [Persistence in LangGraph -- Deep Practical Guide (Jan 2026)](https://pub.towardsai.net/persistence-in-langgraph-deep-practical-guide-36dc4c452c3b)
