@@ -70,33 +70,33 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| PERS-01 | — | Pending |
-| PERS-02 | — | Pending |
-| PERS-03 | — | Pending |
-| PERS-04 | — | Pending |
-| PERS-05 | — | Pending |
-| PERS-06 | — | Pending |
-| CYCL-01 | — | Pending |
-| CYCL-02 | — | Pending |
-| CYCL-03 | — | Pending |
-| CYCL-04 | — | Pending |
-| PIPE-01 | — | Pending |
-| PIPE-02 | — | Pending |
-| PIPE-03 | — | Pending |
-| PIPE-04 | — | Pending |
-| PIPE-05 | — | Pending |
-| REPL-01 | — | Pending |
-| REPL-02 | — | Pending |
-| REPL-03 | — | Pending |
-| REPL-04 | — | Pending |
-| REPL-05 | — | Pending |
-| REPL-06 | — | Pending |
+| PERS-01 | Phase 23 | Pending |
+| PERS-02 | Phase 23 | Pending |
+| PERS-03 | Phase 23 | Pending |
+| PERS-04 | Phase 23 | Pending |
+| PERS-05 | Phase 23 | Pending |
+| PERS-06 | Phase 23 | Pending |
+| CYCL-01 | Phase 24 | Pending |
+| CYCL-02 | Phase 24 | Pending |
+| CYCL-03 | Phase 24 | Pending |
+| CYCL-04 | Phase 24 | Pending |
+| PIPE-01 | Phase 25 | Pending |
+| PIPE-02 | Phase 25 | Pending |
+| PIPE-03 | Phase 25 | Pending |
+| PIPE-04 | Phase 25 | Pending |
+| PIPE-05 | Phase 25 | Pending |
+| REPL-01 | Phase 26 | Pending |
+| REPL-02 | Phase 26 | Pending |
+| REPL-03 | Phase 26 | Pending |
+| REPL-04 | Phase 26 | Pending |
+| REPL-05 | Phase 26 | Pending |
+| REPL-06 | Phase 26 | Pending |
 
 **Coverage:**
 - v1.4 requirements: 21 total
-- Mapped to phases: 0
-- Unmapped: 21 ⚠️
+- Mapped to phases: 21
+- Unmapped: 0
 
 ---
 *Requirements defined: 2026-03-08*
-*Last updated: 2026-03-08 after initial definition*
+*Last updated: 2026-03-08 after roadmap creation*

@@ -3,10 +3,10 @@ gsd_state_version: 1.0
 milestone: v1.4
 milestone_name: "Beta: Observable Swarm"
 status: active
-last_updated: "2026-03-08T23:00:00.000Z"
-last_activity: "2026-03-08 — Milestone v1.4 started"
+last_updated: "2026-03-08T23:30:00.000Z"
+last_activity: "2026-03-08 — Roadmap created (4 phases, 21 requirements mapped)"
 progress:
-  total_phases: 0
+  total_phases: 4
   completed_phases: 0
   total_plans: 0
   completed_plans: 0
@@ -25,17 +25,19 @@ Previous: v1.3 MBS Persona System — SHIPPED 2026-03-08 (300+ tests, 8 phases)
 
 ## Current Phase
 
-Phase: Not started (defining requirements)
-Plan: —
-Status: Defining requirements
-Last activity: 2026-03-08 — Milestone v1.4 started
+Phase: 23 of 26 (Full Persona Population)
+Plan: — (not yet planned)
+Status: Ready to plan
+Last activity: 2026-03-08 — Roadmap created (4 phases, 21 requirements mapped)
+
+Progress: [..........] 0%
 
 ## Project Reference
 
 See: `.planning/PROJECT.md` (updated 2026-03-08)
 
 **Core value:** Institutional-quality trade signal generation through adversarial AI debate, with self-improving memory rules validated by backtesting, hard compliance guardrails, and immutable per-trade audit trails
-**Current focus:** Making the institution observable — fully populated personas, end-to-end pipeline, cycle replay
+**Current focus:** Full Persona Population — populate all 4 skeleton agents with HEXACO-6 diverse personalities and drift_guard YAML
 
 ## Architecture
 
@@ -64,8 +66,45 @@ Status: Green
 - Full MBS persona system live: SoulLoader, KAMI, Agent Church, Soul-Sync, ARS
 - Architecture stable: LangGraph + Gemini + psycopg3
 
+## Performance Metrics
+
+**Velocity:**
+- Total plans completed: 0 (v1.4)
+- Average duration: —
+- Total execution time: —
+
+**By Phase:**
+
+| Phase | Plans | Total | Avg/Plan |
+|-------|-------|-------|----------|
+| - | - | - | - |
+
+*Updated after each plan completion*
+
 ## Accumulated Context
 
+### Decisions
+
+Decisions are logged in PROJECT.md Key Decisions table.
+Recent decisions affecting current work:
+
+- [v1.3]: Direct edge for failure path (no conditional routing)
+- [v1.3]: Counter cosine for ARS sentiment (no numpy)
+- [v1.3]: ARS suspension gates evolution only (not trades)
+
+### Pending Todos
+
+None yet.
+
+### Blockers/Concerns
+
 - Known env issues: broken `ccxt`, missing `chromadb` and `pytest-asyncio` (~13 tests affected, not regressions)
-- Tech debt from v1.3: skeleton agents have no YAML drift_guard block, Nyquist VALIDATION.md partial/missing for phases 15-22, thesis_records/ stub for deferred Accuracy dimension
-- 4 of 5 agent personas are skeletons (only AXIOM fully populated)
+- Tech debt from v1.3: skeleton agents have no YAML drift_guard block (addressed in Phase 23)
+- KAMI Accuracy dimension frozen at 0.5 (30% of merit score inert) — product decision needed: reduce weight to 0.0 or implement thesis_records
+- Must NOT put cycle data in SwarmState (checkpoint bloat risk)
+
+## Session Continuity
+
+Last session: 2026-03-08
+Stopped at: Roadmap created for v1.4, ready to plan Phase 23
+Resume file: None
