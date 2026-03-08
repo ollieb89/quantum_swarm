@@ -1,5 +1,27 @@
 # Milestones
 
+## v1.2 Risk Governance and Rule Validation (Shipped: 2026-03-08)
+
+**Phases completed:** 6 phases (8, 9, 10, 11, 13, 14), 14 plans
+**Tests:** 260+ passing, 0 failures
+**LOC:** ~23,500 Python
+**Timeline:** 2 days (2026-03-07 → 2026-03-08)
+
+**Key accomplishments:**
+1. Portfolio risk governance layer — `InstitutionalGuard` enforces drawdown circuit breaker (>5% daily loss), exposure/concentration limits, and restricted asset blocklist; wired as `claw_guard → institutional_guard` in LangGraph execution graph (closes RISK-07)
+2. Structured JSON memory registry — `MemoryRegistry` with Pydantic-validated rules, one-way lifecycle transitions (proposed → active → archived), atomic file writes, and `update_status()` enforcement (closes MEM-04, MEM-05)
+3. 2-of-3 backtest validation harness — `RuleValidator` runs NautilusTrader baseline + treatment backtests per proposed rule; promotes if ≥2 of Sharpe/drawdown/win-rate improve; MiFID II audit event written to `data/audit.jsonl` on every promotion/rejection (closes MEM-06)
+4. Immutable decision cards — SHA-256 hash-chained `DecisionCard` JSON written by `decision_card_writer_node` for every trade; includes portfolio risk score, applied rule IDs, and analyst rationale (closes EXEC-04)
+5. Gap closure (RISK-07/08, MEM-06) — `institutional_guard_node` wired with conditional routing; `trade_risk_score`/`portfolio_heat` propagate to DecisionCard fields; `asyncio.run()` replaced with `ThreadPoolExecutor` to fix silent async validation bypass
+6. Full audit trail — MiFID II rule validation events + immutable trade decision cards in `data/audit.jsonl`
+
+### Tech Debt (from audit)
+- `risk_approved` not written to `True` on institutional_guard approval path — stays `None`; routing unaffected but audit trail incomplete
+- Nyquist VALIDATION.md files missing for all v1.2 phases — address in v1.3 with `/gsd:validate-phase`
+- Pre-existing: `ccxt` broken package import (Phase 3), Pydantic v1 class-based config in `src/models/audit.py`
+
+---
+
 ## v1.1 Self-Improvement (Shipped: 2026-03-08)
 
 **Phases completed:** 4 phases (5, 6, 7, 12), 7 plans

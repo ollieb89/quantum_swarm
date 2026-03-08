@@ -8,13 +8,13 @@ A production-grade hierarchical multi-agent financial analysis swarm built on La
 
 Institutional-quality trade signal generation through adversarial AI debate, with self-improving memory rules validated by backtesting, hard compliance guardrails, and immutable per-trade audit trails — from market data ingestion to PostgreSQL-persisted execution records.
 
-## Current State (v1.1 shipped, v1.2 complete)
+## Current State (v1.2 shipped)
 
 - **Runtime:** Python 3.12, LangGraph StateGraph, uv-managed
 - **Infrastructure:** PostgreSQL 17 (AsyncPostgresSaver + Trade Warehouse, port 5433)
 - **LLM:** Google Gemini (`gemini-2.0-flash`) via `langchain-google-genai`
-- **Tests:** 246 passing, 0 failures (excluding 2 known-broken env test files)
-- **LOC:** ~22,500 Python
+- **Tests:** 260+ passing, 0 failures (excluding 2 known-broken env test files)
+- **LOC:** ~23,500 Python
 
 ### Architecture
 
@@ -120,9 +120,9 @@ Self-Improvement Pipeline (weekly):
 
 ## Context
 
-Shipped v1.1 on 2026-03-08 (3 days, 246 tests, 4 phases).
-All v1.2 phases (8-11, 13-14) also complete on same date — run `/gsd:complete-milestone` for v1.2 archival.
+Shipped v1.2 on 2026-03-08 (6 phases, 14 plans, 260+ tests). Full risk governance stack live: portfolio constraints, structured memory registry, 2-of-3 backtest validation, MiFID II decision cards, and InstitutionalGuard wired into execution graph. MEM-06 async event loop defect fixed (`ThreadPoolExecutor` replaces `asyncio.run(asyncio.to_thread(...))`).
 Known env issues: broken `ccxt`, missing `chromadb` and `pytest-asyncio` (~13 tests affected, not regressions).
+Tech debt from v1.2: `risk_approved` stays `None` on institutional_guard approval path; Nyquist VALIDATION.md files missing for all v1.2 phases.
 
 ---
-*Last updated: 2026-03-08 after v1.1 milestone*
+*Last updated: 2026-03-08 after v1.2 milestone*
