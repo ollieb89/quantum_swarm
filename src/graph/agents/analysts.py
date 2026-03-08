@@ -103,6 +103,7 @@ def _get_quant_agent():
 
 
 from src.core.budget_manager import BudgetManager
+from src.core.soul_loader import load_soul
 
 def MacroAnalyst(state: SwarmState, budget: Optional[BudgetManager] = None) -> dict[str, Any]:
     """LangGraph node: run the MacroAnalyst ReAct agent.
@@ -165,8 +166,17 @@ def MacroAnalyst(state: SwarmState, budget: Optional[BudgetManager] = None) -> d
         name="MacroAnalyst",
     )
 
+    # Load soul and inject into state (SOUL-05: system_prompt and active_persona)
+    soul = load_soul("macro_analyst")
+
     logger.info("MacroAnalyst node complete")
-    return {"messages": [response], "total_tokens": tokens_to_add, "macro_report": {"text": content}}
+    return {
+        "messages": [response],
+        "total_tokens": tokens_to_add,
+        "macro_report": {"text": content},
+        "system_prompt": soul.system_prompt,
+        "active_persona": soul.active_persona,
+    }
 
 
 def QuantModeler(state: SwarmState, budget: Optional[BudgetManager] = None) -> dict[str, Any]:
