@@ -80,3 +80,8 @@ class SwarmState(TypedDict):
     # merit_updater overwrites per cycle. Included in MiFID II audit hash (NOT excluded).
     # Canonicalize values with round(score, 4) before writing to prevent float jitter.
     merit_scores: Optional[Dict[str, Any]]
+
+    # Phase 18: Theory of Mind Soul-Sync — peer soul summaries for ARS downstream.
+    # Plain dict field (NO operator.add reducer) — written once by soul_sync_handshake_node.
+    # Excluded from AuditLogger hash chain via AUDIT_EXCLUDED_FIELDS (pre-declared Phase 17).
+    soul_sync_context: Optional[Dict[str, str]]

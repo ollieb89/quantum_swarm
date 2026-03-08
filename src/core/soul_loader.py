@@ -1,10 +1,14 @@
 from __future__ import annotations
 
+import logging
+import re
 from dataclasses import dataclass
 from functools import lru_cache
 from pathlib import Path
 
 from src.core.soul_errors import SoulNotFoundError, SoulSecurityError
+
+logger = logging.getLogger(__name__)
 
 SOULS_DIR = Path(__file__).parent / "souls"
 
@@ -16,6 +20,10 @@ _KNOWN_AGENTS = (
     "risk_manager",
 )
 
+# Sections of SOUL.md that are visible to peer agents during soul-sync handshake.
+# Drift Guard and Core Wounds are internal — excluded from public summaries.
+_PEER_VISIBLE_SECTIONS: frozenset[str] = frozenset({"Core Beliefs", "Voice", "Non-Goals"})
+
 
 @dataclass(frozen=True)
 class AgentSoul:
@@ -24,11 +32,18 @@ class AgentSoul:
     identity: str   # Contents of IDENTITY.md
     soul: str       # Contents of SOUL.md
     agents: str     # Contents of AGENTS.md
+    users: str = ""  # Contents of USER.md (optional peer-user context); empty when absent
 
     @property
     def system_prompt(self) -> str:
-        """Full soul content concatenated for LLM system prompt injection."""
-        return f"{self.identity}\n\n{self.soul}\n\n{self.agents}"
+        """Full soul content concatenated for LLM system prompt injection.
+
+        Appends USER.md content only when non-empty to avoid trailing blank blocks.
+        """
+        parts = [self.identity, self.soul, self.agents]
+        if self.users:
+            parts.append(self.users)
+        return "\n\n".join(parts)
 
     @property
     def active_persona(self) -> str:
@@ -39,6 +54,51 @@ class AgentSoul:
                 return stripped[2:].strip()
         return self.agent_id
 
+    def public_soul_summary(self) -> str:
+        """Return a peer-visible summary of this agent's soul, capped at 300 chars.
+
+        Includes: Core Beliefs, Voice, Non-Goals sections from SOUL.md.
+        Excludes: Drift Guard, Core Wounds (internal self-regulatory content).
+
+        Returns:
+            Non-empty string of up to 300 chars representing peer-visible soul content.
+            Falls back to first 300 chars of raw soul content if no matching sections found.
+        """
+        # Normalize line endings before splitting
+        text = self.soul.replace("\r\n", "\n")
+
+        # Split on H2 boundaries (each part starts at the ## heading or before first ##)
+        parts = re.split(r"\n(?=## )", text)
+
+        allowed_parts: list[str] = []
+        for part in parts:
+            # Extract heading from the first line of the part
+            heading_match = re.match(r"^## (.+)", part.strip())
+            if heading_match:
+                heading = heading_match.group(1).strip()
+                if heading in _PEER_VISIBLE_SECTIONS:
+                    allowed_parts.append(part.strip())
+
+        if not allowed_parts:
+            # Fallback: return condensed raw soul (log a warning)
+            logger.warning(
+                "public_soul_summary: no peer-visible sections found for agent %r — using raw soul fallback",
+                self.agent_id,
+            )
+            condensed = re.sub(r"\s+", " ", self.soul).strip()
+            return condensed[:300]
+
+        # Join allowed sections and normalize internal whitespace
+        joined = " ".join(allowed_parts)
+        normalized = re.sub(r"\s+", " ", joined).strip()
+
+        if len(normalized) <= 300:
+            return normalized
+
+        # Truncate at word boundary
+        truncated = normalized[:300].rsplit(" ", 1)[0]
+        return truncated
+
 
 @lru_cache(maxsize=None)
 def load_soul(agent_id: str) -> AgentSoul:
@@ -48,7 +108,7 @@ def load_soul(agent_id: str) -> AgentSoul:
         agent_id: Directory name under src/core/souls/ (e.g. 'macro_analyst').
 
     Returns:
-        Immutable AgentSoul with all three soul file contents populated.
+        Immutable AgentSoul with all soul file contents populated.
 
     Raises:
         SoulSecurityError: If agent_id would escape SOULS_DIR (path traversal).
@@ -65,12 +125,17 @@ def load_soul(agent_id: str) -> AgentSoul:
     identity = (target / "IDENTITY.md").read_text(encoding="utf-8")
     soul = (target / "SOUL.md").read_text(encoding="utf-8")
     agents = (target / "AGENTS.md").read_text(encoding="utf-8")
+    try:
+        users = (target / "USER.md").read_text(encoding="utf-8")
+    except FileNotFoundError:
+        users = ""
 
     return AgentSoul(
         agent_id=agent_id,
         identity=identity,
         soul=soul,
         agents=agents,
+        users=users,
     )
 
 
