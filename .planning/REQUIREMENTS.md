@@ -1,153 +1,114 @@
 # Requirements: Quantum Swarm
 
-**Defined:** 2026-03-06 (v1.0), updated 2026-03-06 (v1.1), updated 2026-03-07 (v1.2)
-**Core Value:** Institutional-quality trade signal generation through adversarial AI debate, with immutable audit trails and hard compliance guardrails
-
-## Validated Requirements (v1.0 — Shipped 2026-03-06)
-
-### Orchestration & Framework (ORCH)
-- ✓ **ORCH-01**: L1 Strategic Orchestrator using LangGraph StateGraph — v1.0
-- ✓ **ORCH-02**: Filesystem blackboard for inter-agent communication — v1.0
-- ✓ **ORCH-03**: Deterministic bypass for sub-ms procedural task execution — v1.0
-- ✓ **ORCH-04**: Progressive skill disclosure via YAML metadata — v1.0
-- ✓ **ORCH-05**: Council-as-Judge consensus with weighted confidence scoring — v1.0
-
-### Analysis & Reasoning (ANALY)
-- ✓ **ANALY-01**: L2 MacroAnalyst ReAct agent — v1.0
-- ✓ **ANALY-02**: L2 QuantModeler ReAct agent — v1.0
-- ✓ **ANALY-04**: Adversarial debate layer (BullishResearcher vs BearishResearcher) — v1.0
-
-### Execution & Tools (EXEC)
-- ✓ **EXEC-01**: L3 DataFetcher (yfinance, ccxt, news, economic calendar) — v1.0
-- ✓ **EXEC-02**: L3 Backtester (NautilusTrader BacktestEngine) — v1.0
-- ✓ **EXEC-03**: L3 OrderRouter (paper, IB equities, Binance crypto) — v1.0
-- ✓ **EXEC-04**: DecisionCard tamper-evident audit trail (canonical JSON, SHA-256 hash, audit.jsonl append) — v1.1
-
-### Risk & Compliance (RISK)
-- ✓ **RISK-01**: RiskManager mandatory gate (consensus_score > 0.6) — v1.0
-- ✓ **RISK-02**: Hard leverage limits (max 10x) and restricted asset blocklist — v1.0
-
-### Memory & Improvement (MEM)
-- ✓ **MEM-01**: Exhaustive execution logging to PostgreSQL trade warehouse — v1.0
-
-### Security & Safety (SEC)
-- ✓ **SEC-01**: ClawGuard verifiable guardrails for agent shell execution — v1.0
-- ✓ **SEC-02**: Budget ceilings via BudgetedTool wrapper — v1.0
-- ✓ **SEC-04**: Immutable hash-chained audit trail (SHA-256, MiFID II) — v1.0
-
----
-
-## v1.1 Requirements
-
-Requirements for the Self-Improvement Loop milestone. Each maps to roadmap phases.
-
-### Analytics (ANALY)
-
-- [x] **ANALY-03**: Swarm can compute RSI, MACD, and Bollinger Bands technical indicators via centralized `quant-alpha-intelligence` registered skill
-
-### Risk Management (RISK)
-
-- [x] **RISK-03**: System calculates ATR-based stop-loss for every trade before order submission
-- [x] **RISK-05**: OrderRouter rejects any trade execution missing a valid stop-loss calculation (hard gate, no exception)
-- [x] **RISK-06**: Stop-loss level is recorded in the trade's PostgreSQL audit log entry alongside entry price and position size
-- [x] **RISK-07**: Aggregate portfolio constraints (max notional exposure, asset concentration, cumulative drawdown circuit breaker) are enforced at the `institutional_guard` gate on every trade — v1.2
-- [x] **RISK-08**: Pre-trade risk scoring sets `state["metadata"]["trade_risk_score"]` and `state["metadata"]["portfolio_heat"]`; these values are recorded in the DecisionCard `portfolio_risk_score` field on every trade — v1.2
-
-### Memory / Self-Improvement (MEM)
-
-- [x] **MEM-02**: Weekly review agent compares actual live P&L against backtested projections and writes a structured performance drift report
-- [x] **MEM-03**: Rule generator reads weekly review output and appends PREFER/AVOID/CAUTION rules to MEMORY.md for future swarm context
-
----
-
-## v1.2 Requirements
-
-Requirements for the Structured Memory Registry milestone. Each maps to roadmap phases.
-
-### Memory / Self-Improvement (MEM)
-
-- [x] **MEM-04**: Structured JSON registry (`data/memory_registry.json`) serves as the primary machine-readable rule store, superseding the flat MEMORY.md format. Rules are Pydantic-validated with id, type, condition, action, evidence, status, version, and timestamps.
-- [x] **MEM-05**: Lifecycle controls enforce one-way status transitions (proposed → active → deprecated/rejected) with version incrementing and INFO-level audit logging on every transition. Terminal states (deprecated, rejected) cannot be reversed.
+**Defined:** 2026-03-08
+**Core Value:** Institutional-quality trade signal generation through adversarial AI debate, with self-improving memory rules validated by backtesting, hard compliance guardrails, and immutable per-trade audit trails
 
 ---
 
 ## v1.3 Requirements
 
-Requirements for the Rule Validation Harness milestone. Each maps to roadmap phases.
+Requirements for the MBS Persona System milestone. Each maps to roadmap phases starting at Phase 15.
 
-### Memory / Self-Improvement (MEM)
+### Soul Foundation (Tier 1)
 
-- [ ] **MEM-06**: Proposed memory rules are automatically backtested before promotion; rules only transition to active if they pass a 2-of-3 metric evaluation harness (Sharpe ratio delta, max drawdown delta, win rate delta). Failing rules are moved to rejected. All promotion/rejection events are appended to `data/audit.jsonl` with full metric evidence.
+- [ ] **SOUL-01**: System loads an agent's soul from filesystem files with path-traversal guard and `lru_cache` so identity is consistent across all node invocations within a session
+- [ ] **SOUL-02**: `macro_analyst` has fully-populated IDENTITY.md (Drift Guard), SOUL.md (core beliefs + values), and AGENTS.md (output contract + workflow rules)
+- [ ] **SOUL-03**: Four skeleton soul dirs exist with minimum viable content (bullish_researcher, bearish_researcher, quant_modeler, risk_manager) so warmup_soul_cache() completes without error
+- [ ] **SOUL-04**: SwarmState carries `active_persona` and `system_prompt` as dedicated fields (not in `messages` list) so soul content never enters the `operator.add` message accumulator
+- [ ] **SOUL-05**: All five L2 nodes inject their agent soul into `system_prompt` before LLM execution; `system_prompt` and `active_persona` are excluded from hash-chained audit records
+- [ ] **SOUL-06**: Test suite has an autouse fixture that calls `load_soul.cache_clear()` before and after every test so cached souls do not contaminate test isolation
+- [ ] **SOUL-07**: Deterministic test suite covering SoulLoader unit, persona content fidelity, and macro_analyst_node integration — zero LLM calls; all tests are string assertions against static files
+
+### KAMI Merit Index (Tier 2a)
+
+- [ ] **KAMI-01**: Agent merit is computed using a multi-dimensional formula (Accuracy + Recovery + Consensus + Fidelity) with configurable weights (default α=0.30, β=0.35, γ=0.25, δ=0.10) stored in swarm_config.yaml
+- [ ] **KAMI-02**: Merit score uses EMA decay (configurable λ, default 0.9), cold start 0.5, and is bounded to [0.1, 1.0]; self-induced tool failures (INVALID_INPUT) penalise rather than reward Recovery dimension
+- [ ] **KAMI-03**: `merit_scores: Dict[str, float]` field exists in SwarmState; scores are loaded from `agent_merit_scores` PostgreSQL table at session start and persisted after each cycle
+- [ ] **KAMI-04**: DebateSynthesizer uses KAMI merit scores for consensus weighting (replaces character-length proxy); skeleton agents with unpopulated IDENTITY.md receive weight_multiplier=0.0
+
+### MEMORY.md Evolution + Agent Church (Tier 2b)
+
+- [ ] **EVOL-01**: After each task cycle, each active agent appends a structured self-reflection entry to its `src/core/souls/{agent_id}/MEMORY.md` (capped at 50 entries; includes `[KAMI_DELTA:]` and `[MERIT_SCORE:]` machine-readable markers)
+- [ ] **EVOL-02**: Agent can propose a SOUL.md diff stored as `data/soul_proposals/{agent_id}.json` (Pydantic-validated schema: agent_id, section, diff, rationale, proposed_at, status)
+- [ ] **EVOL-03**: Standalone `agent_church.py` script (not a LangGraph node) reviews proposals, applies approved diffs with `load_soul.cache_clear()` + `warmup_soul_cache()`, and raises RequiresHumanApproval for any L1 Orchestrator self-proposals
+
+### Theory of Mind Soul-Sync (Tier 2c)
+
+- [ ] **TOM-01**: `soul_sync_handshake_node` runs before DebateSynthesizer as a barrier node; reads peer soul summaries from lru_cache into `soul_sync_context` SwarmState field; preserves parallel researcher fan-out topology
+- [ ] **TOM-02**: AgentSoul exposes `public_soul_summary()` method (excludes Drift Guard triggers and Core Wounds from peer view); researcher USER.md files contain Empathetic Refutation few-shot examples
+
+### ARS Drift Auditor (Tier 2d)
+
+- [ ] **ARS-01**: Standalone ARS Auditor computes five observable drift metrics from MEMORY.md evolution logs (Diff Rejection Rate, KAMI Dimension Variance, Alignment Section Mutation Count, Self-Reflection Sentiment Shift, Role Boundary Vocabulary Violations) using stdlib regex + Counter cosine; integrates with existing systemd timer or `/ars:audit` CLI; 30-cycle warm-up before alerts fire
+- [ ] **ARS-02**: `evolution_suspended` boolean column in `agent_merit_scores` PostgreSQL table; ARS suspension gates MEMORY.md evolution writes only — no code path connects ARS suspension to order_router_node or route_after_institutional_guard
 
 ---
 
-## Future Requirements
+## v2+ Requirements
 
-Deferred from current scope. Tracked but not in v1.2 roadmap.
+Deferred to future milestones. Tracked but not in v1.3 roadmap.
 
-### Analytics
-- **ANALY-05**: Reinforcement Learning optimization for order flow — post v1.1
+### Persona (future)
 
-### Security
-- **SEC-03**: System-wide circuit breakers for API degradation or anomalous strategy behavior — post v1.1
+- **SOUL-08**: All four skeleton agent soul dirs fully populated with HEXACO-6 diverse personality profiles
+- **SOUL-09**: PersonaScore 5D LLM-as-Judge fidelity evaluation pipeline
 
-### Memory
-- **MEM-07**: Regime-aware vector memory for recognizing long-term historical parallels — v2.0
+### Intelligence (future)
 
-### Orchestration
-- **ORCH-06**: Multi-modal input support (chart image analysis) — v2.0
+- **ANALY-05**: RL optimization for order flow
+- **MEM-07**: Regime-aware vector memory for recognizing long-term historical parallels
+- **ORCH-06**: Multi-modal input support (chart image analysis)
+
+### Security (future)
+
+- **SEC-03**: System-wide circuit breakers for API degradation or anomalous strategy behavior
+
+---
 
 ## Out of Scope
 
-Explicit exclusions. Documented to prevent scope creep.
-
 | Feature | Reason |
 |---------|--------|
-| High-frequency / sub-second trading loops | Swarm is cognitive, not latency-optimized |
-| RL optimization for order flow | Deferred to v2.0 |
-| Multi-modal chart image analysis | Deferred to v2.0 |
-| Direct retail account management | Institutional mandate only |
-| Real-time stop-loss auto-triggering | v1.1 calculates and gates at submission; live monitoring is post-v1.1 |
+| Emotional state model (valence/arousal, HMM) | No observable event hooks in v1.2 swarm; requires new data collection infrastructure |
+| SoulZip relational USER.md history | Requires accumulated MEMORY.md cross-session peer data not yet available |
+| LLM-as-Judge for ARS drift detection | Circular evaluation (shared base model blind spots); adds API cost to background audit |
+| Global SOUL.md (shared swarm identity) | Collapses adversarial diversity; defeats the debate architecture |
+| Real-time SOUL.md mutation mid-graph-run | lru_cache race condition with fan-out concurrent reads |
+| HEXACO-6 automated diversity enforcement gate | Deferred until all 4 researcher personas are fully populated |
+| Sentence-transformers for ARS | Cold-start latency not justified at v1.3 scale; Counter cosine sufficient |
+
+---
 
 ## Traceability
 
 Which phases cover which requirements. Updated during roadmap creation.
 
-### v1.0 Requirements
-
-All v1.0 requirements covered by Phases 1-4 (shipped 2026-03-06).
-
-### v1.1 Requirements
-
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| ANALY-03 | Phase 5 | Complete |
-| RISK-03 | Phase 6 | Complete |
-| RISK-05 | Phase 6 | Complete |
-| RISK-06 | Phase 6 | Complete |
-| MEM-02 | Phase 7 | Complete |
-| MEM-03 | Phase 12 | Complete |
+| SOUL-01 | Phase 15 | Pending |
+| SOUL-02 | Phase 15 | Pending |
+| SOUL-03 | Phase 15 | Pending |
+| SOUL-04 | Phase 15 | Pending |
+| SOUL-05 | Phase 15 | Pending |
+| SOUL-06 | Phase 15 | Pending |
+| SOUL-07 | Phase 15 | Pending |
+| KAMI-01 | Phase 16 | Pending |
+| KAMI-02 | Phase 16 | Pending |
+| KAMI-03 | Phase 16 | Pending |
+| KAMI-04 | Phase 16 | Pending |
+| EVOL-01 | Phase 17 | Pending |
+| EVOL-02 | Phase 17 | Pending |
+| EVOL-03 | Phase 17 | Pending |
+| TOM-01 | Phase 18 | Pending |
+| TOM-02 | Phase 18 | Pending |
+| ARS-01 | Phase 19 | Pending |
+| ARS-02 | Phase 19 | Pending |
 
 **Coverage:**
-- v1.1 requirements: 6 total
-- Mapped to phases: 6
-- Unmapped: 0 ✓
-
-### v1.2 Requirements
-
-| Requirement | Phase | Status |
-|-------------|-------|--------|
-| MEM-04 | Phase 9 | Complete |
-| MEM-05 | Phase 9 | Complete |
-| RISK-07 | Phase 13 | Complete |
-| RISK-08 | Phase 13 | Complete |
-| MEM-06 | Phase 14 | Pending |
-
-**Coverage:**
-- v1.2 requirements: 5 total
-- Mapped to phases: 5
+- v1.3 requirements: 18 total
+- Mapped to phases: 18
 - Unmapped: 0 ✓
 
 ---
-*Requirements defined: 2026-03-06 (v1.0)*
-*Last updated: 2026-03-08 — RISK-07, RISK-08 added formally; MEM-06 reset to Pending; gap closure Phases 13-14 added (RISK-07, RISK-08, MEM-06 from v1.2 audit)*
+*Requirements defined: 2026-03-08*
+*Last updated: 2026-03-08 after initial definition*
