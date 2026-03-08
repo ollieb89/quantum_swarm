@@ -4,12 +4,13 @@ milestone: v1.3
 milestone_name: MBS Persona System
 status: active
 last_updated: "2026-03-08"
-last_activity: 2026-03-08 — Roadmap created; 5 phases defined (15-19), 18 requirements mapped
+last_activity: 2026-03-08 — Phase 15 Plan 01 complete; SoulLoader + test scaffold built
+stopped_at: Completed 15-01-PLAN.md
 progress:
   total_phases: 5
   completed_phases: 0
-  total_plans: 0
-  completed_plans: 0
+  total_plans: 3
+  completed_plans: 1
 ---
 
 # Project State
@@ -25,10 +26,15 @@ Previous: v1.2 Risk Governance — SHIPPED 2026-03-08 (260+ tests, 6 phases)
 
 ## Current Phase
 
-Phase: 15 of 19 (Soul Foundation — ready to plan)
-Plan: —
-Status: Ready to plan
-Last activity: 2026-03-08 — Roadmap created; Phase 15 is next
+Phase: 15 of 19 (Soul Foundation — in progress)
+Plan: 01 complete; 02 next
+Status: In progress
+Last activity: 2026-03-08 — 15-01 complete: SoulLoader module + tests/core scaffold built
+
+## Decisions
+
+- **[15-01]** Added `AUDIT_EXCLUDED_FIELDS` frozenset to `AuditLogger` in Plan 01 (not Plan 03) — ensures no soul data enters the hash chain even during incremental development between plans
+- **[15-01]** Added `system_prompt` and `active_persona` Optional[str] fields to `SwarmState` in Plan 01 — required for `TestSwarmStateFields` to pass in this plan's verify step; backward-compatible (None default)
 
 ## Progress
 

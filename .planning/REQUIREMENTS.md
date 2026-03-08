@@ -11,12 +11,12 @@ Requirements for the MBS Persona System milestone. Each maps to roadmap phases s
 
 ### Soul Foundation (Tier 1)
 
-- [ ] **SOUL-01**: System loads an agent's soul from filesystem files with path-traversal guard and `lru_cache` so identity is consistent across all node invocations within a session
+- [x] **SOUL-01**: System loads an agent's soul from filesystem files with path-traversal guard and `lru_cache` so identity is consistent across all node invocations within a session
 - [ ] **SOUL-02**: `macro_analyst` has fully-populated IDENTITY.md (Drift Guard), SOUL.md (core beliefs + values), and AGENTS.md (output contract + workflow rules)
 - [ ] **SOUL-03**: Four skeleton soul dirs exist with minimum viable content (bullish_researcher, bearish_researcher, quant_modeler, risk_manager) so warmup_soul_cache() completes without error
 - [ ] **SOUL-04**: SwarmState carries `active_persona` and `system_prompt` as dedicated fields (not in `messages` list) so soul content never enters the `operator.add` message accumulator
 - [ ] **SOUL-05**: All five L2 nodes inject their agent soul into `system_prompt` before LLM execution; `system_prompt` and `active_persona` are excluded from hash-chained audit records
-- [ ] **SOUL-06**: Test suite has an autouse fixture that calls `load_soul.cache_clear()` before and after every test so cached souls do not contaminate test isolation
+- [x] **SOUL-06**: Test suite has an autouse fixture that calls `load_soul.cache_clear()` before and after every test so cached souls do not contaminate test isolation
 - [ ] **SOUL-07**: Deterministic test suite covering SoulLoader unit, persona content fidelity, and macro_analyst_node integration — zero LLM calls; all tests are string assertions against static files
 
 ### KAMI Merit Index (Tier 2a)
@@ -85,12 +85,12 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| SOUL-01 | Phase 15 | Pending |
+| SOUL-01 | Phase 15 | Complete |
 | SOUL-02 | Phase 15 | Pending |
 | SOUL-03 | Phase 15 | Pending |
 | SOUL-04 | Phase 15 | Pending |
 | SOUL-05 | Phase 15 | Pending |
-| SOUL-06 | Phase 15 | Pending |
+| SOUL-06 | Phase 15 | Complete |
 | SOUL-07 | Phase 15 | Pending |
 | KAMI-01 | Phase 16 | Pending |
 | KAMI-02 | Phase 16 | Pending |
