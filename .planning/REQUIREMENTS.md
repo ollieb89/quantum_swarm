@@ -28,8 +28,8 @@ Requirements for the MBS Persona System milestone. Each maps to roadmap phases s
 
 ### MEMORY.md Evolution + Agent Church (Tier 2b)
 
-- [ ] **EVOL-01**: After each task cycle, each active agent appends a structured self-reflection entry to its `src/core/souls/{agent_id}/MEMORY.md` (capped at 50 entries; includes `[KAMI_DELTA:]` and `[MERIT_SCORE:]` machine-readable markers)
-- [ ] **EVOL-02**: Agent can propose a SOUL.md diff stored as `data/soul_proposals/{agent_id}.json` (Pydantic-validated schema: agent_id, section, diff, rationale, proposed_at, status)
+- [x] **EVOL-01**: After each task cycle, each active agent appends a structured self-reflection entry to its `src/core/souls/{agent_id}/MEMORY.md` (capped at 50 entries; includes `[KAMI_DELTA:]` and `[MERIT_SCORE:]` machine-readable markers)
+- [x] **EVOL-02**: Agent can propose a SOUL.md diff stored as `data/soul_proposals/{agent_id}.json` (Pydantic-validated schema: agent_id, section, diff, rationale, proposed_at, status)
 - [ ] **EVOL-03**: Standalone `agent_church.py` script (not a LangGraph node) reviews proposals, applies approved diffs with `load_soul.cache_clear()` + `warmup_soul_cache()`, and raises RequiresHumanApproval for any L1 Orchestrator self-proposals
 
 ### Theory of Mind Soul-Sync (Tier 2c)
@@ -96,8 +96,8 @@ Which phases cover which requirements. Updated during roadmap creation.
 | KAMI-02 | Phase 16 | Complete |
 | KAMI-03 | Phase 16 | Complete |
 | KAMI-04 | Phase 16 | Complete |
-| EVOL-01 | Phase 17 | Pending |
-| EVOL-02 | Phase 17 | Pending |
+| EVOL-01 | Phase 17 | Complete |
+| EVOL-02 | Phase 17 | Complete |
 | EVOL-03 | Phase 17 | Pending |
 | TOM-01 | Phase 18 | Pending |
 | TOM-02 | Phase 18 | Pending |

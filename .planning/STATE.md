@@ -3,13 +3,13 @@ gsd_state_version: 1.0
 milestone: v1.3
 milestone_name: MBS Persona System
 status: completed
-last_updated: "2026-03-08T13:31:53.015Z"
-last_activity: "2026-03-08 — 17-01 complete: memory_writer_node (per-agent MEMORY.md forensic log, 50-entry cap, KAMI delta), RequiresHumanApproval added to soul_errors, phase17 config block; 6 new tests, 345 total passing"
+last_updated: "2026-03-08T13:40:00.078Z"
+last_activity: "2026-03-08 — 17-02 complete: SoulProposal model + atomic write, KAMI_SPIKE/DRIFT_STREAK/MERIT_FLOOR triggers, rate-limit guard, proposal ledger at data/soul_proposals/; 7 new tests, 354 total passing"
 progress:
   total_phases: 5
   completed_phases: 2
   total_plans: 9
-  completed_plans: 7
+  completed_plans: 8
 ---
 
 # Project State
@@ -26,9 +26,9 @@ Previous: v1.2 Risk Governance — SHIPPED 2026-03-08 (260+ tests, 6 phases)
 ## Current Phase
 
 Phase: 17 of 19 (MEMORY.md Evolution + Agent Church — In Progress)
-Plan: 01/03 complete
-Status: Plan 01 complete — next: Plan 02 (soul_proposal_writer + trigger evaluation)
-Last activity: 2026-03-08 — 17-01 complete: memory_writer_node (per-agent MEMORY.md forensic log, 50-entry cap, KAMI delta), RequiresHumanApproval added to soul_errors, phase17 config block; 6 new tests, 345 total passing
+Plan: 02/03 complete
+Status: Plan 02 complete — next: Plan 03 (Agent Church — standalone script reading soul_proposals/ and drafting SOUL.md edits)
+Last activity: 2026-03-08 — 17-02 complete: SoulProposal model + atomic write, KAMI_SPIKE/DRIFT_STREAK/MERIT_FLOOR triggers, rate-limit guard, proposal ledger at data/soul_proposals/; 7 new tests, 354 total passing
 
 ## Decisions
 
@@ -49,6 +49,9 @@ Last activity: 2026-03-08 — 17-01 complete: memory_writer_node (per-agent MEMO
 - [Phase 17-01]: MEMORY.md prev_score default is 0.5 (cold-start) matching KAMI DEFAULT_MERIT — first entry computes delta against neutral rather than 0.0
 - [Phase 17-01]: _get_souls_dir() extracted as monkeypatchable function — test isolation for MEMORY.md I/O without touching real souls/ directories
 - [Phase 17-01]: memory_writer_node uses synchronous file I/O only (Path.read_text/write_text) — asyncio.run() inside node functions is project-breaking pattern (MEM-06 defect)
+- [Phase 17]: PROPOSALS_DIR is a module-level Path constant — created lazily on first write_proposal_atomic call, not at import time
+- [Phase 17]: agent_id in SoulProposal set to soul HANDLE (not agent directory name) — consistent with Agent Church SOUL.md lookup
+- [Phase 17]: proposed_content in trigger-generated proposals is a sentinel string — memory_writer does not draft soul content; Agent Church generates replacement text in Plan 03
 
 ## Progress
 

@@ -152,6 +152,6 @@ Plans:
 | 14. Fix MEM-06 Validation Gate | v1.2 | 2/2 | Complete | 2026-03-08 |
 | 15. Soul Foundation | v1.3 | 3/3 | Complete | 2026-03-08 |
 | 16. KAMI Merit Index | 3/3 | Complete    | 2026-03-08 | - |
-| 17. MEMORY.md Evolution + Agent Church | 1/3 | In Progress|  | - |
+| 17. MEMORY.md Evolution + Agent Church | 2/3 | In Progress|  | - |
 | 18. Theory of Mind Soul-Sync | v1.3 | 0/TBD | Not started | - |
 | 19. ARS Drift Auditor | v1.3 | 0/TBD | Not started | - |
