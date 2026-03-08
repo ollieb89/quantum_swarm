@@ -60,6 +60,9 @@ See: `.planning/milestones/v1.2-ROADMAP.md` for full archive
 - [x] **Phase 17: MEMORY.md Evolution + Agent Church** - Structured self-reflection log, SOUL.md diff proposals, standalone Agent Church approval gate (completed 2026-03-08)
 - [x] **Phase 18: Theory of Mind Soul-Sync** - Pre-debate soul handshake node, public soul summaries, Empathetic Refutation few-shots (completed 2026-03-08)
 - [x] **Phase 19: ARS Drift Auditor** - Five drift metrics from MEMORY.md logs, evolution_suspended column, warm-up period, strict scope boundary (completed 2026-03-08)
+- [ ] **Phase 20: Wire Drift Flags Pipeline** - Replace hardcoded DRIFT_FLAGS 'none' with evaluated drift flags from SOUL.md Drift Guard; unblock DRIFT_STREAK trigger and ARS drift_flag_frequency metric
+- [ ] **Phase 21: Consume Soul-Sync Context in Debate** - Wire soul_sync_context into debate_synthesizer so peer soul summaries influence debate output
+- [ ] **Phase 22: Failure Path KAMI + Memory Logging** - Route order_router failure path through merit_updater and memory_writer so failed cycles update KAMI scores and MEMORY.md
 
 ## Phase Details
 
@@ -138,6 +141,35 @@ Plans:
 - [ ] 19-01-PLAN.md — ARS auditor core: 5 drift metrics, ars_state DDL, ars: config, CLI interface, flag-then-suspend escalation, test suite
 - [ ] 19-02-PLAN.md — Suspension gate in memory_writer_node, systemd timer, trade path isolation verification
 
+### Phase 20: Wire Drift Flags Pipeline
+**Goal**: DRIFT_FLAGS in MEMORY.md entries reflect actual drift evaluation from SOUL.md Drift Guard, unblocking the DRIFT_STREAK evolution trigger and the ARS drift_flag_frequency metric
+**Depends on**: Phase 19
+**Requirements**: EVOL-02, ARS-01
+**Gap Closure:** Closes INT-01 (hardcoded DRIFT_FLAGS) + FLOW-01 (Drift Detection and Escalation) from v1.3 audit
+**Success Criteria** (what must be TRUE):
+  1. `memory_writer._build_entry()` evaluates the active agent's SOUL.md Drift Guard section against the current cycle's outputs and writes evaluated drift flags (not hardcoded 'none') to `[DRIFT_FLAGS:]` in the MEMORY.md entry
+  2. The DRIFT_STREAK trigger in `SoulProposal` fires when 3+ consecutive entries contain non-empty drift flags
+  3. ARS `drift_flag_frequency` metric returns a non-zero value for agents with drift flags present in their MEMORY.md entries
+
+### Phase 21: Consume Soul-Sync Context in Debate
+**Goal**: debate_synthesizer reads soul_sync_context from SwarmState so peer soul summaries actually influence debate synthesis, completing the Theory of Mind data flow
+**Depends on**: Phase 18
+**Requirements**: TOM-01
+**Gap Closure:** Closes INT-02 (soul_sync_context orphaned output) from v1.3 audit
+**Success Criteria** (what must be TRUE):
+  1. `debate_synthesizer` reads `SwarmState["soul_sync_context"]` and incorporates peer soul summaries into its prompt construction
+  2. Debate output demonstrably differs when soul_sync_context is present vs absent (testable via mock comparison)
+
+### Phase 22: Failure Path KAMI + Memory Logging
+**Goal**: Failed order_router cycles still flow through merit_updater and memory_writer so agent learning and KAMI scoring capture failure signals
+**Depends on**: Phase 17
+**Requirements**: KAMI-03, EVOL-01
+**Gap Closure:** Closes INT-03 (failure path bypass) from v1.3 audit
+**Success Criteria** (what must be TRUE):
+  1. When `order_router_node` returns a failure, the execution path still routes through `decision_card_writer → merit_updater → memory_writer` before reaching `trade_logger`
+  2. The Recovery dimension in KAMI receives a penalty signal for failed cycles
+  3. MEMORY.md gains a structured entry for failed cycles (with appropriate failure markers)
+
 ## Progress
 
 **Execution Order:** 15 → 16 → 17 → 18 → 19
@@ -163,3 +195,6 @@ Plans:
 | 17. MEMORY.md Evolution + Agent Church | 3/3 | Complete    | 2026-03-08 | - |
 | 18. Theory of Mind Soul-Sync | 2/2 | Complete    | 2026-03-08 | - |
 | 19. ARS Drift Auditor | 2/2 | Complete    | 2026-03-08 | - |
+| 20. Wire Drift Flags Pipeline | v1.3 | 0/0 | Planned | - |
+| 21. Consume Soul-Sync Context in Debate | v1.3 | 0/0 | Planned | - |
+| 22. Failure Path KAMI + Memory Logging | v1.3 | 0/0 | Planned | - |

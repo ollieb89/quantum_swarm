@@ -103,10 +103,16 @@ Which phases cover which requirements. Updated during roadmap creation.
 | TOM-02 | Phase 18 | Complete |
 | ARS-01 | Phase 19 | Complete |
 | ARS-02 | Phase 19 | Complete |
+| EVOL-02 | Phase 20 | Pending |
+| ARS-01 | Phase 20 | Pending |
+| TOM-01 | Phase 21 | Pending |
+| KAMI-03 | Phase 22 | Pending |
+| EVOL-01 | Phase 22 | Pending |
 
 **Coverage:**
 - v1.3 requirements: 18 total
 - Mapped to phases: 18
+- Gap closure phases: 3 (Phases 20-22, addressing 5 integration/flow gaps)
 - Unmapped: 0 ✓
 
 ---
