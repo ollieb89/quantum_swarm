@@ -38,8 +38,10 @@ from typing import Any, Dict, Optional
 
 import yaml
 
+from src.core.drift_eval import evaluate_drift
 from src.core.kami import ALL_SOUL_HANDLES
 from src.core.db import get_pool
+from src.core.soul_loader import load_soul
 from src.core.soul_proposal import (
     PROPOSALS_DIR,
     SoulProposal,
@@ -256,6 +258,7 @@ def _build_entry(
     kami_delta: float,
     merit_score: float,
     thesis_summary: str,
+    drift_flags: str = "none",
 ) -> str:
     """Build a fixed-field MEMORY.md entry string with UTC timestamp header."""
     timestamp = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
@@ -267,11 +270,36 @@ def _build_entry(
         f"[AGENT:] {handle}",
         f"[KAMI_DELTA:] {delta_str}",
         f"[MERIT_SCORE:] {score_str}",
-        "[DRIFT_FLAGS:] none",
+        f"[DRIFT_FLAGS:] {drift_flags}",
         f"[THESIS_SUMMARY:] {thesis_summary}",
         "",
     ]
     return "\n".join(lines)
+
+
+# ---------------------------------------------------------------------------
+# Drift evaluation helper (Plan 20-02)
+# ---------------------------------------------------------------------------
+
+def _evaluate_drift_flags(agent_id: str, canonical_output: str) -> str:
+    """Evaluate drift rules for an agent against its canonical output.
+
+    Returns:
+        "none" -- no drift detected (or no rules defined)
+        "flag1,flag2" -- comma-separated matched flag IDs
+        "evaluation_failed" -- evaluator error (logged, non-blocking)
+    """
+    try:
+        soul = load_soul(agent_id)
+        if not soul.drift_rules:
+            return "none"
+        matched = evaluate_drift(soul.drift_rules, canonical_output)
+        if not matched:
+            return "none"
+        return ",".join(matched)
+    except Exception as e:
+        logger.warning("memory_writer: drift evaluation failed for %s: %s", agent_id, e)
+        return "evaluation_failed"
 
 
 # ---------------------------------------------------------------------------
@@ -435,8 +463,20 @@ def _process_agent(handle: str, state: dict) -> None:
     # Compute delta
     kami_delta = current_composite - prev_score
 
+    # Evaluate drift flags (Plan 20-02)
+    canonical_text = ""
+    if isinstance(value, dict):
+        for key in ("content", "reasoning", "summary", "thesis"):
+            candidate = value.get(key)
+            if isinstance(candidate, str) and candidate.strip():
+                canonical_text = candidate.strip()
+                break
+    elif isinstance(value, str):
+        canonical_text = value.strip()
+    drift_flags = _evaluate_drift_flags(agent_id, canonical_text)
+
     # Build and write entry
-    entry_text = _build_entry(handle, kami_delta, current_composite, thesis_summary)
+    entry_text = _build_entry(handle, kami_delta, current_composite, thesis_summary, drift_flags=drift_flags)
     _write_memory_entry(agent_id, entry_text)
 
     # --- Plan 02: Trigger evaluation and proposal emission ---
