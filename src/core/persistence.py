@@ -62,8 +62,6 @@ async def setup_persistence():
         # ALTER TABLE trades ADD COLUMN IF NOT EXISTS atr_at_entry NUMERIC;
         # ALTER TABLE trades ADD COLUMN IF NOT EXISTS stop_loss_multiplier NUMERIC;
         # ALTER TABLE trades ADD COLUMN IF NOT EXISTS stop_loss_method VARCHAR(32);
-        # ALTER TABLE trades ADD COLUMN IF NOT EXISTS trade_risk_score NUMERIC;
-        # ALTER TABLE trades ADD COLUMN IF NOT EXISTS portfolio_heat NUMERIC;
         async with pool.connection() as conn:
             await conn.execute("""
             CREATE TABLE IF NOT EXISTS trades (
@@ -91,6 +89,19 @@ async def setup_persistence():
             CREATE INDEX IF NOT EXISTS idx_trades_task_id ON trades(task_id);
             CREATE INDEX IF NOT EXISTS idx_trades_symbol ON trades(symbol);
             CREATE INDEX IF NOT EXISTS idx_trades_exit_time ON trades(exit_time);
+            """)
+            # Idempotent column migrations for existing tables
+            await conn.execute("""
+            ALTER TABLE trades ADD COLUMN IF NOT EXISTS position_size NUMERIC;
+            ALTER TABLE trades ADD COLUMN IF NOT EXISTS stop_loss_level NUMERIC;
+            ALTER TABLE trades ADD COLUMN IF NOT EXISTS atr_at_entry NUMERIC;
+            ALTER TABLE trades ADD COLUMN IF NOT EXISTS stop_loss_multiplier NUMERIC;
+            ALTER TABLE trades ADD COLUMN IF NOT EXISTS stop_loss_method VARCHAR(32);
+            ALTER TABLE trades ADD COLUMN IF NOT EXISTS trade_risk_score NUMERIC;
+            ALTER TABLE trades ADD COLUMN IF NOT EXISTS portfolio_heat NUMERIC;
+            ALTER TABLE trades ADD COLUMN IF NOT EXISTS strategy_context JSONB;
+            ALTER TABLE trades ADD COLUMN IF NOT EXISTS pnl NUMERIC;
+            ALTER TABLE trades ADD COLUMN IF NOT EXISTS pnl_pct NUMERIC;
             """)
             
     logger.info("PostgreSQL schemas initialized.")

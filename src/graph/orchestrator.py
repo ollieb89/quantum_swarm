@@ -464,14 +464,10 @@ class LangGraphOrchestrator:
         config = {"configurable": {"thread_id": task_id}}
 
         try:
-            # LangGraph invoke is async if app was compiled with an async checkpointer
-            # or if using astream, but for simplicity here we assume invoke works.
-            # In LangGraph 0.2+, invoke is sync if checkpointer is sync, 
-            # and ainvoke is async. PostgresSaver is async.
-            if self.checkpointer and hasattr(self.app, "ainvoke"):
-                final_state = await self.app.ainvoke(initial_state, config=config)
-            else:
-                final_state = self.app.invoke(initial_state, config=config)
+            # LangGraph application contains async nodes (e.g. within with_audit_logging),
+            # so we MUST use ainvoke even without an async checkpointer.
+            final_state = await self.app.ainvoke(initial_state, config=config)
+
         except SafetyShutdown as e:
             logger.warning("run_task: SafetyShutdown triggered: %s", e)
             return GraphDecision(
