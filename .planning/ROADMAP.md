@@ -118,7 +118,11 @@ Plans:
   1. `soul_sync_handshake_node` runs as a barrier node before `DebateSynthesizer`; it reads peer soul summaries from `lru_cache` into `SwarmState["soul_sync_context"]` without making any LLM calls and without disrupting the parallel BullishResearcher/BearishResearcher fan-out topology
   2. `AgentSoul.public_soul_summary()` returns a truncated soul view that excludes Drift Guard triggers and Core Wounds; the excluded fields are not present in any audit record or debate message logged to `state["messages"]`
   3. Researcher `USER.md` files contain Empathetic Refutation few-shot examples that reference peer soul context, and the examples are loaded by `SoulLoader` as part of the agent's normal soul injection
-**Plans**: TBD
+**Plans**: 2 plans
+
+Plans:
+- [ ] 18-01-PLAN.md — Test scaffold (14 stubs, RED) + AgentSoul extension (users field, public_soul_summary, system_prompt) + SwarmState soul_sync_context field
+- [ ] 18-02-PLAN.md — soul_sync_handshake_node implementation + orchestrator barrier rewiring + USER.md content files (MOMENTUM + CASSANDRA) + full suite GREEN
 
 ### Phase 19: ARS Drift Auditor
 **Goal**: A scheduled out-of-band auditor detects ego-hijacking and persona drift across agent evolution logs, suspends evolution for flagged agents, and never gates trade execution
@@ -153,5 +157,5 @@ Plans:
 | 15. Soul Foundation | v1.3 | 3/3 | Complete | 2026-03-08 |
 | 16. KAMI Merit Index | 3/3 | Complete    | 2026-03-08 | - |
 | 17. MEMORY.md Evolution + Agent Church | 3/3 | Complete    | 2026-03-08 | - |
-| 18. Theory of Mind Soul-Sync | v1.3 | 0/TBD | Not started | - |
+| 18. Theory of Mind Soul-Sync | v1.3 | 0/2 | Not started | - |
 | 19. ARS Drift Auditor | v1.3 | 0/TBD | Not started | - |
