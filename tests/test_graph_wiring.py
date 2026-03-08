@@ -40,25 +40,36 @@ def test_institutional_guard_wired_in_graph():
 
     workflow = captured.get("workflow", graph_obj)
 
-    # Extract edges — LangGraph StateGraph exposes a networkx DiGraph via ._graph
+    # Extract direct edges — LangGraph StateGraph exposes a networkx DiGraph via ._graph
     # or falls back to .edges depending on version.
     try:
         edges = list(workflow._graph.edges())
     except AttributeError:
-        # Older or future langgraph versions may expose edges differently
+        # Current langgraph: workflow.edges is a set of (src, dst) tuples for direct edges.
         edges = [(e[0], e[1]) for e in getattr(workflow, "edges", [])]
 
-    edge_sources = [e[0] for e in edges]
-    edge_destinations = [e[1] for e in edges]
+    # Extract conditional-edge destinations from workflow.branches.
+    # branches: {source_node: {fn_name: BranchSpec(ends={label: target, ...})}}
+    branches = getattr(workflow, "branches", {})
 
-    # (a) claw_guard must route INTO institutional_guard
+    def conditional_destinations(node_name):
+        """Return all target nodes reachable via conditional edges from node_name."""
+        dests = []
+        for branch_specs in branches.get(node_name, {}).values():
+            ends = getattr(branch_specs, "ends", {})
+            dests.extend(ends.values())
+        return dests
+
+    # (a) claw_guard must route INTO institutional_guard via a direct edge
     assert ("claw_guard", "institutional_guard") in edges, (
         f"Expected edge claw_guard -> institutional_guard not found in graph. "
         f"Edges from claw_guard: {[e for e in edges if e[0] == 'claw_guard']}"
     )
 
     # (b) institutional_guard must route toward data_fetcher (direct or conditional)
-    ig_destinations = [e[1] for e in edges if e[0] == "institutional_guard"]
+    ig_direct = [e[1] for e in edges if e[0] == "institutional_guard"]
+    ig_conditional = conditional_destinations("institutional_guard")
+    ig_destinations = ig_direct + ig_conditional
     assert any("data_fetcher" in dest for dest in ig_destinations), (
         f"Expected institutional_guard to route toward data_fetcher. "
         f"Destinations from institutional_guard: {ig_destinations}"

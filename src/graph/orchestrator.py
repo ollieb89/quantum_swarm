@@ -82,6 +82,23 @@ def route_after_order_router(state: SwarmState) -> str:
     return "trade_logger"
 
 
+def route_after_institutional_guard(state: SwarmState) -> str:
+    """Conditional routing after InstitutionalGuard.
+
+    Routes to 'data_fetcher' when the guard approves (risk_approved is not False).
+    Routes to 'synthesize' when rejected (risk_approved is False), so the caller
+    receives an explanatory summary rather than a silent END.
+
+    Returns:
+        'data_fetcher' or 'synthesize'
+    """
+    if state.get("risk_approved") is False:
+        logger.info("route_after_institutional_guard: risk_approved=False → synthesize")
+        return "synthesize"
+    logger.info("route_after_institutional_guard: approved → data_fetcher")
+    return "data_fetcher"
+
+
 async def decision_card_writer_node(state: SwarmState) -> dict:
     """Generate and persist an immutable decision card for successful trade executions."""
     audit_path = Path("data/audit.jsonl")
@@ -301,7 +318,12 @@ def create_orchestrator_graph(config: Dict, checkpointer: Any = None, memory: An
 
     # --- Phase 3+4: risk_manager → claw_guard → L3 chain → synthesize → END ---
     workflow.add_edge("risk_manager", "claw_guard")
-    workflow.add_edge("claw_guard", "data_fetcher")
+    workflow.add_edge("claw_guard", "institutional_guard")
+    workflow.add_conditional_edges(
+        "institutional_guard",
+        route_after_institutional_guard,
+        {"data_fetcher": "data_fetcher", "synthesize": "synthesize"},
+    )
     workflow.add_edge("data_fetcher", "write_external_memory")   # Phase 4: store market data
     workflow.add_edge("write_external_memory", "knowledge_base")
     workflow.add_edge("knowledge_base", "backtester")
