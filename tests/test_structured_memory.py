@@ -128,33 +128,46 @@ class TestRuleGeneratorIntegration(unittest.TestCase):
             self.test_memory_md.unlink()
 
     def test_persist_rules_stores_proposed(self):
-        """persist_rules() writes rule as proposed; not returned by get_active_rules()."""
+        """persist_rules() writes rule and immediately promotes it to active (MC-01 fix).
+
+        Updated in Phase 12-02: persist_rules() now calls update_status(rule.id, "active")
+        after add_rule(), so rules are immediately available via get_active_rules().
+        The validator can later demote to "rejected" if live backtests fail.
+        """
+        from unittest.mock import patch
+        from src.agents.rule_validator import RuleValidator
         rg = RuleGenerator()
         rg.registry = MemoryRegistry(str(self.test_registry_file))
         rg.memory_md_path = self.test_memory_md
         rule = MemoryRule(title="Integration Rule", type="risk_adjustment")
-        rg.persist_rules([rule])
-        # Assert rule in registry
+        with patch.object(RuleValidator, "validate_proposed_rules", return_value=0):
+            rg.persist_rules([rule])
+        # Assert rule in registry with active status (promoted by persist_rules)
         reloaded = MemoryRegistry(str(self.test_registry_file))
         self.assertEqual(len(reloaded.schema.rules), 1)
-        self.assertEqual(reloaded.schema.rules[0].status, "proposed")
-        # Assert NOT in active rules
-        self.assertEqual(len(reloaded.get_active_rules()), 0)
+        self.assertEqual(reloaded.schema.rules[0].status, "active")
+        # Assert IS in active rules
+        self.assertEqual(len(reloaded.get_active_rules()), 1)
         # Assert MEMORY.md was written
         self.assertTrue(self.test_memory_md.exists())
 
     def test_promote_rule_appears_in_active(self):
-        """After update_status(active), rule is returned by get_active_rules()."""
+        """persist_rules() immediately promotes rule to active (MC-01 fix).
+
+        Updated in Phase 12-02: persist_rules() now promotes rules to active
+        at persist time. This test verifies the rule is active after persist_rules()
+        without needing a manual update_status() call.
+        """
+        from unittest.mock import patch
+        from src.agents.rule_validator import RuleValidator
         rg = RuleGenerator()
         rg.registry = MemoryRegistry(str(self.test_registry_file))
         rg.memory_md_path = self.test_memory_md
         rule = MemoryRule(title="Promotable Rule", type="strategy_preference")
-        rg.persist_rules([rule])
-        # Now promote
+        with patch.object(RuleValidator, "validate_proposed_rules", return_value=0):
+            rg.persist_rules([rule])
+        # Rule is already active after persist_rules() — no manual promotion needed
         reloaded = MemoryRegistry(str(self.test_registry_file))
-        stored_rule = reloaded.schema.rules[0]
-        reloaded.update_status(stored_rule.id, "active")
-        # Assert now active
         active = reloaded.get_active_rules()
         self.assertEqual(len(active), 1)
         self.assertEqual(active[0].title, "Promotable Rule")

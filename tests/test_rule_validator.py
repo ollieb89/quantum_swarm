@@ -303,31 +303,32 @@ class TestRuleValidatorIntegration(unittest.TestCase):
 
     def test_full_audit_trail(self):
         """
-        After persist_rules(), audit.jsonl contains one event line with all
-        required fields: rule_id, before_status, after_status, baseline_sharpe,
-        treatment_sharpe, sharpe_delta.
+        When validate_proposed_rules() is called directly on a registry with a
+        proposed rule, audit.jsonl contains one event line with all required fields.
+
+        Updated in Phase 12-02: persist_rules() now promotes rules to "active"
+        immediately (MC-01 fix), so the validator finds no proposed rules when
+        called via persist_rules(). This test now exercises the validator directly
+        to verify the audit trail writing logic is intact.
         """
-        from src.agents.rule_generator import RuleGenerator
         from src.agents.rule_validator import RuleValidator
 
+        # Add rule directly to registry as "proposed" (bypassing persist_rules())
         rule = MemoryRule(title="Audit Trail Test Rule", type="general")
+        registry = MemoryRegistry(str(self.test_registry_file))
+        registry.add_rule(rule)  # saved as "proposed"
 
-        rg = RuleGenerator()
-        rg.registry = MemoryRegistry(str(self.test_registry_file))
-        rg.memory_md_path = self.test_memory_md
-
-        original_init = RuleValidator.__init__
-
-        def patched_init(self_v, **kwargs):
-            original_init(self_v)
-            self_v.audit_path = self.test_audit_file
+        validator = RuleValidator.__new__(RuleValidator)
+        validator.registry = registry
+        validator.audit_path = self.test_audit_file
+        validator.lookback_days = 90
+        validator.min_trades = 10
 
         with patch(
             "src.agents.rule_validator._run_nautilus_backtest",
             side_effect=[_BASELINE_RESULT, _TREATMENT_IMPROVED],
         ):
-            with patch.object(RuleValidator, "__init__", patched_init):
-                rg.persist_rules([rule])
+            validator.validate_proposed_rules()
 
         self.assertTrue(self.test_audit_file.exists(), "audit.jsonl must be created")
         lines = self.test_audit_file.read_text().strip().splitlines()
