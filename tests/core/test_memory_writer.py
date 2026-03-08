@@ -293,3 +293,272 @@ class TestTradePathIsolation:
         assert "evolution_suspended" not in source, (
             "route_after_institutional_guard must NOT reference evolution_suspended"
         )
+
+
+# ---------------------------------------------------------------------------
+# Test 9: _build_entry drift_flags parameter (Plan 20-02)
+# ---------------------------------------------------------------------------
+
+class TestBuildEntryDriftFlags:
+    """Plan 20-02: _build_entry accepts drift_flags and writes them to the entry."""
+
+    def test_build_entry_default_none(self):
+        """_build_entry with no drift_flags kwarg writes [DRIFT_FLAGS:] none."""
+        entry = mw_mod._build_entry("AXIOM", 0.01, 0.80, "Test thesis.")
+        assert "[DRIFT_FLAGS:] none" in entry
+
+    def test_build_entry_with_flags(self):
+        """_build_entry with drift_flags='recency_bias,narrative_capture' writes them."""
+        entry = mw_mod._build_entry(
+            "AXIOM", 0.01, 0.80, "Test thesis.",
+            drift_flags="recency_bias,narrative_capture",
+        )
+        assert "[DRIFT_FLAGS:] recency_bias,narrative_capture" in entry
+
+    def test_build_entry_evaluation_failed(self):
+        """_build_entry with drift_flags='evaluation_failed' writes the sentinel."""
+        entry = mw_mod._build_entry(
+            "AXIOM", 0.01, 0.80, "Test thesis.",
+            drift_flags="evaluation_failed",
+        )
+        assert "[DRIFT_FLAGS:] evaluation_failed" in entry
+
+
+# ---------------------------------------------------------------------------
+# Test 10: _evaluate_drift_flags helper (Plan 20-02)
+# ---------------------------------------------------------------------------
+
+class TestEvaluateDriftFlags:
+    """Plan 20-02: _evaluate_drift_flags returns correct flag strings."""
+
+    def test_matching_rules_return_flag_ids(self, monkeypatch):
+        """Agent with drift rules that match text returns comma-separated flag_ids."""
+        from src.core.drift_eval import DriftRule
+        from src.core.soul_loader import AgentSoul
+
+        mock_soul = AgentSoul(
+            agent_id="macro_analyst",
+            identity="# AXIOM",
+            soul="test soul",
+            agents="test agents",
+            drift_rules=(
+                DriftRule(flag_id="recency_bias", type="keyword_any", include=("latest",)),
+            ),
+        )
+        monkeypatch.setattr("src.graph.nodes.memory_writer.load_soul", lambda _: mock_soul)
+
+        result = mw_mod._evaluate_drift_flags("macro_analyst", "The latest data shows growth.")
+        assert result == "recency_bias"
+
+    def test_no_match_returns_none(self, monkeypatch):
+        """Agent with drift rules that don't match returns 'none'."""
+        from src.core.drift_eval import DriftRule
+        from src.core.soul_loader import AgentSoul
+
+        mock_soul = AgentSoul(
+            agent_id="macro_analyst",
+            identity="# AXIOM",
+            soul="test soul",
+            agents="test agents",
+            drift_rules=(
+                DriftRule(flag_id="recency_bias", type="keyword_any", include=("latest",)),
+            ),
+        )
+        monkeypatch.setattr("src.graph.nodes.memory_writer.load_soul", lambda _: mock_soul)
+
+        result = mw_mod._evaluate_drift_flags("macro_analyst", "Structural regime analysis.")
+        assert result == "none"
+
+    def test_no_drift_rules_returns_none(self, monkeypatch):
+        """Agent with empty drift_rules returns 'none'."""
+        from src.core.soul_loader import AgentSoul
+
+        mock_soul = AgentSoul(
+            agent_id="bullish_researcher",
+            identity="# MOMENTUM",
+            soul="test soul",
+            agents="test agents",
+            drift_rules=(),
+        )
+        monkeypatch.setattr("src.graph.nodes.memory_writer.load_soul", lambda _: mock_soul)
+
+        result = mw_mod._evaluate_drift_flags("bullish_researcher", "Some output text.")
+        assert result == "none"
+
+    def test_exception_returns_evaluation_failed(self, monkeypatch):
+        """If load_soul raises, _evaluate_drift_flags returns 'evaluation_failed'."""
+        monkeypatch.setattr(
+            "src.graph.nodes.memory_writer.load_soul",
+            MagicMock(side_effect=RuntimeError("broken")),
+        )
+
+        result = mw_mod._evaluate_drift_flags("macro_analyst", "Some text.")
+        assert result == "evaluation_failed"
+
+
+# ---------------------------------------------------------------------------
+# Test 11: _process_agent drift integration (Plan 20-02)
+# ---------------------------------------------------------------------------
+
+class TestProcessAgentDrift:
+    """Plan 20-02: _process_agent computes drift flags from soul rules."""
+
+    @pytest.fixture(autouse=True)
+    def _mock_db(self, monkeypatch):
+        """Disable evolution suspension check for drift integration tests."""
+        async def _fake_check(handle: str) -> bool:
+            return False
+        monkeypatch.setattr(mw_mod, "_check_evolution_suspended", _fake_check)
+
+    def test_axiom_matching_output_writes_flags(self, tmp_path, monkeypatch):
+        """AXIOM with output matching drift rules writes non-empty drift flags."""
+        from src.core.drift_eval import DriftRule
+        from src.core.soul_loader import AgentSoul
+
+        mock_soul = AgentSoul(
+            agent_id="macro_analyst",
+            identity="# AXIOM",
+            soul="test soul",
+            agents="test agents",
+            drift_rules=(
+                DriftRule(flag_id="narrative_capture", type="keyword_any",
+                          include=("consensus expects",)),
+            ),
+        )
+        monkeypatch.setattr("src.graph.nodes.memory_writer.load_soul", lambda _: mock_soul)
+
+        state = _make_state(
+            macro_report={"content": "The consensus expects inflation to fall."},
+            merit_scores={"AXIOM": {"composite": 0.75}},
+        )
+        asyncio.run(mw_mod.memory_writer_node(state))
+
+        memory_path = tmp_path / "macro_analyst" / "MEMORY.md"
+        content = memory_path.read_text()
+        assert "[DRIFT_FLAGS:] narrative_capture" in content
+
+    def test_axiom_clean_output_writes_none(self, tmp_path, monkeypatch):
+        """AXIOM with clean output text writes [DRIFT_FLAGS:] none."""
+        from src.core.drift_eval import DriftRule
+        from src.core.soul_loader import AgentSoul
+
+        mock_soul = AgentSoul(
+            agent_id="macro_analyst",
+            identity="# AXIOM",
+            soul="test soul",
+            agents="test agents",
+            drift_rules=(
+                DriftRule(flag_id="narrative_capture", type="keyword_any",
+                          include=("consensus expects",)),
+            ),
+        )
+        monkeypatch.setattr("src.graph.nodes.memory_writer.load_soul", lambda _: mock_soul)
+
+        state = _make_state(
+            macro_report={"content": "Structural regime analysis shows credit tightening."},
+            merit_scores={"AXIOM": {"composite": 0.75}},
+        )
+        asyncio.run(mw_mod.memory_writer_node(state))
+
+        memory_path = tmp_path / "macro_analyst" / "MEMORY.md"
+        content = memory_path.read_text()
+        assert "[DRIFT_FLAGS:] none" in content
+
+    def test_skeleton_agent_writes_none(self, tmp_path, monkeypatch):
+        """Agent with no drift rules (skeleton) writes [DRIFT_FLAGS:] none."""
+        from src.core.soul_loader import AgentSoul
+
+        mock_soul = AgentSoul(
+            agent_id="bullish_researcher",
+            identity="# MOMENTUM",
+            soul="test soul",
+            agents="test agents",
+            drift_rules=(),
+        )
+        monkeypatch.setattr("src.graph.nodes.memory_writer.load_soul", lambda _: mock_soul)
+
+        state = _make_state(
+            bullish_thesis="Momentum is building in tech sector.",
+            merit_scores={"MOMENTUM": {"composite": 0.60}},
+        )
+        asyncio.run(mw_mod.memory_writer_node(state))
+
+        memory_path = tmp_path / "bullish_researcher" / "MEMORY.md"
+        content = memory_path.read_text()
+        assert "[DRIFT_FLAGS:] none" in content
+
+    def test_drift_eval_exception_writes_evaluation_failed(self, tmp_path, monkeypatch):
+        """If drift evaluation throws, _process_agent writes evaluation_failed."""
+        monkeypatch.setattr(
+            "src.graph.nodes.memory_writer.load_soul",
+            MagicMock(side_effect=RuntimeError("soul broken")),
+        )
+
+        state = _make_state(
+            macro_report={"content": "Some output."},
+            merit_scores={"AXIOM": {"composite": 0.75}},
+        )
+        asyncio.run(mw_mod.memory_writer_node(state))
+
+        memory_path = tmp_path / "macro_analyst" / "MEMORY.md"
+        content = memory_path.read_text()
+        assert "[DRIFT_FLAGS:] evaluation_failed" in content
+
+
+# ---------------------------------------------------------------------------
+# Test 12: DRIFT_STREAK with real flags (Plan 20-02)
+# ---------------------------------------------------------------------------
+
+class TestDriftStreakWithRealFlags:
+    """Plan 20-02: DRIFT_STREAK fires when 3+ consecutive entries have flags."""
+
+    def test_drift_streak_fires_with_flagged_entries(self, tmp_path):
+        """3 consecutive entries with non-empty drift flags triggers DRIFT_STREAK."""
+        memory_path = tmp_path / "macro_analyst" / "MEMORY.md"
+        memory_path.parent.mkdir(parents=True, exist_ok=True)
+
+        # Seed 3 entries with drift flags (not "none")
+        lines = []
+        for i in range(3):
+            lines.append(f"=== 2026-03-0{i+1}T00:00:00Z ===")
+            lines.append("[AGENT:] AXIOM")
+            lines.append("[KAMI_DELTA:] +0.01")
+            lines.append(f"[MERIT_SCORE:] 0.{70+i:02d}00")
+            lines.append("[DRIFT_FLAGS:] recency_bias")
+            lines.append("[THESIS_SUMMARY:] Seeded entry with drift.")
+            lines.append("")
+        memory_path.write_text("\n".join(lines))
+
+        config = {"drift_streak_n": 3}
+        triggers = mw_mod._check_triggers("AXIOM", 0.01, memory_path, config)
+        assert "DRIFT_STREAK" in triggers
+
+    def test_drift_streak_does_not_fire_with_none_flags(self, tmp_path):
+        """3 consecutive entries with [DRIFT_FLAGS:] none does NOT fire DRIFT_STREAK."""
+        memory_path = tmp_path / "macro_analyst" / "MEMORY.md"
+        _seed_entries(memory_path, 3)  # _seed_entries writes "none" flags
+
+        config = {"drift_streak_n": 3}
+        triggers = mw_mod._check_triggers("AXIOM", 0.01, memory_path, config)
+        assert "DRIFT_STREAK" not in triggers
+
+
+# ---------------------------------------------------------------------------
+# Test 13: _extract_drift_flags handles evaluation_failed (Plan 20-02)
+# ---------------------------------------------------------------------------
+
+class TestExtractDriftFlagsEvalFailed:
+    """Plan 20-02: _extract_drift_flags treats evaluation_failed as non-empty."""
+
+    def test_evaluation_failed_returns_nonempty(self):
+        """_extract_drift_flags returns non-empty for 'evaluation_failed'."""
+        entry = "[DRIFT_FLAGS:] evaluation_failed"
+        result = mw_mod._extract_drift_flags(entry)
+        assert result != ""
+        assert result == "evaluation_failed"
+
+    def test_none_returns_empty(self):
+        """_extract_drift_flags returns empty string for 'none'."""
+        entry = "[DRIFT_FLAGS:] none"
+        result = mw_mod._extract_drift_flags(entry)
+        assert result == ""
