@@ -82,7 +82,39 @@ Self-Improvement Pipeline (weekly):
 - ✓ RISK-07: Aggregate portfolio constraints (max notional exposure, asset concentration, cumulative drawdown) enforced at `institutional_guard` gate on every trade — v1.2 Phase 8/13
 - ✓ RISK-08: `state["metadata"]["trade_risk_score"]` and `state["metadata"]["portfolio_heat"]` set by `institutional_guard_node`, recorded in `DecisionCard.portfolio_risk_score` — v1.2 Phase 8/13
 
-### Active (next milestone)
+## Current Milestone: v1.3 MBS Persona System
+
+**Goal:** Give every L2 agent a persistent, character-consistent identity via the Mind-Body-Soul architecture — covering foundation (SoulLoader, soul files, LangGraph wiring), merit-based reward scoring (KAMI), agent self-evolution (MEMORY.md + Agent Church), Theory of Mind debate layer, and ARS drift auditing.
+
+**Target features:**
+- Tier 1 — SoulLoader + `macro_analyst` reference persona + 4 skeleton soul dirs + SwarmState fields + LangGraph node injection + test suite
+- Tier 2a — KAMI Merit Index: multi-dimensional reward (Accuracy + Recovery + Consensus + Fidelity), EMA decay [0.1–1.0], cold start 0.5, consensus weighting
+- Tier 2b — MEMORY.md per-agent evolution log + self-reflection + Agent Church approval gate for SOUL.md diffs
+- Tier 2c — Theory of Mind: Soul-Sync Handshake (truncated SOUL.md exchange before debate) + Empathetic Refutation
+- Tier 2d — ARS Auditor: periodic drift/ego-hijacking detection across agent evolution logs
+
+### Active (v1.3)
+
+- [ ] SOUL-01: SoulLoader loads AgentSoul from files with path-traversal guard and lru_cache
+- [ ] SOUL-02: `macro_analyst` persona files (IDENTITY.md, SOUL.md, AGENTS.md) fully populated with Drift Guard
+- [ ] SOUL-03: 4 skeleton soul dirs (bullish_researcher, bearish_researcher, quant_modeler, risk_manager) created
+- [ ] SOUL-04: SwarmState extended with `active_persona` and `system_prompt` fields
+- [ ] SOUL-05: `macro_analyst_node` injects soul into SwarmState before LLM execution
+- [ ] SOUL-06: `warmup_soul_cache()` called at graph creation
+- [ ] SOUL-07: Deterministic test suite — no LLM calls (unit + content + integration)
+- [ ] KAMI-01: Merit Index formula (Accuracy + Recovery + Consensus + Fidelity) with configurable weights
+- [ ] KAMI-02: EMA decay with configurable λ; cold start 0.5; bounds [0.1, 1.0]
+- [ ] KAMI-03: KAMI scores wired to `DebateSynthesizer` consensus weighting
+- [ ] KAMI-04: KAMI scores stored in SwarmState and persisted to PostgreSQL
+- [ ] EVOL-01: Per-agent MEMORY.md updated after each task cycle with self-reflection log
+- [ ] EVOL-02: Agent proposes SOUL.md diffs in MEMORY.md; Agent Church (L1 Orchestrator) approval gate
+- [ ] EVOL-03: Approved diffs applied; rejected diffs logged with reason
+- [ ] TOM-01: Soul-Sync Handshake — agents exchange truncated SOUL.md summaries before debate
+- [ ] TOM-02: Empathetic Refutation — agents address peer's persona logic rather than flat rejection
+- [ ] ARS-01: ARS Auditor computes drift score from MEMORY.md evolution logs per agent
+- [ ] ARS-02: Agents exceeding ARS drift threshold flagged; ops alert + evolution suspended
+
+### Active (deferred from v1.2 / future)
 
 - [ ] ANALY-05: RL optimization for order flow — v2.0
 - [ ] SEC-03: System-wide circuit breakers for API degradation or anomalous strategy behavior
@@ -125,4 +157,4 @@ Known env issues: broken `ccxt`, missing `chromadb` and `pytest-asyncio` (~13 te
 Tech debt from v1.2: `risk_approved` stays `None` on institutional_guard approval path; Nyquist VALIDATION.md files missing for all v1.2 phases.
 
 ---
-*Last updated: 2026-03-08 after v1.2 milestone*
+*Last updated: 2026-03-08 after v1.3 milestone start*
