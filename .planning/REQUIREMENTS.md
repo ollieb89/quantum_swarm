@@ -54,7 +54,7 @@ Requirements for the Self-Improvement Loop milestone. Each maps to roadmap phase
 ### Memory / Self-Improvement (MEM)
 
 - [x] **MEM-02**: Weekly review agent compares actual live P&L against backtested projections and writes a structured performance drift report
-- [x] **MEM-03**: Rule generator reads weekly review output and appends PREFER/AVOID/CAUTION rules to MEMORY.md for future swarm context
+- [ ] **MEM-03**: Rule generator reads weekly review output and appends PREFER/AVOID/CAUTION rules to MEMORY.md for future swarm context
 
 ---
 
@@ -124,7 +124,7 @@ All v1.0 requirements covered by Phases 1-4 (shipped 2026-03-06).
 | RISK-05 | Phase 6 | Complete |
 | RISK-06 | Phase 6 | Complete |
 | MEM-02 | Phase 7 | Complete |
-| MEM-03 | Phase 7 | Complete |
+| MEM-03 | Phase 12 | Pending |
 
 **Coverage:**
 - v1.1 requirements: 6 total
@@ -167,4 +167,4 @@ All v1.0 requirements covered by Phases 1-4 (shipped 2026-03-06).
 
 ---
 *Requirements defined: 2026-03-06 (v1.0)*
-*Last updated: 2026-03-08 — v1.3 added (MEM-06: Rule Validation Harness, Phase 10 Complete)*
+*Last updated: 2026-03-08 — MEM-03 reset to Pending; gap closure Phase 12 added (MC-01, MC-02 from v1.1 audit)*
