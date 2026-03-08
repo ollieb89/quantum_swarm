@@ -40,6 +40,9 @@ class TestCoreLeafImports:
     def test_decision_card_imports_cleanly(self):
         _isolated_import("src.core.decision_card")
 
+    def test_kami_imports_cleanly(self):
+        _isolated_import("src.core.kami")
+
 
 class TestNoCoreToAgentImport:
     """Leaf core modules must not import from agents or orchestrator."""
