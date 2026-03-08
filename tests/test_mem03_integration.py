@@ -114,31 +114,34 @@ def _make_state(**overrides) -> dict:
 
 def test_persist_rules_promotes_to_active(isolated_rule_generator, temp_rule):
     """
-    MC-01 RED: persist_rules([rule]) must result in get_active_rules() returning
-    the rule as "active".
-
-    Currently FAILS because:
-    - persist_rules() calls registry.add_rule(rule) which saves as "proposed"
-    - RuleValidator.validate_proposed_rules() runs backtests; without real backtest
-      data, rules remain "proposed" and are never promoted to "active"
-    - get_active_rules() filters for status == "active" and returns []
-
-    Plan 02 fix: After registry.add_rule(rule), call
-    registry.update_status(rule.id, "active") — or change pipeline-generated rules
-    to default status "active".
+    MEM-06: persist_rules() adds rules as proposed, then validator promotes
+    passing rules to 'active'. With mocked backtest returning improved metrics,
+    the rule must end up active.
     """
     rg = isolated_rule_generator
+    audit_path = rg.memory_md_path.parent / "audit.jsonl"
+    original_init = RuleValidator.__init__
 
-    # Patch RuleValidator.validate_proposed_rules to return 0 (no-op backtest)
-    # This simulates the no-backtest-data path; rules stay "proposed" after validator
-    with patch.object(RuleValidator, "validate_proposed_rules", return_value=0):
-        rg.persist_rules([temp_rule])
+    def patched_init(self_v, **kwargs):
+        original_init(self_v, **kwargs)
+        self_v.audit_path = audit_path
+
+    # Mock backtest so validator promotes to active (2-of-3 metrics improve)
+    with patch.object(RuleValidator, "__init__", patched_init):
+        with patch(
+            "src.agents.rule_validator._run_nautilus_backtest",
+            side_effect=[
+                {"sharpe_ratio": 1.0, "max_drawdown": -0.10, "win_rate": 0.50, "total_trades": 15},
+                {"sharpe_ratio": 1.5, "max_drawdown": -0.05, "win_rate": 0.60, "total_trades": 15},
+            ],
+        ):
+            rg.persist_rules([temp_rule])
 
     active_rules = rg.registry.get_active_rules()
     assert len(active_rules) > 0, (
-        "MC-01 BROKEN: persist_rules() did not promote the rule to 'active'. "
+        "MEM-06: persist_rules() + validator must promote passing rules to 'active'. "
         f"get_active_rules() returned {active_rules!r}. "
-        "Expected the rule to be accessible as active after persist_rules()."
+        "Validator runs after add_rule(); passing backtest promotes to active."
     )
 
 
@@ -146,28 +149,35 @@ def test_persist_rules_active_rules_accessible_across_registry_instances(
     isolated_rule_generator, temp_rule, tmp_path
 ):
     """
-    MC-01 RED: After persist_rules(), a NEW MemoryRegistry pointing at the same
-    temp file must also return the rule from get_active_rules().
-
-    Tests that the promotion is durable (persisted to JSON), not just in-memory.
-
-    Currently FAILS for the same reason as test_persist_rules_promotes_to_active:
-    the rule is never promoted, so even if it were in-memory active, the disk
-    serialized form would show "proposed".
+    MEM-06: After persist_rules() + validator promotion, a fresh MemoryRegistry
+    at the same path must return the rule from get_active_rules() (durability).
     """
     rg = isolated_rule_generator
     reg_path = str(tmp_path / "reg.json")
     rg.registry = MemoryRegistry(reg_path)
+    rg.memory_md_path = tmp_path / "MEMORY.md"
+    audit_path = tmp_path / "audit.jsonl"
+    original_init = RuleValidator.__init__
 
-    with patch.object(RuleValidator, "validate_proposed_rules", return_value=0):
-        rg.persist_rules([temp_rule])
+    def patched_init(self_v, **kwargs):
+        original_init(self_v, **kwargs)
+        self_v.audit_path = audit_path
 
-    # Create a fresh MemoryRegistry pointing at the same file
+    with patch.object(RuleValidator, "__init__", patched_init):
+        with patch(
+            "src.agents.rule_validator._run_nautilus_backtest",
+            side_effect=[
+                {"sharpe_ratio": 1.0, "max_drawdown": -0.10, "win_rate": 0.50, "total_trades": 15},
+                {"sharpe_ratio": 1.5, "max_drawdown": -0.05, "win_rate": 0.60, "total_trades": 15},
+            ],
+        ):
+            rg.persist_rules([temp_rule])
+
     fresh_registry = MemoryRegistry(reg_path)
     active_rules = fresh_registry.get_active_rules()
 
     assert len(active_rules) > 0, (
-        "MC-01 BROKEN: persist_rules() promotion is not durable. "
+        "MEM-06: Validator promotion must be durable. "
         f"A fresh MemoryRegistry at the same path returned {active_rules!r}. "
         "Expected the rule to be persisted as 'active' to disk."
     )
