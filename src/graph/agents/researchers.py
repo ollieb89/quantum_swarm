@@ -23,7 +23,7 @@ import unittest.mock
 from typing import Any, Optional
 
 from langchain_google_genai import ChatGoogleGenerativeAI
-from langchain_core.messages import AIMessage, HumanMessage
+from langchain_core.messages import AIMessage, HumanMessage, SystemMessage
 from langchain_core.tools import tool
 
 from src.graph.state import SwarmState
@@ -151,6 +151,7 @@ def _make_budgeted_tools(max_calls: int = 5) -> list[BudgetedTool]:
 
 
 from src.core.budget_manager import BudgetManager
+from src.core.soul_loader import load_soul
 
 def _run_researcher_agent(
     llm: ChatGoogleGenerativeAI,
@@ -158,6 +159,7 @@ def _run_researcher_agent(
     query: str,
     budgeted_tools: list[BudgetedTool],
     budget: Optional[BudgetManager] = None,
+    soul_system_message: Optional[SystemMessage] = None,
 ) -> tuple[str, int]:
     """Run a simple ReAct loop with budgeted tools and return the final text and tokens used.
 
@@ -171,7 +173,9 @@ def _run_researcher_agent(
       2. If LLM produces text content, return it.
       3. If LLM produces a ToolBudgetExceeded or other stop, return last text.
     """
-    messages: list[Any] = [HumanMessage(content=f"{system_prompt}\n\n{query}")]
+    # Prepend soul SystemMessage if provided — injected locally, NEVER written to state["messages"]
+    _prefix: list[Any] = [soul_system_message] if soul_system_message is not None else []
+    messages: list[Any] = _prefix + [HumanMessage(content=f"{system_prompt}\n\n{query}")]
 
     # Build a tool name → BudgetedTool map for dispatch
     tool_map: dict[str, BudgetedTool] = {t.tool_name: t for t in budgeted_tools}
@@ -255,6 +259,9 @@ def BullishResearcher(state: SwarmState, budget: Optional[BudgetManager] = None)
     """
     logger.info("BullishResearcher node invoked (task_id=%s)", state.get("task_id"))
 
+    # Phase 15: Load soul — SystemMessage constructed locally, never written to state["messages"]
+    soul = load_soul("bullish_researcher")
+
     analyst_context = _extract_analyst_context(state)
     user_input = state.get("user_input", "")
     intent = state.get("intent", "")
@@ -291,6 +298,7 @@ def BullishResearcher(state: SwarmState, budget: Optional[BudgetManager] = None)
             query=query,
             budgeted_tools=budgeted_tools,
             budget=budget,
+            soul_system_message=SystemMessage(content=soul.system_prompt),
         )
     except Exception as exc:
         logger.warning("BullishResearcher encountered error: %s", exc)
@@ -305,7 +313,13 @@ def BullishResearcher(state: SwarmState, budget: Optional[BudgetManager] = None)
         content=content,
         name="bullish_research",
     )
-    return {"messages": [response], "total_tokens": tokens_to_add, "bullish_thesis": {"text": content}}
+    return {
+        "messages": [response],
+        "total_tokens": tokens_to_add,
+        "bullish_thesis": {"text": content},
+        "system_prompt": soul.system_prompt,
+        "active_persona": soul.active_persona,
+    }
 
 
 def BearishResearcher(state: SwarmState, budget: Optional[BudgetManager] = None) -> dict[str, Any]:
@@ -324,6 +338,9 @@ def BearishResearcher(state: SwarmState, budget: Optional[BudgetManager] = None)
         findings as an AIMessage tagged with name="bearish_research".
     """
     logger.info("BearishResearcher node invoked (task_id=%s)", state.get("task_id"))
+
+    # Phase 15: Load soul — SystemMessage constructed locally, never written to state["messages"]
+    soul = load_soul("bearish_researcher")
 
     analyst_context = _extract_analyst_context(state)
     user_input = state.get("user_input", "")
@@ -361,6 +378,7 @@ def BearishResearcher(state: SwarmState, budget: Optional[BudgetManager] = None)
             query=query,
             budgeted_tools=budgeted_tools,
             budget=budget,
+            soul_system_message=SystemMessage(content=soul.system_prompt),
         )
     except Exception as exc:
         logger.warning("BearishResearcher encountered error: %s", exc)
@@ -375,7 +393,13 @@ def BearishResearcher(state: SwarmState, budget: Optional[BudgetManager] = None)
         content=content,
         name="bearish_research",
     )
-    return {"messages": [response], "total_tokens": tokens_to_add, "bearish_thesis": {"text": content}}
+    return {
+        "messages": [response],
+        "total_tokens": tokens_to_add,
+        "bearish_thesis": {"text": content},
+        "system_prompt": soul.system_prompt,
+        "active_persona": soul.active_persona,
+    }
 
 
 # ---------------------------------------------------------------------------

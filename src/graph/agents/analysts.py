@@ -242,8 +242,17 @@ def QuantModeler(state: SwarmState, budget: Optional[BudgetManager] = None) -> d
         name="QuantModeler",
     )
 
+    # Load soul and inject into state (SOUL-05: system_prompt and active_persona)
+    soul = load_soul("quant_modeler")
+
     logger.info("QuantModeler node complete")
-    return {"messages": [response], "total_tokens": tokens_to_add, "quant_proposal": {"text": content}}
+    return {
+        "messages": [response],
+        "total_tokens": tokens_to_add,
+        "quant_proposal": {"text": content},
+        "system_prompt": soul.system_prompt,
+        "active_persona": soul.active_persona,
+    }
 
 
 # ---------------------------------------------------------------------------
