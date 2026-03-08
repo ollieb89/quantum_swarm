@@ -2,14 +2,14 @@
 gsd_state_version: 1.0
 milestone: v1.3
 milestone_name: MBS Persona System
-status: executing
-last_updated: "2026-03-08T17:45:02Z"
-last_activity: "2026-03-08 — 20-01 complete: DriftRule dataclass, YAML parser, evaluate_drift, AgentSoul.drift_rules wired"
+status: completed
+last_updated: "2026-03-08T17:55:55.147Z"
+last_activity: "2026-03-08 — 20-02 complete: drift eval wired into memory_writer, DRIFT_STREAK + ARS end-to-end"
 progress:
-  total_phases: 5
-  completed_phases: 5
-  total_plans: 13
-  completed_plans: 13
+  total_phases: 8
+  completed_phases: 6
+  total_plans: 15
+  completed_plans: 15
 ---
 
 # Project State
@@ -25,10 +25,10 @@ Previous: v1.2 Risk Governance — SHIPPED 2026-03-08 (260+ tests, 6 phases)
 
 ## Current Phase
 
-Phase: 20 (Wire Drift Flags Pipeline — IN PROGRESS)
-Plan: 01/02 complete
-Status: 20-01 complete — DriftRule dataclass, YAML parser, evaluate_drift, AgentSoul.drift_rules wired at load time
-Last activity: 2026-03-08 — 20-01 complete: DriftRule dataclass, YAML parser, evaluate_drift, AgentSoul.drift_rules wired
+Phase: 20 (Wire Drift Flags Pipeline — COMPLETE)
+Plan: 02/02 complete
+Status: Phase 20 complete — drift evaluation wired into memory_writer, DRIFT_STREAK + ARS drift_flag_frequency end-to-end
+Last activity: 2026-03-08 — 20-02 complete: drift eval wired into memory_writer, DRIFT_STREAK + ARS end-to-end
 
 ## Decisions
 
@@ -72,6 +72,8 @@ Last activity: 2026-03-08 — 20-01 complete: DriftRule dataclass, YAML parser, 
 - [Phase 20-01]: Fail-soft on malformed drift_guard YAML: log warning and set drift_rules=() — agent functions without drift eval rather than crashing
 - [Phase 20-01]: drift_rules field placed last in AgentSoul frozen dataclass — Python dataclass requires fields with defaults after non-defaults
 - [Phase 20-01]: certainty_overreach regex rule derived from AXIOM Voice section ("Certainty language is absent") — guards against drift toward certainty language
+- [Phase 20-02]: Module-level monkeypatch (mw_mod, 'load_soul') instead of string path — avoids AttributeError when src.graph.nodes not loaded as submodule attribute
+- [Phase 20-02]: Canonical text extraction for drift eval reuses same key priority as _extract_thesis_summary but takes FULL text (not first sentence) for evaluation accuracy
 
 ## Progress
 
