@@ -3,7 +3,7 @@ gsd_state_version: 1.0
 milestone: v1.3
 milestone_name: MBS Persona System
 status: completed
-last_updated: "2026-03-08T11:26:32.892Z"
+last_updated: "2026-03-08T11:36:50.885Z"
 last_activity: "2026-03-08 — 16-02 complete: merit_loader_node (session-start DB read, idempotency guard) + merit_updater_node (EMA update for Recovery/Consensus/Fidelity, DB-first persist), orchestrator rewired (merit_loader entry point, merit_updater between decision_card_writer→trade_logger); 9 new tests, 333 total passing"
 progress:
   total_phases: 5
