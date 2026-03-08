@@ -164,6 +164,10 @@ Plans:
 **Success Criteria** (what must be TRUE):
   1. `debate_synthesizer` reads `SwarmState["soul_sync_context"]` and incorporates peer soul summaries into its prompt construction
   2. Debate output demonstrably differs when soul_sync_context is present vs absent (testable via mock comparison)
+**Plans**: 1 plan
+
+Plans:
+- [ ] 21-01-PLAN.md — Wire soul_sync_context into DebateSynthesizer: _OPPONENT_MAP, peer_soul_summary enrichment of debate_history, TDD test suite
 
 ### Phase 22: Failure Path KAMI + Memory Logging
 **Goal**: Failed order_router cycles still flow through merit_updater and memory_writer so agent learning and KAMI scoring capture failure signals
@@ -201,5 +205,5 @@ Plans:
 | 18. Theory of Mind Soul-Sync | 2/2 | Complete    | 2026-03-08 | - |
 | 19. ARS Drift Auditor | 2/2 | Complete    | 2026-03-08 | - |
 | 20. Wire Drift Flags Pipeline | 2/2 | Complete    | 2026-03-08 | - |
-| 21. Consume Soul-Sync Context in Debate | v1.3 | 0/0 | Planned | - |
+| 21. Consume Soul-Sync Context in Debate | v1.3 | 0/1 | Planned | - |
 | 22. Failure Path KAMI + Memory Logging | v1.3 | 0/0 | Planned | - |
