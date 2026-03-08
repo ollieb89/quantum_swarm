@@ -79,3 +79,36 @@ async def test_audit_chain_tamper_detection(audit_logger):
     # Verify the chain again - should fail now
     is_valid = await audit_logger.verify_chain()
     assert is_valid is False, "Audit chain verification should fail after tampering"
+
+
+def test_merit_scores_in_audit_hash():
+    """merit_scores must NOT be in AUDIT_EXCLUDED_FIELDS and must produce deterministic hashes."""
+    import json
+    import hashlib
+    from src.core.audit_logger import AUDIT_EXCLUDED_FIELDS, _strip_excluded
+
+    # (a) merit_scores is not excluded from audit hashes
+    assert "merit_scores" not in AUDIT_EXCLUDED_FIELDS
+
+    # (b) Different merit_scores produce different hashes
+    def _round_deep(obj):
+        if isinstance(obj, float):
+            return round(obj, 4)
+        if isinstance(obj, dict):
+            return {k: _round_deep(v) for k, v in obj.items()}
+        return obj
+
+    def _hash(state: dict) -> str:
+        clean = _strip_excluded(state)
+        rounded = _round_deep(clean)
+        return hashlib.sha256(
+            json.dumps(rounded, sort_keys=True).encode()
+        ).hexdigest()
+
+    state_a = {"merit_scores": {"MOMENTUM": 0.75, "CASSANDRA": 0.60}}
+    state_b = {"merit_scores": {"MOMENTUM": 0.50, "CASSANDRA": 0.50}}
+    assert _hash(state_a) != _hash(state_b)
+
+    # (c) Identical values at 4dp produce identical hashes (deterministic rounding)
+    state_c = {"merit_scores": {"MOMENTUM": 0.750001, "CASSANDRA": 0.600002}}
+    assert _hash(state_a) == _hash(state_c)
