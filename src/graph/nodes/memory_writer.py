@@ -1,6 +1,6 @@
 """Post-execution node: per-agent MEMORY.md structured self-reflection log.
 
-Phase 17, Plan 01 (EVOL-01).
+Phase 17, Plan 01 (EVOL-01) + Plan 02 (EVOL-02).
 
 Writes one structured entry per active agent per cycle to:
     src/core/souls/{agent_id}/MEMORY.md
@@ -19,6 +19,12 @@ Rules:
 - Skip-on-no-output: if canonical state field is None, no entry written
 - Cap: 50 entries max; oldest dropped when exceeded
 
+Plan 02 additions (EVOL-02):
+- _check_triggers: KAMI_SPIKE, DRIFT_STREAK, MERIT_FLOOR trigger evaluation
+- _build_proposal_rationale: human-readable trigger summary string
+- _process_agent: emits SoulProposal via write_proposal_atomic after trigger check
+- Rate-limit guard: suppresses duplicate proposals for same (agent_id, target_section)
+
 All I/O is synchronous (Path.read_text / Path.write_text).
 Do NOT use asyncio.run() inside node functions — known project-breaking pattern.
 """
@@ -33,6 +39,13 @@ from typing import Any, Dict, Optional
 import yaml
 
 from src.core.kami import ALL_SOUL_HANDLES
+from src.core.soul_proposal import (
+    PROPOSALS_DIR,
+    SoulProposal,
+    build_proposal_id,
+    check_rate_limit,
+    write_proposal_atomic,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -262,11 +275,111 @@ def _write_memory_entry(agent_id: str, entry_text: str) -> None:
 
 
 # ---------------------------------------------------------------------------
+# Plan 02 (EVOL-02): Trigger helpers
+# ---------------------------------------------------------------------------
+
+
+def _extract_drift_flags(entry: str) -> str:
+    """Parse a single entry block string; return the DRIFT_FLAGS value.
+
+    Returns "" if no [DRIFT_FLAGS:] line is found.  Returns "" for the
+    sentinel value "none" so callers can treat non-empty as "drift present".
+    """
+    match = re.search(r"\[DRIFT_FLAGS:\]\s*(.+)", entry)
+    if not match:
+        return ""
+    value = match.group(1).strip()
+    return "" if value.lower() == "none" else value
+
+
+def _extract_merit_score_from_entry(entry: str) -> Optional[float]:
+    """Find [MERIT_SCORE:] in an entry block; return float or None on failure."""
+    match = re.search(r"\[MERIT_SCORE:\]\s*([\d.]+)", entry)
+    if not match:
+        return None
+    try:
+        return float(match.group(1))
+    except ValueError:
+        return None
+
+
+def _check_triggers(
+    handle: str,
+    kami_delta: float,
+    memory_path: Path,
+    config: dict,
+) -> list[str]:
+    """Evaluate all three proposal triggers against the current MEMORY.md state.
+
+    Checks (in order, independent — multiple can fire):
+      KAMI_SPIKE   : |kami_delta| >= kami_delta_threshold (default 0.05)
+      DRIFT_STREAK : last drift_streak_n entries all have non-empty DRIFT_FLAGS
+      MERIT_FLOOR  : last merit_floor_k entries all have MERIT_SCORE <= merit_floor
+
+    For DRIFT_STREAK and MERIT_FLOOR, if fewer than N/K entries exist in the file
+    the trigger cannot fire (condition treated as False).
+
+    Returns a list of matched trigger name strings (may be empty, 1, or more).
+    """
+    triggers: list[str] = []
+
+    # --- KAMI_SPIKE ---
+    threshold: float = config.get("kami_delta_threshold", 0.05)
+    if abs(kami_delta) >= threshold:
+        triggers.append("KAMI_SPIKE")
+
+    # Read and parse entries for streak checks
+    entries: list[str] = []
+    if memory_path.exists():
+        try:
+            content = memory_path.read_text()
+            entries = _parse_entries(content)
+        except Exception as e:
+            logger.debug("memory_writer: _check_triggers could not read %s: %s", memory_path, e)
+
+    # --- DRIFT_STREAK ---
+    streak_n: int = int(config.get("drift_streak_n", 3))
+    if len(entries) >= streak_n:
+        tail = entries[-streak_n:]
+        if all(_extract_drift_flags(e) for e in tail):
+            triggers.append("DRIFT_STREAK")
+
+    # --- MERIT_FLOOR ---
+    floor_k: int = int(config.get("merit_floor_k", 3))
+    merit_floor: float = config.get("merit_floor", 0.40)
+    if len(entries) >= floor_k:
+        tail = entries[-floor_k:]
+        scores = [_extract_merit_score_from_entry(e) for e in tail]
+        if all(s is not None and s <= merit_floor for s in scores):
+            triggers.append("MERIT_FLOOR")
+
+    return triggers
+
+
+def _build_proposal_rationale(triggers: list[str]) -> str:
+    """Return a human-readable rationale string summarising which triggers fired."""
+    parts = []
+    if "KAMI_SPIKE" in triggers:
+        parts.append("Merit changed sharply (KAMI_SPIKE)")
+    if "DRIFT_STREAK" in triggers:
+        parts.append("drift flags raised on consecutive cycles (DRIFT_STREAK)")
+    if "MERIT_FLOOR" in triggers:
+        parts.append("merit score below floor threshold (MERIT_FLOOR)")
+    if not parts:
+        return "Unknown trigger."
+    return "; ".join(parts) + "."
+
+
+# ---------------------------------------------------------------------------
 # Per-agent processing
 # ---------------------------------------------------------------------------
 
 def _process_agent(handle: str, state: dict) -> None:
     """Write a MEMORY entry for one agent if its canonical output is non-None.
+
+    Plan 02 extension: after writing the MEMORY entry, evaluate proposal
+    triggers.  If any fire and the agent is not rate-limited, emit a
+    SoulProposal via write_proposal_atomic.
 
     Raises on any exception (caller catches and logs).
     """
@@ -298,6 +411,51 @@ def _process_agent(handle: str, state: dict) -> None:
     # Build and write entry
     entry_text = _build_entry(handle, kami_delta, current_composite, thesis_summary)
     _write_memory_entry(agent_id, entry_text)
+
+    # --- Plan 02: Trigger evaluation and proposal emission ---
+    try:
+        cfg = _load_p17_config()
+        triggers = _check_triggers(handle, kami_delta, memory_path, cfg)
+        if not triggers:
+            return
+
+        # Rate-limit check — proposals_dir is patchable via module attribute
+        rate_limited = check_rate_limit(
+            agent_id=handle,  # use soul handle (consistent with Agent Church SOUL.md lookup)
+            target_section="## Core Beliefs",
+            proposals_dir=PROPOSALS_DIR,
+            k=cfg.get("rate_limit_rejection_k", 3),
+            window_days=cfg.get("rate_limit_window_days", 7),
+        )
+
+        if rate_limited:
+            logger.warning("memory_writer: rate-limited proposal for %s", handle)
+            return
+
+        proposal = SoulProposal(
+            proposal_id=build_proposal_id(agent_id),
+            agent_id=handle,
+            target_section="## Core Beliefs",
+            proposed_content=(
+                "[PENDING — Agent Church will draft content based on MEMORY.md context]"
+            ),
+            proposal_reasons=triggers,
+            rationale=_build_proposal_rationale(triggers),
+            proposed_at=datetime.now(timezone.utc),
+            status="pending",
+        )
+        write_proposal_atomic(proposal)
+        logger.info(
+            "memory_writer: emitted proposal %s for %s (triggers: %s)",
+            proposal.proposal_id,
+            handle,
+            triggers,
+        )
+
+    except Exception as exc:
+        logger.error(
+            "memory_writer: proposal trigger/emit error for %s: %s", handle, exc
+        )
 
 
 # ---------------------------------------------------------------------------
