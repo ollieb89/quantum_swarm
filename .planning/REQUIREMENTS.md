@@ -105,7 +105,7 @@ Which phases cover which requirements. Updated during roadmap creation.
 | ARS-02 | Phase 19 | Complete |
 | EVOL-02 | Phase 20 | Complete |
 | ARS-01 | Phase 20 | Complete |
-| TOM-01 | Phase 21 | Pending |
+| TOM-01 | Phase 21 | Complete |
 | KAMI-03 | Phase 22 | Pending |
 | EVOL-01 | Phase 22 | Pending |
 

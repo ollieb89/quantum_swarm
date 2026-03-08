@@ -3,13 +3,13 @@ gsd_state_version: 1.0
 milestone: v1.3
 milestone_name: MBS Persona System
 status: completed
-last_updated: "2026-03-08T17:58:49.424Z"
-last_activity: "2026-03-08 — 20-02 complete: drift eval wired into memory_writer, DRIFT_STREAK + ARS end-to-end"
+last_updated: "2026-03-08T19:23:35.595Z"
+last_activity: "2026-03-08 — 21-01 complete: peer soul summaries wired into debate_history via _OPPONENT_MAP, INT-02 closed"
 progress:
   total_phases: 8
-  completed_phases: 6
-  total_plans: 15
-  completed_plans: 15
+  completed_phases: 7
+  total_plans: 16
+  completed_plans: 16
 ---
 
 # Project State
@@ -25,10 +25,10 @@ Previous: v1.2 Risk Governance — SHIPPED 2026-03-08 (260+ tests, 6 phases)
 
 ## Current Phase
 
-Phase: 20 (Wire Drift Flags Pipeline — COMPLETE)
-Plan: 02/02 complete
-Status: Phase 20 complete — drift evaluation wired into memory_writer, DRIFT_STREAK + ARS drift_flag_frequency end-to-end
-Last activity: 2026-03-08 — 20-02 complete: drift eval wired into memory_writer, DRIFT_STREAK + ARS end-to-end
+Phase: 21 (Consume Soul-Sync Context — COMPLETE)
+Plan: 01/01 complete
+Status: Phase 21 complete — peer soul summaries wired into debate_history via _OPPONENT_MAP, INT-02 closed
+Last activity: 2026-03-08 — 21-01 complete: peer soul summaries wired into debate_history via _OPPONENT_MAP, INT-02 closed
 
 ## Decisions
 
@@ -74,6 +74,8 @@ Last activity: 2026-03-08 — 20-02 complete: drift eval wired into memory_write
 - [Phase 20-01]: certainty_overreach regex rule derived from AXIOM Voice section ("Certainty language is absent") — guards against drift toward certainty language
 - [Phase 20-02]: Module-level monkeypatch (mw_mod, 'load_soul') instead of string path — avoids AttributeError when src.graph.nodes not loaded as submodule attribute
 - [Phase 20-02]: Canonical text extraction for drift eval reuses same key priority as _extract_thesis_summary but takes FULL text (not first sentence) for evaluation accuracy
+- [Phase 21-01]: _OPPONENT_MAP lives in debate.py not kami.py — presentation-adjacent logic, not merit logic
+- [Phase 21-01]: peer_soul_summary omitted entirely when absent/empty — no None values, no warnings logged
 
 ## Progress
 
@@ -93,7 +95,7 @@ Status: Green
 See: `.planning/PROJECT.md` (updated 2026-03-08 after v1.3 milestone start)
 
 **Core value:** Institutional-quality trade signal generation through adversarial AI debate, with self-improving memory rules validated by backtesting, hard compliance guardrails, and immutable per-trade audit trails
-**Current focus:** v1.3 Phase 18 — Theory of Mind Soul-Sync (Phase 17 MEMORY.md Evolution + Agent Church complete 2026-03-08)
+**Current focus:** v1.3 Phase 21 complete — soul_sync_context consumed in DebateSynthesizer, INT-02 closed
 
 ## Architecture
 

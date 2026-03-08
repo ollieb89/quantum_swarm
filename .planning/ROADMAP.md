@@ -61,7 +61,7 @@ See: `.planning/milestones/v1.2-ROADMAP.md` for full archive
 - [x] **Phase 18: Theory of Mind Soul-Sync** - Pre-debate soul handshake node, public soul summaries, Empathetic Refutation few-shots (completed 2026-03-08)
 - [x] **Phase 19: ARS Drift Auditor** - Five drift metrics from MEMORY.md logs, evolution_suspended column, warm-up period, strict scope boundary (completed 2026-03-08)
 - [x] **Phase 20: Wire Drift Flags Pipeline** - Replace hardcoded DRIFT_FLAGS 'none' with evaluated drift flags from SOUL.md Drift Guard; unblock DRIFT_STREAK trigger and ARS drift_flag_frequency metric (completed 2026-03-08)
-- [ ] **Phase 21: Consume Soul-Sync Context in Debate** - Wire soul_sync_context into debate_synthesizer so peer soul summaries influence debate output
+- [x] **Phase 21: Consume Soul-Sync Context in Debate** - Wire soul_sync_context into debate_synthesizer so peer soul summaries influence debate output (completed 2026-03-08)
 - [ ] **Phase 22: Failure Path KAMI + Memory Logging** - Route order_router failure path through merit_updater and memory_writer so failed cycles update KAMI scores and MEMORY.md
 
 ## Phase Details
@@ -205,5 +205,5 @@ Plans:
 | 18. Theory of Mind Soul-Sync | 2/2 | Complete    | 2026-03-08 | - |
 | 19. ARS Drift Auditor | 2/2 | Complete    | 2026-03-08 | - |
 | 20. Wire Drift Flags Pipeline | 2/2 | Complete    | 2026-03-08 | - |
-| 21. Consume Soul-Sync Context in Debate | v1.3 | 0/1 | Planned | - |
+| 21. Consume Soul-Sync Context in Debate | 1/1 | Complete   | 2026-03-08 | - |
 | 22. Failure Path KAMI + Memory Logging | v1.3 | 0/0 | Planned | - |
