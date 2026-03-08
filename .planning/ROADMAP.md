@@ -178,6 +178,11 @@ Plans:
   1. When `order_router_node` returns a failure, the execution path still routes through `decision_card_writer → merit_updater → memory_writer` before reaching `trade_logger`
   2. The Recovery dimension in KAMI receives a penalty signal for failed cycles
   3. MEMORY.md gains a structured entry for failed cycles (with appropriate failure markers)
+**Plans**: 2 plans
+
+Plans:
+- [ ] 22-01-PLAN.md — failure_cause classification in order_router, KAMI Recovery signal update, [CYCLE_STATUS:] in MEMORY.md entries
+- [ ] 22-02-PLAN.md — Orchestrator rewiring (remove conditional, direct edge), failure-aware decision_card_writer, full regression
 
 ## Progress
 
@@ -206,4 +211,4 @@ Plans:
 | 19. ARS Drift Auditor | 2/2 | Complete    | 2026-03-08 | - |
 | 20. Wire Drift Flags Pipeline | 2/2 | Complete    | 2026-03-08 | - |
 | 21. Consume Soul-Sync Context in Debate | 1/1 | Complete    | 2026-03-08 | - |
-| 22. Failure Path KAMI + Memory Logging | v1.3 | 0/0 | Planned | - |
+| 22. Failure Path KAMI + Memory Logging | v1.3 | 0/2 | Planned | - |
