@@ -2,9 +2,9 @@
 gsd_state_version: 1.0
 milestone: v1.3
 milestone_name: MBS Persona System
-status: verifying
-last_updated: "2026-03-08T16:15:02.118Z"
-last_activity: "2026-03-08 — 19-02 complete: evolution_suspended gate in memory_writer_node, ARS systemd timer, scope boundary verified"
+status: executing
+last_updated: "2026-03-08T17:45:02Z"
+last_activity: "2026-03-08 — 20-01 complete: DriftRule dataclass, YAML parser, evaluate_drift, AgentSoul.drift_rules wired"
 progress:
   total_phases: 5
   completed_phases: 5
@@ -25,10 +25,10 @@ Previous: v1.2 Risk Governance — SHIPPED 2026-03-08 (260+ tests, 6 phases)
 
 ## Current Phase
 
-Phase: 19 of 19 (ARS Drift Auditor — IN PROGRESS)
-Plan: 02/02 complete
-Status: Phase 19 complete — ARS drift auditor with evolution_suspended gate in memory_writer, systemd timer, scope boundary verified; ARS-01 + ARS-02 satisfied
-Last activity: 2026-03-08 — 19-02 complete: evolution_suspended gate in memory_writer_node, ARS systemd timer, scope boundary verified
+Phase: 20 (Wire Drift Flags Pipeline — IN PROGRESS)
+Plan: 01/02 complete
+Status: 20-01 complete — DriftRule dataclass, YAML parser, evaluate_drift, AgentSoul.drift_rules wired at load time
+Last activity: 2026-03-08 — 20-01 complete: DriftRule dataclass, YAML parser, evaluate_drift, AgentSoul.drift_rules wired
 
 ## Decisions
 
@@ -69,6 +69,9 @@ Last activity: 2026-03-08 — 19-02 complete: evolution_suspended gate in memory
 - [Phase 19-02]: _check_evolution_suspended queries DB directly rather than relying on merit_loader — keeps plan minimal and avoids touching SwarmState schema
 - [Phase 19-02]: Fail-open on DB errors: _check_evolution_suspended returns False if DB unavailable — memory evolution proceeds, only suspension enforcement lost
 - [Phase 19-02]: ARS timer uses separate service name (quantum-swarm-ars-auditor) from Obsidian timer (quantum-swarm-tracking)
+- [Phase 20-01]: Fail-soft on malformed drift_guard YAML: log warning and set drift_rules=() — agent functions without drift eval rather than crashing
+- [Phase 20-01]: drift_rules field placed last in AgentSoul frozen dataclass — Python dataclass requires fields with defaults after non-defaults
+- [Phase 20-01]: certainty_overreach regex rule derived from AXIOM Voice section ("Certainty language is absent") — guards against drift toward certainty language
 
 ## Progress
 
