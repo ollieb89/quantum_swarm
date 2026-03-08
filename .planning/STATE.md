@@ -3,13 +3,13 @@ gsd_state_version: 1.0
 milestone: v1.3
 milestone_name: MBS Persona System
 status: completed
-last_updated: "2026-03-08T11:12:58.936Z"
-last_activity: "2026-03-08 — 16-01 complete: KAMI arithmetic core (KAMIDimensions, compute_merit, apply_ema, signal helpers), 23 unit tests, agent_merit_scores DDL, merit_scores SwarmState field, kami: config, Wave 0 test stubs; 323 tests passing (KAMI-01, KAMI-02, KAMI-03 closed)"
+last_updated: "2026-03-08T11:19:28.544Z"
+last_activity: "2026-03-08 — 16-02 complete: merit_loader_node (session-start DB read, idempotency guard) + merit_updater_node (EMA update for Recovery/Consensus/Fidelity, DB-first persist), orchestrator rewired (merit_loader entry point, merit_updater between decision_card_writer→trade_logger); 9 new tests, 333 total passing"
 progress:
   total_phases: 5
   completed_phases: 1
   total_plans: 6
-  completed_plans: 4
+  completed_plans: 5
 ---
 
 # Project State
@@ -26,9 +26,9 @@ Previous: v1.2 Risk Governance — SHIPPED 2026-03-08 (260+ tests, 6 phases)
 ## Current Phase
 
 Phase: 16 of 19 (KAMI Merit Index — In Progress)
-Plan: 01/03 complete
-Status: Plan 01 complete — next: Plan 02 (merit_loader + merit_updater graph nodes)
-Last activity: 2026-03-08 — 16-01 complete: KAMI arithmetic core (KAMIDimensions, compute_merit, apply_ema, signal helpers), 23 unit tests, agent_merit_scores DDL, merit_scores SwarmState field, kami: config, Wave 0 test stubs; 323 tests passing (KAMI-01, KAMI-02, KAMI-03 closed)
+Plan: 02/03 complete
+Status: Plan 02 complete — next: Plan 03 (KAMI integration / threshold routing)
+Last activity: 2026-03-08 — 16-02 complete: merit_loader_node (session-start DB read, idempotency guard) + merit_updater_node (EMA update for Recovery/Consensus/Fidelity, DB-first persist), orchestrator rewired (merit_loader entry point, merit_updater between decision_card_writer→trade_logger); 9 new tests, 333 total passing
 
 ## Decisions
 
@@ -41,6 +41,9 @@ Last activity: 2026-03-08 — 16-01 complete: KAMI arithmetic core (KAMIDimensio
 - [Phase 16-kami-merit-index]: round(raw, 10) before clamp in compute_merit eliminates IEEE 754 jitter (0.30+0.35+0.25+0.10 != exactly 1.0 in Python float arithmetic)
 - [Phase 16-kami-merit-index]: merit_scores is plain Optional[Dict] in SwarmState with no Annotated reducer — merit_loader overwrites per cycle, not accumulates
 - [Phase 16-kami-merit-index]: evolution_suspended column pre-declared in agent_merit_scores DDL to avoid ALTER TABLE migration in Phase 19 ARS-02
+- [Phase 16-02]: merit_updater returns {} on DB failure — DB and SwarmState merit_scores kept strictly in sync
+- [Phase 16-02]: Accuracy dimension is never updated in-cycle — deferred to post-trade resolution in a later phase
+- [Phase 16-02]: merit_loader is new graph entry point replacing classify_intent — merit scores loaded before any analysis
 
 ## Progress
 
