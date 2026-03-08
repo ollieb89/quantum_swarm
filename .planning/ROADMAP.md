@@ -72,7 +72,12 @@ See: `.planning/milestones/v1.2-ROADMAP.md` for full archive
   2. `macro_analyst_node` writes `system_prompt` and `active_persona` into `SwarmState` before invoking the LLM, and neither field appears in any hash-chained audit record captured by `AuditLogger`
   3. `warmup_soul_cache()` completes without error with all five soul directories present (macro_analyst fully populated, four skeletons with minimum viable content)
   4. The deterministic test suite passes with zero LLM calls; an `autouse` fixture calls `load_soul.cache_clear()` before and after every test so no cached soul leaks between tests
-**Plans**: TBD
+**Plans**: 3 plans
+
+Plans:
+- [ ] 15-01-PLAN.md — SoulLoader module (AgentSoul dataclass, load_soul, warmup) + test scaffold (conftest, 3 test file stubs)
+- [ ] 15-02-PLAN.md — All 15 soul files: AXIOM fully-populated + 4 skeleton directional stubs
+- [ ] 15-03-PLAN.md — Integration wiring: SwarmState fields, audit exclusion, node injection, orchestrator warmup, full suite green
 
 ### Phase 16: KAMI Merit Index
 **Goal**: Agent reliability is measured by a multi-dimensional merit score that decays with time, persists across sessions, and replaces the character-length proxy in DebateSynthesizer consensus weighting
@@ -135,7 +140,7 @@ See: `.planning/milestones/v1.2-ROADMAP.md` for full archive
 | 12. Wire MEM-03 End-to-End | v1.1 | 2/2 | Complete | 2026-03-08 |
 | 13. Wire InstitutionalGuard | v1.2 | 2/2 | Complete | 2026-03-08 |
 | 14. Fix MEM-06 Validation Gate | v1.2 | 2/2 | Complete | 2026-03-08 |
-| 15. Soul Foundation | v1.3 | 0/TBD | Not started | - |
+| 15. Soul Foundation | v1.3 | 0/3 | Not started | - |
 | 16. KAMI Merit Index | v1.3 | 0/TBD | Not started | - |
 | 17. MEMORY.md Evolution + Agent Church | v1.3 | 0/TBD | Not started | - |
 | 18. Theory of Mind Soul-Sync | v1.3 | 0/TBD | Not started | - |
