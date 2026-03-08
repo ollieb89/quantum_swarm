@@ -50,8 +50,8 @@ Requirements for the Self-Improvement Loop milestone. Each maps to roadmap phase
 - [x] **RISK-03**: System calculates ATR-based stop-loss for every trade before order submission
 - [x] **RISK-05**: OrderRouter rejects any trade execution missing a valid stop-loss calculation (hard gate, no exception)
 - [x] **RISK-06**: Stop-loss level is recorded in the trade's PostgreSQL audit log entry alongside entry price and position size
-- [ ] **RISK-07**: Aggregate portfolio constraints (max notional exposure, asset concentration, cumulative drawdown circuit breaker) are enforced at the `institutional_guard` gate on every trade — v1.2
-- [ ] **RISK-08**: Pre-trade risk scoring sets `state["metadata"]["trade_risk_score"]` and `state["metadata"]["portfolio_heat"]`; these values are recorded in the DecisionCard `portfolio_risk_score` field on every trade — v1.2
+- [x] **RISK-07**: Aggregate portfolio constraints (max notional exposure, asset concentration, cumulative drawdown circuit breaker) are enforced at the `institutional_guard` gate on every trade — v1.2
+- [x] **RISK-08**: Pre-trade risk scoring sets `state["metadata"]["trade_risk_score"]` and `state["metadata"]["portfolio_heat"]`; these values are recorded in the DecisionCard `portfolio_risk_score` field on every trade — v1.2
 
 ### Memory / Self-Improvement (MEM)
 
@@ -139,8 +139,8 @@ All v1.0 requirements covered by Phases 1-4 (shipped 2026-03-06).
 |-------------|-------|--------|
 | MEM-04 | Phase 9 | Complete |
 | MEM-05 | Phase 9 | Complete |
-| RISK-07 | Phase 13 | Pending |
-| RISK-08 | Phase 13 | Pending |
+| RISK-07 | Phase 13 | Complete |
+| RISK-08 | Phase 13 | Complete |
 | MEM-06 | Phase 14 | Pending |
 
 **Coverage:**

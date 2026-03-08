@@ -3,13 +3,13 @@ gsd_state_version: 1.0
 milestone: v1.1
 milestone_name: Self-Improvement
 status: verifying
-last_updated: "2026-03-08T02:48:58.563Z"
-last_activity: 2026-03-08 — Phase 12-02 completed; MC-01 fix (persist_rules promotes to active) + MC-02 fix (analysts forward memory to sub-graph invoke); all 5 test_mem03_integration.py GREEN; MEM-03 fully closed.
+last_updated: "2026-03-08T03:48:03.740Z"
+last_activity: 2026-03-08 — Phase 13-01 completed; TDD RED scaffold for institutional guard graph wiring; test_institutional_guard_wired_in_graph FAILS (RED), test_institutional_guard_metadata_propagation PASSES; Phase 8 tests unaffected.
 progress:
-  total_phases: 8
+  total_phases: 10
   completed_phases: 7
-  total_plans: 15
-  completed_plans: 17
+  total_plans: 17
+  completed_plans: 18
 ---
 
 # Project State
@@ -25,10 +25,10 @@ Previous: v1.1 Self-Improvement Loop — SHIPPED 2026-03-06 (169 tests, 3 phases
 
 ## Current Phase
 
-Phase: 12 — MEM-03 Integration Fix
-Plan: 02 (complete)
-Status: Complete (2/2 plans done — MC-01 + MC-02 both closed; MEM-03 fully verified)
-Last activity: 2026-03-08 — Phase 12-02 completed; MC-01 fix (persist_rules promotes to active) + MC-02 fix (analysts forward memory to sub-graph invoke); all 5 test_mem03_integration.py GREEN; MEM-03 fully closed.
+Phase: 13 — Wire Institutional Guard
+Plan: 01 (complete)
+Status: In Progress (1/2 plans done — TDD RED scaffold committed)
+Last activity: 2026-03-08 — Phase 13-01 completed; TDD RED scaffold for institutional guard graph wiring; test_institutional_guard_wired_in_graph FAILS (RED), test_institutional_guard_metadata_propagation PASSES; Phase 8 tests unaffected.
 
 ## Progress
 
