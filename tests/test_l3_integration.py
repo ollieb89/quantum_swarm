@@ -214,11 +214,12 @@ def test_l3_chain_order():
     assert "trade_logger" in nodes
 
     # Verify edge ordering via graph structure:
-    # risk_manager → claw_guard → data_fetcher → knowledge_base → backtester → ...
+    # risk_manager → claw_guard → institutional_guard → data_fetcher → knowledge_base → backtester → ...
     edges = graph.get_graph().edges
     edge_pairs = [(e[0], e[1]) for e in edges]
     assert ("risk_manager", "claw_guard") in edge_pairs
-    assert ("claw_guard", "data_fetcher") in edge_pairs
+    # Phase 13: claw_guard now routes through institutional_guard before data_fetcher
+    assert ("claw_guard", "institutional_guard") in edge_pairs
     # Phase 4: write_external_memory inserted between data_fetcher and knowledge_base
     assert ("data_fetcher", "write_external_memory") in edge_pairs
     assert ("write_external_memory", "knowledge_base") in edge_pairs
