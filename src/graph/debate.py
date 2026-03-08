@@ -7,12 +7,12 @@ The synthesizer is a PURE AGGREGATION step — it makes no LLM calls.
 It reads the tagged AIMessage outputs produced by BullishResearcher and
 BearishResearcher from SwarmState["messages"] and computes:
 
-    weighted_consensus_score = bullish_strength / (bullish_strength + bearish_strength)
+    weighted_consensus_score = bull_w / (bull_w + bear_w)
 
-    where "strength" is a simple proxy: the character length of the researcher's
-    final text output (longer, denser responses indicate more evidence gathered).
-    This is deliberately lightweight and deterministic; future plans can swap in
-    a more sophisticated scoring function without changing the interface.
+    where bull_w and bear_w are the KAMI merit composite scores for each side's
+    soul handle (MOMENTUM and CASSANDRA respectively), read from
+    SwarmState["merit_scores"]. Character-length proxy removed in Phase 16.
+    Cold-start fallback: both sides default to DEFAULT_MERIT=0.5 → score=0.5.
 
 Output fields written to SwarmState:
     - weighted_consensus_score: float in [0.0, 1.0]
@@ -25,6 +25,7 @@ import logging
 from typing import Any
 
 from src.graph.state import SwarmState
+from src.core.kami import RESEARCHER_HANDLE_MAP, DEFAULT_MERIT
 
 logger = logging.getLogger(__name__)
 
@@ -83,25 +84,35 @@ def DebateSynthesizer(state: SwarmState) -> dict[str, Any]:
     bullish_text = _extract_researcher_text(messages, _BULLISH_SOURCE)
     bearish_text = _extract_researcher_text(messages, _BEARISH_SOURCE)
 
-    # Strength proxy: character length of each side's output.
-    # A researcher that produced more detailed findings has a longer response.
-    bullish_strength = float(len(bullish_text)) if bullish_text else 0.0
-    bearish_strength = float(len(bearish_text)) if bearish_text else 0.0
+    # Phase 16: KAMI merit-based consensus weighting.
+    # Character-length proxy removed — len(text) is no longer used for strength.
+    # Merit key: soul handles from RESEARCHER_HANDLE_MAP (stable per-role mapping).
+    # Extension point: future phases with multiple agents per side sum their merits.
+    merit_scores = state.get("merit_scores") or {}
+    bullish_handle = RESEARCHER_HANDLE_MAP.get(_BULLISH_SOURCE, "")
+    bearish_handle = RESEARCHER_HANDLE_MAP.get(_BEARISH_SOURCE, "")
 
-    total = bullish_strength + bearish_strength
+    bullish_entry = merit_scores.get(bullish_handle, {})
+    bearish_entry = merit_scores.get(bearish_handle, {})
+
+    bull_w = float(bullish_entry.get("composite", DEFAULT_MERIT)) if bullish_entry else DEFAULT_MERIT
+    bear_w = float(bearish_entry.get("composite", DEFAULT_MERIT)) if bearish_entry else DEFAULT_MERIT
+
+    # Both sides missing or zero → neutral
+    total = bull_w + bear_w
     if total > 0.0:
-        raw_score = bullish_strength / total
+        raw_score = bull_w / total
     else:
-        # No researcher output at all — neutral default
+        # No merit data at all — neutral default
         raw_score = 0.5
 
     # Clip to [0.0, 1.0] as a safety guard (should always be in range, but be explicit)
     weighted_consensus_score = max(0.0, min(1.0, raw_score))
 
     logger.info(
-        "DebateSynthesizer: bullish_strength=%.0f bearish_strength=%.0f score=%.4f",
-        bullish_strength,
-        bearish_strength,
+        "DebateSynthesizer: bull_merit=%.4f bear_merit=%.4f score=%.4f",
+        bull_w,
+        bear_w,
         weighted_consensus_score,
     )
 
@@ -114,7 +125,7 @@ def DebateSynthesizer(state: SwarmState) -> dict[str, Any]:
                 "source": _BULLISH_SOURCE,
                 "hypothesis": "bullish",
                 "evidence": bullish_text,
-                "strength": bullish_strength,
+                "strength": bull_w,   # merit composite, not len(text)
             }
         )
 
@@ -124,7 +135,7 @@ def DebateSynthesizer(state: SwarmState) -> dict[str, Any]:
                 "source": _BEARISH_SOURCE,
                 "hypothesis": "bearish",
                 "evidence": bearish_text,
-                "strength": bearish_strength,
+                "strength": bear_w,   # merit composite, not len(text)
             }
         )
 

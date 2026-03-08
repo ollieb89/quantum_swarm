@@ -130,11 +130,12 @@ def test_scenario_a_overfitting():
     score = result["weighted_consensus_score"]
     history = result["debate_history"]
 
-    # Assertion 1: bearish evidence dominates → score < 0.5
-    assert score < 0.5, (
-        f"Expected weighted_consensus_score < 0.5 when bearish evidence dominates, "
-        f"got {score:.4f} (bullish_len={len(bullish_short_content)}, "
-        f"bearish_len={len(bearish_long_content)})"
+    # Phase 16: Without merit_scores, both sides default to DEFAULT_MERIT=0.5 → neutral
+    # (character-length proxy removed). Score is now merit-driven; without merit_scores
+    # in state, the synthesizer returns the neutral fallback of 0.5.
+    assert score == 0.5, (
+        f"Expected weighted_consensus_score == 0.5 (neutral fallback — no merit_scores), "
+        f"got {score:.4f}"
     )
 
     # Assertion 2: debate_history contains bearish_research entry
@@ -285,3 +286,133 @@ def test_debate_synthesizer_writes_debate_resolution_to_state():
         f"got keys: {list(result.keys())}"
     )
     assert result["debate_resolution"] is not None, "debate_resolution must not be None"
+
+
+# ---------------------------------------------------------------------------
+# Phase 16: KAMI merit-based synthesizer tests
+# ---------------------------------------------------------------------------
+
+
+def test_debate_synthesizer_uses_merit():
+    """Weighted consensus uses KAMI merit composites, not character length.
+
+    MOMENTUM merit=0.9, CASSANDRA merit=0.3.
+    Expected: weighted_consensus_score ≈ 0.9 / (0.9 + 0.3) = 0.75.
+    """
+    state = _make_base_state(
+        merit_scores={
+            "MOMENTUM": {"composite": 0.9},
+            "CASSANDRA": {"composite": 0.3},
+        },
+        messages=[
+            {
+                "role": "assistant",
+                "name": "bullish_research",
+                "content": "Bull.",  # deliberately short — length must NOT drive score
+            },
+            {
+                "role": "assistant",
+                "name": "bearish_research",
+                "content": "Bear. " * 50,  # much longer — if len() still used, bear would win
+            },
+        ],
+    )
+
+    result = DebateSynthesizer(state)
+    score = result["weighted_consensus_score"]
+
+    expected = 0.9 / (0.9 + 0.3)  # ≈ 0.75
+    assert abs(score - expected) < 1e-6, (
+        f"Expected merit-weighted score ≈ {expected:.6f}, got {score:.6f}. "
+        "DebateSynthesizer may still be using character length."
+    )
+
+
+def test_debate_synthesizer_neutral_fallback():
+    """Both sides have no merit_scores → fallback to 0.5 (cold start neutral).
+
+    This must NOT use text length. Even with very different length texts,
+    the result must be exactly 0.5.
+    """
+    # Test with empty dict
+    state_empty = _make_base_state(
+        merit_scores={},
+        messages=[
+            {"role": "assistant", "name": "bullish_research", "content": "A"},
+            {"role": "assistant", "name": "bearish_research", "content": "B" * 500},
+        ],
+    )
+    result_empty = DebateSynthesizer(state_empty)
+    assert result_empty["weighted_consensus_score"] == 0.5, (
+        f"Empty merit_scores must produce score=0.5, got {result_empty['weighted_consensus_score']}"
+    )
+
+    # Test with None
+    state_none = _make_base_state(
+        merit_scores=None,
+        messages=[
+            {"role": "assistant", "name": "bullish_research", "content": "A"},
+            {"role": "assistant", "name": "bearish_research", "content": "B" * 500},
+        ],
+    )
+    result_none = DebateSynthesizer(state_none)
+    assert result_none["weighted_consensus_score"] == 0.5, (
+        f"None merit_scores must produce score=0.5, got {result_none['weighted_consensus_score']}"
+    )
+
+
+def test_debate_synthesizer_skeleton_cannot_dominate():
+    """Skeleton agent (CASSANDRA composite≈MERIT_FLOOR=0.1) cannot dominate an
+    established agent (MOMENTUM composite=0.85).
+
+    Expected: consensus score > 0.85 (bullish side near-dominates).
+    """
+    state = _make_base_state(
+        merit_scores={
+            "MOMENTUM": {"composite": 0.85},
+            "CASSANDRA": {"composite": 0.1},
+        },
+        messages=[
+            {"role": "assistant", "name": "bullish_research", "content": "Bull signal."},
+            {"role": "assistant", "name": "bearish_research", "content": "Bear signal."},
+        ],
+    )
+
+    result = DebateSynthesizer(state)
+    score = result["weighted_consensus_score"]
+    expected_min = 0.85 / (0.85 + 0.1)  # ≈ 0.894
+
+    assert score > 0.85, (
+        f"Established agent should dominate skeleton. Expected score > 0.85, got {score:.4f}. "
+        f"(merit-exact expected ≈ {expected_min:.4f})"
+    )
+
+
+def test_debate_synthesizer_strength_field_is_merit():
+    """debate_history[0]['strength'] must be the merit composite float, NOT len(text)."""
+    bullish_text = "This is a bullish message that is intentionally long " * 10
+    state = _make_base_state(
+        merit_scores={
+            "MOMENTUM": {"composite": 0.72},
+            "CASSANDRA": {"composite": 0.45},
+        },
+        messages=[
+            {"role": "assistant", "name": "bullish_research", "content": bullish_text},
+            {"role": "assistant", "name": "bearish_research", "content": "Short bear."},
+        ],
+    )
+
+    result = DebateSynthesizer(state)
+    history = result["debate_history"]
+
+    bullish_entries = [e for e in history if e.get("source") == "bullish_research"]
+    assert bullish_entries, "Expected a bullish_research entry in debate_history"
+
+    strength = bullish_entries[0]["strength"]
+    assert strength != float(len(bullish_text)), (
+        f"strength field must NOT equal len(bullish_text)={len(bullish_text)}. "
+        "Character-length proxy must be removed."
+    )
+    assert strength == pytest.approx(0.72), (
+        f"strength must be the merit composite (0.72), got {strength}"
+    )
