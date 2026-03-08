@@ -3,13 +3,13 @@ gsd_state_version: 1.0
 milestone: v1.1
 milestone_name: Self-Improvement
 status: completed
-last_updated: "2026-03-08T02:01:55.574Z"
-last_activity: 2026-03-08 — Phase 11-02 completed; decision_card_writer_node wired into LangGraph; conditional edge order_router->decision_card_writer->trade_logger; 21/21 decision card tests passing; 225-test suite clean.
+last_updated: "2026-03-08T02:25:08Z"
+last_activity: 2026-03-08 — Phase 12-01 completed; TDD RED scaffold for MEM-03 gap closure; 5 tests in test_mem03_integration.py; 4 failing (MC-01 + MC-02 gaps), 1 passing (regression guard); 0 regressions in test_analysts.py.
 progress:
-  total_phases: 7
+  total_phases: 8
   completed_phases: 6
-  total_plans: 13
-  completed_plans: 15
+  total_plans: 16
+  completed_plans: 17
 ---
 
 # Project State
@@ -25,10 +25,10 @@ Previous: v1.1 Self-Improvement Loop — SHIPPED 2026-03-06 (169 tests, 3 phases
 
 ## Current Phase
 
-Phase: 11 — Explainability & Decision Cards
-Plan: 02 (complete)
-Status: Complete (2/2 plans done)
-Last activity: 2026-03-08 — Phase 11-02 completed; decision_card_writer_node wired into LangGraph; conditional edge order_router->decision_card_writer->trade_logger; 21/21 decision card tests passing; 225-test suite clean.
+Phase: 12 — MEM-03 Integration Fix
+Plan: 01 (complete)
+Status: In Progress (1/2 plans done — Plan 02 implementation pending)
+Last activity: 2026-03-08 — Phase 12-01 completed; TDD RED scaffold for MEM-03 gap closure; 5 tests in test_mem03_integration.py; 4 failing (MC-01 + MC-02 gaps), 1 passing (regression guard); 0 regressions in test_analysts.py.
 
 ## Progress
 
@@ -125,6 +125,10 @@ See: `.planning/PROJECT.md` (updated 2026-03-08 — Phase 5 complete)
 - Test isolation for audit.jsonl writes: patch builtins.open on mode=='a' with mock_open(); avoid Path monkeypatching which causes recursive calls (11-02)
 - get_pool() DB failure in decision_card_writer is non-fatal: caught, prev_audit_hash=None, card still written (11-02)
 - SwarmState Phase 11 fields: decision_card_status (Literal pending/written/failed), decision_card_error (str), decision_card_audit_ref (str card_id) — all Optional, initialized to None (11-02)
+- Phase 12 TDD RED pattern: patch.object(RuleValidator, "validate_proposed_rules", return_value=0) to isolate MC-01 gap in persist_rules() without triggering live backtests (12-01)
+- Memory forwarding test: capture mock_agent.invoke.call_args[0][0]["messages"] to assert memory dict prepended; check content generically via hasattr(.content) or dict.get("content") so test survives Plan 02 type conversion (12-01)
+- MC-01 gap: persist_rules() calls registry.add_rule(rule) which saves as "proposed"; no code ever calls update_status(rule.id, "active"); get_active_rules() always returns [] (12-01)
+- MC-02 gap: MacroAnalyst line 133 and QuantModeler line 191 invoke with [HumanMessage(query)] only — state["messages"] memory message is never prepended (12-01)
 
 ## v1.1 Phase Dependency Chain
 
