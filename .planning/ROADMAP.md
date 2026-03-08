@@ -105,7 +105,7 @@ See: `.planning/milestones/v1.0-ROADMAP.md` for full archive
 - [ ] **Phase 5: Quant Alpha Intelligence** — Centralized technical indicator skill available to all agents
 - [x] **Phase 6: Stop-Loss Enforcement** — ATR-based stop-loss calculated, gated, and audited on every trade (completed 2026-03-07)
 - [x] **Phase 7: Self-Improvement Loop** — PerformanceReviewAgent + RuleGenerator with lazy LLM init, SelfLearningPipeline, dual-source memory injection, --review CLI (completed 2026-03-07)
-- [ ] **Phase 12: Wire MEM-03 End-to-End (Rule Lifecycle & Memory Forwarding)** — Gap closure: promote generated rules to `active` status; forward institutional memory into MacroAnalyst/QuantModeler sub-graph invocations (closes MC-01, MC-02)
+- [x] **Phase 12: Wire MEM-03 End-to-End (Rule Lifecycle & Memory Forwarding)** — Gap closure: promote generated rules to `active` status; forward institutional memory into MacroAnalyst/QuantModeler sub-graph invocations (closes MC-01, MC-02) (completed 2026-03-08)
 
 ## Phase Details
 

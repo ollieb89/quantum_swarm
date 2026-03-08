@@ -2,13 +2,13 @@
 gsd_state_version: 1.0
 milestone: v1.1
 milestone_name: Self-Improvement
-status: completed
-last_updated: "2026-03-08T02:25:08Z"
-last_activity: 2026-03-08 — Phase 12-01 completed; TDD RED scaffold for MEM-03 gap closure; 5 tests in test_mem03_integration.py; 4 failing (MC-01 + MC-02 gaps), 1 passing (regression guard); 0 regressions in test_analysts.py.
+status: executing
+last_updated: "2026-03-08T02:38:50Z"
+last_activity: 2026-03-08 — Phase 12-02 completed; MC-01 fix (persist_rules promotes to active) + MC-02 fix (analysts forward memory to sub-graph invoke); all 5 test_mem03_integration.py GREEN; MEM-03 fully closed.
 progress:
   total_phases: 8
-  completed_phases: 6
-  total_plans: 16
+  completed_phases: 7
+  total_plans: 15
   completed_plans: 17
 ---
 
@@ -26,9 +26,9 @@ Previous: v1.1 Self-Improvement Loop — SHIPPED 2026-03-06 (169 tests, 3 phases
 ## Current Phase
 
 Phase: 12 — MEM-03 Integration Fix
-Plan: 01 (complete)
-Status: In Progress (1/2 plans done — Plan 02 implementation pending)
-Last activity: 2026-03-08 — Phase 12-01 completed; TDD RED scaffold for MEM-03 gap closure; 5 tests in test_mem03_integration.py; 4 failing (MC-01 + MC-02 gaps), 1 passing (regression guard); 0 regressions in test_analysts.py.
+Plan: 02 (complete)
+Status: Complete (2/2 plans done — MC-01 + MC-02 both closed; MEM-03 fully verified)
+Last activity: 2026-03-08 — Phase 12-02 completed; MC-01 fix (persist_rules promotes to active) + MC-02 fix (analysts forward memory to sub-graph invoke); all 5 test_mem03_integration.py GREEN; MEM-03 fully closed.
 
 ## Progress
 
@@ -129,6 +129,10 @@ See: `.planning/PROJECT.md` (updated 2026-03-08 — Phase 5 complete)
 - Memory forwarding test: capture mock_agent.invoke.call_args[0][0]["messages"] to assert memory dict prepended; check content generically via hasattr(.content) or dict.get("content") so test survives Plan 02 type conversion (12-01)
 - MC-01 gap: persist_rules() calls registry.add_rule(rule) which saves as "proposed"; no code ever calls update_status(rule.id, "active"); get_active_rules() always returns [] (12-01)
 - MC-02 gap: MacroAnalyst line 133 and QuantModeler line 191 invoke with [HumanMessage(query)] only — state["messages"] memory message is never prepended (12-01)
+- MC-01 fix: persist_rules() calls update_status(rule.id, "active") after add_rule() — rules immediately available via get_active_rules() without waiting for validator (12-02)
+- MC-02 fix: MacroAnalyst() and QuantModeler() extract state["messages"][0] dict, convert to HumanMessage, prepend to invoke() call — LLM receives institutional memory before query (12-02)
+- Stale test pattern: tests asserting old broken behavior (status=="proposed" after persist_rules) must be updated when production behavior changes; use patch.object(RuleValidator, "validate_proposed_rules", return_value=0) for isolation (12-02)
+- RuleValidator audit trail test isolation: use RuleValidator.__new__() + direct attribute injection to bypass __init__; call validate_proposed_rules() on registry with hand-crafted proposed rule (12-02)
 
 ## v1.1 Phase Dependency Chain
 
