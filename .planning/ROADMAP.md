@@ -132,7 +132,11 @@ Plans:
   1. `src/core/ars_auditor.py` computes all five drift metrics (Diff Rejection Rate, KAMI Dimension Variance, Alignment Section Mutation Count, Self-Reflection Sentiment Shift, Role Boundary Vocabulary Violations) from MEMORY.md evolution logs using stdlib regex and Counter cosine only; no LLM calls and no external dependencies beyond the project's existing `pyproject.toml`
   2. An agent that has accumulated 30+ evolution cycles and exceeds the drift threshold is flagged with an ops alert and has its `evolution_suspended` column set to `True` in the `agent_merit_scores` PostgreSQL table; no code path connects this suspension flag to `order_router_node` or `route_after_institutional_guard`
   3. Agents with fewer than 30 MEMORY.md entries do not trigger alerts regardless of metric values (warm-up period enforced); the auditor integrates with the existing systemd timer or responds to a `/ars:audit` CLI invocation
-**Plans**: TBD
+**Plans**: 2 plans
+
+Plans:
+- [ ] 19-01-PLAN.md — ARS auditor core: 5 drift metrics, ars_state DDL, ars: config, CLI interface, flag-then-suspend escalation, test suite
+- [ ] 19-02-PLAN.md — Suspension gate in memory_writer_node, systemd timer, trade path isolation verification
 
 ## Progress
 
@@ -158,4 +162,4 @@ Plans:
 | 16. KAMI Merit Index | 3/3 | Complete    | 2026-03-08 | - |
 | 17. MEMORY.md Evolution + Agent Church | 3/3 | Complete    | 2026-03-08 | - |
 | 18. Theory of Mind Soul-Sync | 2/2 | Complete    | 2026-03-08 | - |
-| 19. ARS Drift Auditor | v1.3 | 0/TBD | Not started | - |
+| 19. ARS Drift Auditor | v1.3 | 0/2 | Not started | - |
