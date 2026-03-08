@@ -6,6 +6,7 @@ from dataclasses import dataclass
 from functools import lru_cache
 from pathlib import Path
 
+from src.core.drift_eval import DriftRule, parse_drift_guard_yaml
 from src.core.soul_errors import SoulNotFoundError, SoulSecurityError
 
 logger = logging.getLogger(__name__)
@@ -33,6 +34,7 @@ class AgentSoul:
     soul: str       # Contents of SOUL.md
     agents: str     # Contents of AGENTS.md
     users: str = ""  # Contents of USER.md (optional peer-user context); empty when absent
+    drift_rules: tuple[DriftRule, ...] = ()  # Parsed drift guard rules from SOUL.md YAML
 
     @property
     def system_prompt(self) -> str:
@@ -130,12 +132,24 @@ def load_soul(agent_id: str) -> AgentSoul:
     except FileNotFoundError:
         users = ""
 
+    # Parse drift guard rules from SOUL.md YAML block (fail-soft: log and continue)
+    try:
+        drift_rules = parse_drift_guard_yaml(soul)
+    except ValueError as e:
+        logger.warning(
+            "Malformed drift_guard YAML for agent %r — drift evaluation disabled: %s",
+            agent_id,
+            e,
+        )
+        drift_rules = ()
+
     return AgentSoul(
         agent_id=agent_id,
         identity=identity,
         soul=soul,
         agents=agents,
         users=users,
+        drift_rules=drift_rules,
     )
 
 

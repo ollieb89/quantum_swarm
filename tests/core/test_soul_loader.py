@@ -1,5 +1,6 @@
-"""Unit tests for SoulLoader (SOUL-01, SOUL-03, SOUL-04, SOUL-06)."""
+"""Unit tests for SoulLoader (SOUL-01, SOUL-03, SOUL-04, SOUL-06, EVOL-02)."""
 import pytest
+from src.core.drift_eval import DriftRule
 from src.core.soul_loader import AgentSoul, load_soul, warmup_soul_cache
 from src.core.soul_errors import SoulNotFoundError, SoulSecurityError
 
@@ -86,3 +87,26 @@ class TestSwarmStateFields:
         import typing
         hints = typing.get_type_hints(SwarmState)
         assert "active_persona" in hints, "SwarmState missing 'active_persona' field"
+
+
+# --- EVOL-02: AgentSoul.drift_rules populated from SOUL.md YAML ---
+
+class TestDriftRulesIntegration:
+    def test_macro_analyst_has_drift_rules(self):
+        soul = load_soul("macro_analyst")
+        assert isinstance(soul.drift_rules, tuple)
+        assert len(soul.drift_rules) > 0
+        assert all(isinstance(r, DriftRule) for r in soul.drift_rules)
+
+    def test_macro_analyst_has_expected_flag_ids(self):
+        soul = load_soul("macro_analyst")
+        flag_ids = {r.flag_id for r in soul.drift_rules}
+        assert flag_ids == {"recency_bias", "narrative_capture", "certainty_overreach"}
+
+    def test_skeleton_agent_has_empty_drift_rules(self):
+        soul = load_soul("bullish_researcher")
+        assert soul.drift_rules == ()
+
+    def test_drift_rules_field_is_tuple(self):
+        soul = load_soul("macro_analyst")
+        assert isinstance(soul.drift_rules, tuple)
