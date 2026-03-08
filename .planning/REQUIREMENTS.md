@@ -34,7 +34,7 @@ Requirements for the MBS Persona System milestone. Each maps to roadmap phases s
 
 ### Theory of Mind Soul-Sync (Tier 2c)
 
-- [ ] **TOM-01**: `soul_sync_handshake_node` runs before DebateSynthesizer as a barrier node; reads peer soul summaries from lru_cache into `soul_sync_context` SwarmState field; preserves parallel researcher fan-out topology
+- [x] **TOM-01**: `soul_sync_handshake_node` runs before DebateSynthesizer as a barrier node; reads peer soul summaries from lru_cache into `soul_sync_context` SwarmState field; preserves parallel researcher fan-out topology
 - [x] **TOM-02**: AgentSoul exposes `public_soul_summary()` method (excludes Drift Guard triggers and Core Wounds from peer view); researcher USER.md files contain Empathetic Refutation few-shot examples
 
 ### ARS Drift Auditor (Tier 2d)
@@ -99,7 +99,7 @@ Which phases cover which requirements. Updated during roadmap creation.
 | EVOL-01 | Phase 17 | Complete |
 | EVOL-02 | Phase 17 | Complete |
 | EVOL-03 | Phase 17 | Complete |
-| TOM-01 | Phase 18 | Pending |
+| TOM-01 | Phase 18 | Complete |
 | TOM-02 | Phase 18 | Complete |
 | ARS-01 | Phase 19 | Pending |
 | ARS-02 | Phase 19 | Pending |

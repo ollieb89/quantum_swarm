@@ -3,13 +3,13 @@ gsd_state_version: 1.0
 milestone: v1.3
 milestone_name: MBS Persona System
 status: completed
-last_updated: "2026-03-08T14:55:22.442Z"
-last_activity: "2026-03-08 — 18-01 complete: AgentSoul extended with users field + public_soul_summary() (H2 section parser, Drift Guard excluded, 300-char cap); soul_sync_context added to SwarmState; 14-test suite green (13 pass, 3 skip Plan 02)"
+last_updated: "2026-03-08T15:00:46.527Z"
+last_activity: "2026-03-08 — 18-02 complete: soul_sync_handshake_node (sync barrier, zero LLM calls) + orchestrator rewire (researchers→handshake→debate_synthesizer) + USER.md empathetic refutation few-shots for MOMENTUM and CASSANDRA; 16/16 test_soul_sync tests GREEN; Phase 18 TOM-01 + TOM-02 satisfied; next: Phase 19 (ARS Drift Auditor)"
 progress:
   total_phases: 5
-  completed_phases: 3
+  completed_phases: 4
   total_plans: 11
-  completed_plans: 10
+  completed_plans: 11
 ---
 
 # Project State
@@ -25,10 +25,10 @@ Previous: v1.2 Risk Governance — SHIPPED 2026-03-08 (260+ tests, 6 phases)
 
 ## Current Phase
 
-Phase: 18 of 19 (Theory of Mind Soul-Sync — In Progress)
-Plan: 01/02 complete
-Status: Phase 18 Plan 01 complete — data contracts established, AgentSoul extended, SwarmState soul_sync_context added; next: Plan 02 (soul_sync_handshake_node)
-Last activity: 2026-03-08 — 18-01 complete: AgentSoul extended with users field + public_soul_summary() (H2 section parser, Drift Guard excluded, 300-char cap); soul_sync_context added to SwarmState; 14-test suite green (13 pass, 3 skip Plan 02)
+Phase: 18 of 19 (Theory of Mind Soul-Sync — COMPLETE)
+Plan: 02/02 complete
+Status: Phase 18 complete — soul_sync_handshake_node wired as barrier between researchers and debate_synthesizer; USER.md empathetic refutation authored for MOMENTUM and CASSANDRA; 16/16 tests GREEN; TOM-01 + TOM-02 satisfied; next: Phase 19 (ARS Drift Auditor)
+Last activity: 2026-03-08 — 18-02 complete: soul_sync_handshake_node (sync barrier, zero LLM calls) + orchestrator rewire + USER.md few-shots; 16/16 soul_sync tests GREEN; Phase 18 TOM-01 + TOM-02 fully satisfied
 
 ## Decisions
 
@@ -59,6 +59,8 @@ Last activity: 2026-03-08 — 18-01 complete: AgentSoul extended with users fiel
 - [Phase 18-01]: users field placed as LAST field in AgentSoul frozen dataclass — Python dataclass requires fields with defaults to follow fields without defaults
 - [Phase 18-01]: soul_sync_context uses plain Optional[Dict[str, str]] with no Annotated reducer — written once by handshake node, same pattern as merit_scores
 - [Phase 18-01]: public_soul_summary() uses re.split on H2 boundaries with _PEER_VISIBLE_SECTIONS frozenset filter; falls back to raw soul[:300] if no matching sections found
+- [Phase 18]: soul_sync_handshake_node implemented as synchronous (not async) — all reads are lru_cache hits via warmup_soul_cache(), no I/O needed; with_audit_logging handles sync nodes via asyncio.to_thread
+- [Phase 18]: TestNoLLMCalls patch fixed with create=True — module correctly never imports ChatGoogleGenerativeAI; patch target needs create=True when testing absence of an import
 
 ## Progress
 
