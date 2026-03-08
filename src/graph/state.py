@@ -1,5 +1,5 @@
 import operator
-from typing import Annotated, List, TypedDict, Optional, Any
+from typing import Annotated, List, Literal, TypedDict, Optional, Any
 
 class SwarmState(TypedDict):
     """
@@ -62,3 +62,8 @@ class SwarmState(TypedDict):
     knowledge_base_result: Optional[dict]      # Local KB context (sentiment_context + historical_stats)
     backtest_result: Optional[dict]            # NautilusTrader metrics dict
     execution_result: Optional[dict]           # OrderRouter fill dict
+
+    # Phase 11: Decision Card (Explainability)
+    decision_card_status: Optional[Literal["pending", "written", "failed"]]
+    decision_card_error: Optional[str]
+    decision_card_audit_ref: Optional[str]     # card_id on success

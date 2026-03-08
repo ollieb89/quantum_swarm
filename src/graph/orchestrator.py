@@ -17,6 +17,8 @@ from src.blackboard.board import Blackboard
 from src.core.blackboard import InterAgentBlackboard
 from src.core.budget_manager import BudgetManager
 from src.core.memory_registry import MemoryRegistry
+from src.core.decision_card import build_decision_card, canonical_json, verify_decision_card
+from src.core.db import get_pool
 from src.tools.verification_wrapper import SafetyShutdown
 from .agents.researchers import BullishResearcher, BearishResearcher
 from .debate import DebateSynthesizer
@@ -70,6 +72,84 @@ def route_after_debate(state: SwarmState) -> str:
         "route_after_debate: score=%s → hold (threshold not met)", score
     )
     return "hold"
+
+
+def route_after_order_router(state: SwarmState) -> str:
+    """Route to decision_card_writer only for successful trade executions."""
+    result = state.get("execution_result") or {}
+    if result.get("success") is True:
+        return "decision_card_writer"
+    return "trade_logger"
+
+
+async def decision_card_writer_node(state: SwarmState) -> dict:
+    """Generate and persist an immutable decision card for successful trade executions."""
+    audit_path = Path("data/audit.jsonl")
+    try:
+        # Fetch prev_audit_hash from PostgreSQL audit_logs
+        prev_audit_hash: Any = None
+        try:
+            pool = get_pool()
+            async with pool.connection() as conn:
+                async with conn.cursor() as cur:
+                    await cur.execute(
+                        "SELECT entry_hash FROM audit_logs ORDER BY id DESC LIMIT 1"
+                    )
+                    row = await cur.fetchone()
+                    prev_audit_hash = row[0] if row else None
+        except Exception as db_err:
+            logger.warning("decision_card_writer: could not fetch prev_audit_hash: %s", db_err)
+            prev_audit_hash = None
+
+        # Load active rule IDs
+        registry = MemoryRegistry()
+        card = build_decision_card(state, registry=registry, prev_audit_hash=prev_audit_hash)
+
+        line = canonical_json(card.model_dump(mode="json"))
+
+        # Write with one retry on transient failure
+        written = False
+        last_err = None
+        for attempt in range(2):
+            try:
+                audit_path.parent.mkdir(parents=True, exist_ok=True)
+                with open(audit_path, "a") as f:
+                    f.write(line + "\n")
+                written = True
+                break
+            except Exception as write_err:
+                last_err = write_err
+                logger.warning(
+                    "decision_card_writer: write attempt %d failed: %s", attempt + 1, write_err
+                )
+
+        if not written:
+            logger.error(
+                "COMPLIANCE INCIDENT: decision card write failed after retry for task_id=%s: %s",
+                state.get("task_id"), last_err
+            )
+            return {
+                "decision_card_status": "failed",
+                "decision_card_error": str(last_err),
+                "decision_card_audit_ref": None,
+            }
+
+        return {
+            "decision_card_status": "written",
+            "decision_card_error": None,
+            "decision_card_audit_ref": card.card_id,
+        }
+
+    except Exception as e:
+        logger.error(
+            "COMPLIANCE INCIDENT: decision card generation failed for task_id=%s: %s",
+            state.get("task_id"), e
+        )
+        return {
+            "decision_card_status": "failed",
+            "decision_card_error": str(e),
+            "decision_card_audit_ref": None,
+        }
 
 
 # --- Graph Construction ---
@@ -173,6 +253,7 @@ def create_orchestrator_graph(config: Dict, checkpointer: Any = None, memory: An
     workflow.add_node("knowledge_base", with_audit_logging(knowledge_base_node, "knowledge_base"))
     workflow.add_node("backtester", with_audit_logging(backtester_node, "backtester"))
     workflow.add_node("order_router", with_audit_logging(order_router_node, "order_router"))
+    workflow.add_node("decision_card_writer", with_audit_logging(decision_card_writer_node, "decision_card_writer"))
     workflow.add_node("trade_logger", with_audit_logging(trade_logger_node, "trade_logger"))
 
     workflow.add_node("synthesize", with_audit_logging(partial(synthesize_consensus, config=config, board=board), "synthesize"))
@@ -225,7 +306,12 @@ def create_orchestrator_graph(config: Dict, checkpointer: Any = None, memory: An
     workflow.add_edge("write_external_memory", "knowledge_base")
     workflow.add_edge("knowledge_base", "backtester")
     workflow.add_edge("backtester", "order_router")
-    workflow.add_edge("order_router", "trade_logger")
+    workflow.add_conditional_edges(
+        "order_router",
+        route_after_order_router,
+        {"decision_card_writer": "decision_card_writer", "trade_logger": "trade_logger"},
+    )
+    workflow.add_edge("decision_card_writer", "trade_logger")
     workflow.add_edge("trade_logger", "write_trade_memory")      # Phase 4: store trade outcome
     workflow.add_edge("write_trade_memory", "synthesize")
     workflow.add_edge("synthesize", END)
@@ -368,6 +454,10 @@ class LangGraphOrchestrator:
             "knowledge_base_result": None,
             "backtest_result": None,
             "execution_result": None,
+            # Phase 11: Decision Card fields
+            "decision_card_status": None,
+            "decision_card_error": None,
+            "decision_card_audit_ref": None,
         }
 
         # Configure the thread (required for checkpointing)
