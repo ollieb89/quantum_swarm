@@ -170,3 +170,117 @@ class TestOrderRouterFailureCause:
         er = result["execution_result"]
         assert er["success"] is True
         assert er["failure_cause"] is None
+
+
+# ---------------------------------------------------------------------------
+# _build_entry: CYCLE_STATUS field tests
+# ---------------------------------------------------------------------------
+
+
+class TestBuildEntryCycleStatus:
+    """_build_entry includes [CYCLE_STATUS:] field in correct position."""
+
+    def test_cycle_status_success(self) -> None:
+        from src.graph.nodes.memory_writer import _build_entry
+        entry = _build_entry("AXIOM", 0.04, 0.81, "Thesis here.", cycle_status="success")
+        lines = entry.strip().splitlines()
+        field_lines = [l for l in lines if l.startswith("[")]
+        labels = [l.split("]")[0] + "]" for l in field_lines]
+        # CYCLE_STATUS must appear between DRIFT_FLAGS and THESIS_SUMMARY
+        assert "[CYCLE_STATUS:]" in labels
+        drift_idx = labels.index("[DRIFT_FLAGS:]")
+        status_idx = labels.index("[CYCLE_STATUS:]")
+        thesis_idx = labels.index("[THESIS_SUMMARY:]")
+        assert drift_idx < status_idx < thesis_idx
+        assert "[CYCLE_STATUS:] success" in entry
+
+    def test_cycle_status_failed(self) -> None:
+        from src.graph.nodes.memory_writer import _build_entry
+        entry = _build_entry("CASSANDRA", -0.03, 0.78, "Bearish.", cycle_status="failed")
+        assert "[CYCLE_STATUS:] failed" in entry
+
+    def test_cycle_status_external_failure(self) -> None:
+        from src.graph.nodes.memory_writer import _build_entry
+        entry = _build_entry("SIGMA", 0.0, 0.50, "Neutral.", cycle_status="external_failure")
+        assert "[CYCLE_STATUS:] external_failure" in entry
+
+    def test_cycle_status_defaults_to_success(self) -> None:
+        from src.graph.nodes.memory_writer import _build_entry
+        entry = _build_entry("AXIOM", 0.0, 0.50, "Test.")
+        assert "[CYCLE_STATUS:] success" in entry
+
+
+# ---------------------------------------------------------------------------
+# _process_agent: cycle_status determination tests
+# ---------------------------------------------------------------------------
+
+
+class TestProcessAgentCycleStatus:
+    """_process_agent derives cycle_status from execution_result."""
+
+    @patch("src.graph.nodes.memory_writer._get_souls_dir")
+    @patch("src.graph.nodes.memory_writer._evaluate_drift_flags", return_value="none")
+    @patch("src.graph.nodes.memory_writer.load_soul")
+    def test_success_cycle_status(self, mock_soul, mock_drift, mock_dir, tmp_path) -> None:
+        from src.graph.nodes.memory_writer import _process_agent
+        mock_dir.return_value = tmp_path
+        (tmp_path / "macro_analyst").mkdir()
+
+        state = {
+            "macro_report": "Inflation rising.",
+            "merit_scores": {"AXIOM": {"composite": 0.80}},
+            "execution_result": {"success": True, "failure_cause": None},
+        }
+        _process_agent("AXIOM", state)
+        content = (tmp_path / "macro_analyst" / "MEMORY.md").read_text()
+        assert "[CYCLE_STATUS:] success" in content
+
+    @patch("src.graph.nodes.memory_writer._get_souls_dir")
+    @patch("src.graph.nodes.memory_writer._evaluate_drift_flags", return_value="none")
+    @patch("src.graph.nodes.memory_writer.load_soul")
+    def test_failed_cycle_status_self_induced(self, mock_soul, mock_drift, mock_dir, tmp_path) -> None:
+        from src.graph.nodes.memory_writer import _process_agent
+        mock_dir.return_value = tmp_path
+        (tmp_path / "macro_analyst").mkdir()
+
+        state = {
+            "macro_report": "Inflation rising.",
+            "merit_scores": {"AXIOM": {"composite": 0.80}},
+            "execution_result": {"success": False, "failure_cause": "RISK_RULE_VIOLATION"},
+        }
+        _process_agent("AXIOM", state)
+        content = (tmp_path / "macro_analyst" / "MEMORY.md").read_text()
+        assert "[CYCLE_STATUS:] failed" in content
+
+    @patch("src.graph.nodes.memory_writer._get_souls_dir")
+    @patch("src.graph.nodes.memory_writer._evaluate_drift_flags", return_value="none")
+    @patch("src.graph.nodes.memory_writer.load_soul")
+    def test_external_failure_cycle_status(self, mock_soul, mock_drift, mock_dir, tmp_path) -> None:
+        from src.graph.nodes.memory_writer import _process_agent
+        mock_dir.return_value = tmp_path
+        (tmp_path / "macro_analyst").mkdir()
+
+        state = {
+            "macro_report": "Inflation rising.",
+            "merit_scores": {"AXIOM": {"composite": 0.80}},
+            "execution_result": {"success": False, "failure_cause": "EXCHANGE_DOWN"},
+        }
+        _process_agent("AXIOM", state)
+        content = (tmp_path / "macro_analyst" / "MEMORY.md").read_text()
+        assert "[CYCLE_STATUS:] external_failure" in content
+
+    @patch("src.graph.nodes.memory_writer._get_souls_dir")
+    @patch("src.graph.nodes.memory_writer._evaluate_drift_flags", return_value="none")
+    @patch("src.graph.nodes.memory_writer.load_soul")
+    def test_no_execution_result_defaults_success(self, mock_soul, mock_drift, mock_dir, tmp_path) -> None:
+        from src.graph.nodes.memory_writer import _process_agent
+        mock_dir.return_value = tmp_path
+        (tmp_path / "macro_analyst").mkdir()
+
+        state = {
+            "macro_report": "Inflation rising.",
+            "merit_scores": {"AXIOM": {"composite": 0.80}},
+        }
+        _process_agent("AXIOM", state)
+        content = (tmp_path / "macro_analyst" / "MEMORY.md").read_text()
+        assert "[CYCLE_STATUS:] success" in content

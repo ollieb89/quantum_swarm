@@ -84,6 +84,16 @@ async def _check_evolution_suspended(handle: str) -> bool:
 
 MEMORY_MAX_ENTRIES: int = 50
 
+# Phase 22: External failure causes — duplicated from kami.py intentionally.
+# memory_writer is in graph layer; importing from core is fine but a local
+# constant is simpler and avoids coupling the two modules.
+_EXTERNAL_CAUSES = frozenset({
+    "EXCHANGE_DOWN",
+    "BROKER_API_ERROR",
+    "NETWORK_TIMEOUT",
+    "VENUE_UNAVAILABLE",
+})
+
 # Maps soul handle → agent_id directory name under src/core/souls/
 HANDLE_TO_AGENT_ID: Dict[str, str] = {
     "AXIOM": "macro_analyst",
@@ -259,8 +269,12 @@ def _build_entry(
     merit_score: float,
     thesis_summary: str,
     drift_flags: str = "none",
+    cycle_status: str = "success",
 ) -> str:
-    """Build a fixed-field MEMORY.md entry string with UTC timestamp header."""
+    """Build a fixed-field MEMORY.md entry string with UTC timestamp header.
+
+    Phase 22: Added [CYCLE_STATUS:] field between DRIFT_FLAGS and THESIS_SUMMARY.
+    """
     timestamp = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
     delta_str = _format_delta(kami_delta)
     score_str = f"{round(merit_score, 4):.4f}"
@@ -271,6 +285,7 @@ def _build_entry(
         f"[KAMI_DELTA:] {delta_str}",
         f"[MERIT_SCORE:] {score_str}",
         f"[DRIFT_FLAGS:] {drift_flags}",
+        f"[CYCLE_STATUS:] {cycle_status}",
         f"[THESIS_SUMMARY:] {thesis_summary}",
         "",
     ]
@@ -475,8 +490,22 @@ def _process_agent(handle: str, state: dict) -> None:
         canonical_text = value.strip()
     drift_flags = _evaluate_drift_flags(agent_id, canonical_text)
 
+    # Phase 22: Determine cycle_status from execution_result
+    exec_result = state.get("execution_result") or {}
+    if exec_result.get("success") is False:
+        failure_cause = exec_result.get("failure_cause")
+        if failure_cause in _EXTERNAL_CAUSES:
+            cycle_status = "external_failure"
+        else:
+            cycle_status = "failed"
+    else:
+        cycle_status = "success"
+
     # Build and write entry
-    entry_text = _build_entry(handle, kami_delta, current_composite, thesis_summary, drift_flags=drift_flags)
+    entry_text = _build_entry(
+        handle, kami_delta, current_composite, thesis_summary,
+        drift_flags=drift_flags, cycle_status=cycle_status,
+    )
     _write_memory_entry(agent_id, entry_text)
 
     # --- Plan 02: Trigger evaluation and proposal emission ---
