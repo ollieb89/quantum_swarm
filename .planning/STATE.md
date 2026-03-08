@@ -3,8 +3,8 @@ gsd_state_version: 1.0
 milestone: v1.3
 milestone_name: MBS Persona System
 status: completed
-last_updated: "2026-03-08T20:43:42.975Z"
-last_activity: "2026-03-08 — 22-01 complete: failure_cause classification in order_router, KAMI recovery signal awareness, CYCLE_STATUS in MEMORY.md"
+last_updated: "2026-03-08T20:51:20.000Z"
+last_activity: "2026-03-08 — 22-02 complete: direct edge order_router -> decision_card_writer, failure cards, full regression"
 progress:
   total_phases: 8
   completed_phases: 7
@@ -26,9 +26,9 @@ Previous: v1.2 Risk Governance — SHIPPED 2026-03-08 (260+ tests, 6 phases)
 ## Current Phase
 
 Phase: 22 (Failure Path KAMI + Memory Logging — IN PROGRESS)
-Plan: 01 complete
-Status: 22-01 complete — failure_cause classification, KAMI recovery signal awareness, CYCLE_STATUS in MEMORY.md
-Last activity: 2026-03-08 — 22-01 complete: failure_cause classification in order_router, KAMI recovery signal awareness, CYCLE_STATUS in MEMORY.md
+Plan: 02 complete
+Status: 22-02 complete — direct edge order_router -> decision_card_writer, failure cards, full regression
+Last activity: 2026-03-08 — 22-02 complete: direct edge order_router -> decision_card_writer, failure cards, full regression
 
 ## Decisions
 
@@ -80,6 +80,8 @@ Last activity: 2026-03-08 — 22-01 complete: failure_cause classification in or
 - [Phase 22-01]: Unknown failure_cause values get 1.0 (fail-open) — penalising unclassified causes would violate user decision "Unknown: neutral/no penalty"
 - [Phase 22-01]: _EXTERNAL_CAUSES duplicated in memory_writer.py — avoids cross-layer coupling between graph and core layers
 - [Phase 22-01]: EXECUTION_FAILURE (generic exception) treated as external — cannot classify without more context, fail-open applies
+- [Phase 22-02]: route_after_order_router deleted entirely — clean removal, direct edge replaces conditional routing
+- [Phase 22-02]: No changes needed to build_decision_card, decision_card_writer_node, or merit_updater — all already handle failure cases generically
 
 ## Progress
 
@@ -99,7 +101,7 @@ Status: Green
 See: `.planning/PROJECT.md` (updated 2026-03-08 after v1.3 milestone start)
 
 **Core value:** Institutional-quality trade signal generation through adversarial AI debate, with self-improving memory rules validated by backtesting, hard compliance guardrails, and immutable per-trade audit trails
-**Current focus:** v1.3 Phase 22 in progress — failure_cause classification and CYCLE_STATUS in MEMORY.md (Plan 01 complete)
+**Current focus:** v1.3 Phase 22 in progress — failure path routing rewired, failure cards + full regression (Plan 02 complete)
 
 ## Architecture
 
