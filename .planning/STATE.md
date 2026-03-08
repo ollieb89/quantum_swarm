@@ -2,9 +2,9 @@
 gsd_state_version: 1.0
 milestone: v1.3
 milestone_name: MBS Persona System
-status: executing
-last_updated: "2026-03-08T09:29:23.660Z"
-last_activity: "2026-03-08 — 15-03 complete: soul wired into all 5 L2 nodes; _strip_excluded in audit hash; warmup_soul_cache in orchestrator; 292 tests passing"
+status: completed
+last_updated: "2026-03-08T09:33:32.700Z"
+last_activity: "2026-03-08 — 15-03 complete: soul wired into all 5 L2 nodes (MacroAnalyst, QuantModeler, BullishResearcher, BearishResearcher); _strip_excluded in audit _calculate_hash; warmup_soul_cache in orchestrator; 292 tests passing (SOUL-04, SOUL-05, SOUL-07 closed)"
 progress:
   total_phases: 5
   completed_phases: 1

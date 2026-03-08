@@ -140,7 +140,7 @@ Plans:
 | 12. Wire MEM-03 End-to-End | v1.1 | 2/2 | Complete | 2026-03-08 |
 | 13. Wire InstitutionalGuard | v1.2 | 2/2 | Complete | 2026-03-08 |
 | 14. Fix MEM-06 Validation Gate | v1.2 | 2/2 | Complete | 2026-03-08 |
-| 15. Soul Foundation | 3/3 | Complete   | 2026-03-08 | - |
+| 15. Soul Foundation | 3/3 | Complete    | 2026-03-08 | - |
 | 16. KAMI Merit Index | v1.3 | 0/TBD | Not started | - |
 | 17. MEMORY.md Evolution + Agent Church | v1.3 | 0/TBD | Not started | - |
 | 18. Theory of Mind Soul-Sync | v1.3 | 0/TBD | Not started | - |
