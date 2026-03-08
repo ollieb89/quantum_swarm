@@ -39,6 +39,7 @@ from typing import Any, Dict, Optional
 import yaml
 
 from src.core.kami import ALL_SOUL_HANDLES
+from src.core.db import get_pool
 from src.core.soul_proposal import (
     PROPOSALS_DIR,
     SoulProposal,
@@ -48,6 +49,32 @@ from src.core.soul_proposal import (
 )
 
 logger = logging.getLogger(__name__)
+
+
+# ---------------------------------------------------------------------------
+# Evolution suspension check (ARS Plan 19-02)
+# ---------------------------------------------------------------------------
+
+async def _check_evolution_suspended(handle: str) -> bool:
+    """Check if agent evolution is suspended via DB query. Non-blocking on failure.
+
+    Queries the agent_merit_scores table for the evolution_suspended flag.
+    Returns False on any error (DB down, missing row, etc.) so that
+    memory writes proceed by default — fail-open for evolution, not trade execution.
+    """
+    try:
+        pool = get_pool()
+        async with pool.connection() as conn:
+            result = await conn.execute(
+                "SELECT evolution_suspended FROM agent_merit_scores WHERE soul_handle = %s",
+                (handle,),
+            )
+            row = await result.fetchone()
+            if row and row[0]:
+                return True
+    except Exception as e:
+        logger.debug("memory_writer: could not check evolution_suspended for %s: %s", handle, e)
+    return False
 
 # ---------------------------------------------------------------------------
 # Constants
@@ -465,16 +492,21 @@ def _process_agent(handle: str, state: dict) -> None:
 async def memory_writer_node(state: dict) -> dict:
     """Write per-agent MEMORY.md entries. Silent node (returns {}). Non-blocking.
 
-    Iterates all 5 soul handles. For each, checks the canonical SwarmState field;
-    writes a structured MEMORY entry if the field is non-None; skips silently otherwise.
-    On any write failure, logs an error and continues — MEMORY is forensic infrastructure,
-    not trade-critical.
+    Iterates all 5 soul handles. For each, checks evolution_suspended flag
+    in DB — if True, skips MEMORY.md write AND proposal emission (ARS-02).
+    Then checks the canonical SwarmState field; writes a structured MEMORY
+    entry if the field is non-None; skips silently otherwise.
+    On any write failure, logs an error and continues — MEMORY is forensic
+    infrastructure, not trade-critical.
 
     Returns:
         {} (no SwarmState mutation)
     """
     for handle in ALL_SOUL_HANDLES:
         try:
+            if await _check_evolution_suspended(handle):
+                logger.warning("memory_writer skipped due to evolution_suspended: %s", handle)
+                continue
             _process_agent(handle, state)
         except Exception as e:
             logger.error("memory_writer: unhandled error for %s: %s", handle, e)
