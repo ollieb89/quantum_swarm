@@ -1,5 +1,5 @@
 import operator
-from typing import Annotated, List, Literal, TypedDict, Optional, Any
+from typing import Annotated, Dict, List, Literal, TypedDict, Optional, Any
 
 class SwarmState(TypedDict):
     """
@@ -74,3 +74,9 @@ class SwarmState(TypedDict):
     # They are excluded from AuditLogger hash input via AUDIT_EXCLUDED_FIELDS.
     system_prompt: Optional[str]    # Full soul content (IDENTITY + SOUL + AGENTS concatenated)
     active_persona: Optional[str]   # Agent handle from first H1 of IDENTITY.md (e.g. 'AXIOM')
+
+    # Phase 16: KAMI Merit Index — earned dynamic merit scores keyed by soul handle.
+    # Plain dict field (NO operator.add reducer) — merit_loader sets at session start,
+    # merit_updater overwrites per cycle. Included in MiFID II audit hash (NOT excluded).
+    # Canonicalize values with round(score, 4) before writing to prevent float jitter.
+    merit_scores: Optional[Dict[str, Any]]

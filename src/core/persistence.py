@@ -104,4 +104,17 @@ async def setup_persistence():
             ALTER TABLE trades ADD COLUMN IF NOT EXISTS pnl_pct NUMERIC;
             """)
             
+        # 4. Agent Merit Scores (Phase 16: KAMI Merit Index)
+        async with pool.connection() as conn:
+            await conn.execute("""
+            CREATE TABLE IF NOT EXISTS agent_merit_scores (
+                soul_handle    VARCHAR(64) PRIMARY KEY,
+                composite      NUMERIC(6, 4) NOT NULL DEFAULT 0.5,
+                dimensions     JSONB,
+                updated_at     TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+                evolution_suspended BOOLEAN DEFAULT FALSE
+            );
+            CREATE INDEX IF NOT EXISTS idx_merit_soul_handle ON agent_merit_scores(soul_handle);
+            """)
+
     logger.info("PostgreSQL schemas initialized.")

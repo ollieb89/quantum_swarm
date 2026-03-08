@@ -243,3 +243,17 @@ notifications:
     risk_breach: true
     daily_loss_threshold: true
     weekly_review_complete: true
+
+# Phase 16: KAMI Merit Index — multi-dimensional earned merit scoring
+kami:
+  # Composite formula weights — must sum to 1.0
+  alpha: 0.30   # Accuracy weight
+  beta: 0.35    # Recovery weight
+  gamma: 0.25   # Consensus weight
+  delta: 0.10   # Fidelity weight
+  # EMA decay rate — higher = more weight on recent signal
+  lambda: 0.9
+  # Cold-start and floor/ceiling
+  default_merit: 0.5
+  merit_floor: 0.1
+  merit_ceil: 1.0
