@@ -1,6 +1,7 @@
 """Unit tests for SoulLoader (SOUL-01, SOUL-03, SOUL-04, SOUL-06)."""
 import pytest
 from src.core.soul_loader import AgentSoul, load_soul, warmup_soul_cache
+from src.core.soul_errors import SoulNotFoundError, SoulSecurityError
 
 
 # --- SOUL-01: load_soul returns populated AgentSoul ---
@@ -35,16 +36,16 @@ class TestLoadSoul:
         soul = load_soul("macro_analyst")
         assert hash(soul) is not None  # frozen=True guarantees hashability
 
-    def test_path_traversal_raises_value_error(self):
-        with pytest.raises(ValueError, match="path traversal"):
+    def test_path_traversal_raises_soul_security_error(self):
+        with pytest.raises(SoulSecurityError, match="path traversal"):
             load_soul("../etc/passwd")
 
     def test_path_traversal_does_not_raise_file_not_found(self):
-        with pytest.raises(ValueError):
+        with pytest.raises(SoulSecurityError):
             load_soul("../../sensitive")
 
-    def test_missing_agent_raises_file_not_found(self):
-        with pytest.raises(FileNotFoundError):
+    def test_missing_agent_raises_soul_not_found_error(self):
+        with pytest.raises(SoulNotFoundError):
             load_soul("nonexistent_agent_xyz")
 
     def test_lru_cache_returns_same_object(self):

@@ -4,6 +4,8 @@ from dataclasses import dataclass
 from functools import lru_cache
 from pathlib import Path
 
+from src.core.soul_errors import SoulNotFoundError, SoulSecurityError
+
 SOULS_DIR = Path(__file__).parent / "souls"
 
 _KNOWN_AGENTS = (
@@ -49,16 +51,16 @@ def load_soul(agent_id: str) -> AgentSoul:
         Immutable AgentSoul with all three soul file contents populated.
 
     Raises:
-        ValueError: If agent_id would escape SOULS_DIR (path traversal).
-        FileNotFoundError: If the agent's soul directory does not exist.
+        SoulSecurityError: If agent_id would escape SOULS_DIR (path traversal).
+        SoulNotFoundError: If the agent's soul directory does not exist.
     """
     target = (SOULS_DIR / agent_id).resolve()
     if not str(target).startswith(str(SOULS_DIR.resolve())):
-        raise ValueError(
+        raise SoulSecurityError(
             f"Invalid agent_id — path traversal detected: {agent_id!r}"
         )
     if not target.is_dir():
-        raise FileNotFoundError(f"No soul directory for agent: {agent_id!r}")
+        raise SoulNotFoundError(f"No soul directory for agent: {agent_id!r}")
 
     identity = (target / "IDENTITY.md").read_text(encoding="utf-8")
     soul = (target / "SOUL.md").read_text(encoding="utf-8")
