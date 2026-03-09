@@ -31,6 +31,7 @@ configure_logging()
 from src.core.cycle_runner import CycleRunner  # noqa: E402
 from src.core.cycle_snapshot import CycleSnapshot  # noqa: E402
 from src.core.persistence import setup_persistence  # noqa: E402
+from src.cli.replay import handle_replay, register_replay_parser  # noqa: E402
 from src.core.soul_loader import reload_souls  # noqa: E402
 from src.graph.orchestrator import create_orchestrator_graph  # noqa: E402
 
@@ -102,7 +103,12 @@ def main() -> None:
         help="Clear and re-warm soul cache before running",
     )
 
+    register_replay_parser(sub)
+
     args = parser.parse_args()
+
+    if args.command == "replay":
+        sys.exit(handle_replay(args))
 
     if args.command != "analyze":
         parser.print_help(sys.stderr)
