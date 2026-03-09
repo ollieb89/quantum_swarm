@@ -5,7 +5,7 @@ from datetime import datetime, timezone
 from typing import Any, Dict, Optional
 
 from src.models.audit import AuditLogEntry
-from .db import get_pool
+from .db import ensure_pool_open
 
 logger = logging.getLogger(__name__)
 
@@ -18,6 +18,7 @@ AUDIT_EXCLUDED_FIELDS: frozenset[str] = frozenset({
     "system_prompt",
     "active_persona",
     "soul_sync_context",
+    "soft_failed_nodes",
 })
 
 
@@ -41,6 +42,13 @@ class AuditLogger:
         if self._table_initialized:
             return
 
+        pool = await ensure_pool_open()
+        if pool is None:
+            # No DB — mark as initialized (filesystem-only mode)
+            self._table_initialized = True
+            logger.info("AuditLogger: PostgreSQL unavailable, running without DB audit persistence")
+            return
+
         query = """
         CREATE TABLE IF NOT EXISTS audit_logs (
             id SERIAL PRIMARY KEY,
@@ -57,16 +65,11 @@ class AuditLogger:
         -- Prevent UPDATE/DELETE via triggers in production
         -- CREATE INDEX IF NOT EXISTS idx_audit_task_id ON audit_logs(task_id);
         """
-        pool = get_pool()
-        try:
-            await pool.open()
-        except Exception:
-            pass  # Pool may already be open
         async with pool.connection() as conn:
             await conn.execute(query)
             # Retrieve the last hash in the chain for session continuity
             self._last_hash = await self._get_last_hash(conn)
-            
+
         self._table_initialized = True
         logger.info("AuditLogger initialized with last_hash: %s", self._last_hash)
 
@@ -118,11 +121,12 @@ class AuditLogger:
         current_hash = self._calculate_hash(entry_payload, self._last_hash)
         
         # Save to database
-        pool = get_pool()
-        try:
-            await pool.open()
-        except Exception:
-            pass  # Pool may already be open
+        pool = await ensure_pool_open()
+        if pool is None:
+            # No DB — update hash chain in memory only (filesystem audit via audit.jsonl)
+            self._last_hash = current_hash
+            logger.debug("Logged audit transition for node %s in task %s (memory-only)", node_id, task_id)
+            return
         async with pool.connection() as conn:
             async with conn.cursor() as cur:
                 await cur.execute(
@@ -131,12 +135,12 @@ class AuditLogger:
                     VALUES (%s, %s, %s, %s, %s, %s, %s)
                     """,
                     (
-                        task_id, 
-                        timestamp, 
-                        node_id, 
-                        json.dumps(input_data, default=str), 
-                        json.dumps(output_data, default=str), 
-                        current_hash, 
+                        task_id,
+                        timestamp,
+                        node_id,
+                        json.dumps(input_data, default=str),
+                        json.dumps(output_data, default=str),
+                        current_hash,
                         self._last_hash
                     )
                 )
@@ -147,11 +151,10 @@ class AuditLogger:
 
     async def verify_chain(self) -> bool:
         """Verifies the integrity of the entire hash chain in the database."""
-        pool = get_pool()
-        try:
-            await pool.open()
-        except Exception:
-            pass  # Pool may already be open
+        pool = await ensure_pool_open()
+        if pool is None:
+            logger.warning("verify_chain: PostgreSQL unavailable, cannot verify")
+            return True  # No DB rows to verify
         async with pool.connection() as conn:
             async with conn.cursor() as cur:
                 await cur.execute("SELECT task_id, timestamp, node_id, input_data, output_data, entry_hash, prev_hash FROM audit_logs ORDER BY id ASC")

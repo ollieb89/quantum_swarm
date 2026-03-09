@@ -90,6 +90,10 @@ class CycleSnapshot(BaseModel):
     # -- Failure context --
     error_context: Optional[dict] = None
 
+    # -- Circuit breaker degraded state (Phase 28) --
+    degraded: bool = False
+    soft_failed_nodes: list[str] = Field(default_factory=list)
+
     # -----------------------------------------------------------------------
     # Helper methods
     # -----------------------------------------------------------------------

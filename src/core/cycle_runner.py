@@ -140,6 +140,7 @@ class CycleRunner:
             "active_persona": None,
             "merit_scores": None,
             "soul_sync_context": None,
+            "soft_failed_nodes": [],
         }
 
     # ------------------------------------------------------------------
@@ -189,6 +190,8 @@ class CycleRunner:
             execution_result=final_state.get("execution_result"),
             decision_card=decision_card,
             error_context=error_ctx,
+            soft_failed_nodes=final_state.get("soft_failed_nodes", []),
+            degraded=bool(final_state.get("soft_failed_nodes")),
         )
 
     # ------------------------------------------------------------------
@@ -229,8 +232,15 @@ class CycleRunner:
         initial_state = self._build_initial_state(user_input)
         task_id = initial_state["task_id"]
 
+        config = {"configurable": {"thread_id": task_id}}
+
+        # Reset per-session budget counters so each cycle starts fresh
+        budget = getattr(self._graph, "budget_manager", None)
+        if budget is not None:
+            budget.reset_session()
+
         try:
-            final_state = await self._graph.ainvoke(initial_state)
+            final_state = await self._graph.ainvoke(initial_state, config=config)
 
             # Determine status from final state
             if final_state.get("risk_approved") is False:
@@ -260,8 +270,8 @@ class CycleRunner:
                 },
             )
 
-        # Validate completed cycles
-        if snapshot.status == "completed":
+        # Validate completed cycles (skip for degraded — partial runs are valid)
+        if snapshot.status == "completed" and not snapshot.degraded:
             snapshot.validate_completed()
 
         # Persist

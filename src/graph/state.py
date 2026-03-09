@@ -85,3 +85,9 @@ class SwarmState(TypedDict):
     # Plain dict field (NO operator.add reducer) — written once by soul_sync_handshake_node.
     # Excluded from AuditLogger hash chain via AUDIT_EXCLUDED_FIELDS (pre-declared Phase 17).
     soul_sync_context: Optional[Dict[str, str]]
+
+    # Phase 28: Circuit Breaker — tracks LLM nodes that soft-failed due to
+    # transient API errors (429/503/timeout).  Uses operator.add reducer so
+    # multiple soft-failed nodes accumulate across the graph run.
+    # Excluded from AuditLogger hash chain (infrastructure metadata, not trade data).
+    soft_failed_nodes: Annotated[List[str], operator.add]

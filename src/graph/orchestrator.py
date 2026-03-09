@@ -18,7 +18,7 @@ from src.core.blackboard import InterAgentBlackboard
 from src.core.budget_manager import BudgetManager
 from src.core.memory_registry import MemoryRegistry
 from src.core.decision_card import build_decision_card, canonical_json, verify_decision_card
-from src.core.db import get_pool
+from src.core.db import ensure_pool_open
 from src.tools.verification_wrapper import SafetyShutdown
 from .agents.researchers import BullishResearcher, BearishResearcher
 from .debate import DebateSynthesizer
@@ -102,7 +102,7 @@ async def decision_card_writer_node(state: SwarmState) -> dict:
         # Fetch prev_audit_hash from PostgreSQL audit_logs
         prev_audit_hash: Any = None
         try:
-            pool = get_pool()
+            pool = await ensure_pool_open()
             async with pool.connection() as conn:
                 async with conn.cursor() as cur:
                     await cur.execute(
@@ -168,10 +168,33 @@ async def decision_card_writer_node(state: SwarmState) -> dict:
 # --- Graph Construction ---
 
 from src.core.audit_logger import AuditLogger
+from src.core.circuit_breaker import CircuitBreaker, CircuitState, is_transient_llm_error
 from src.core.soul_loader import warmup_soul_cache
 
 # Global instance for the orchestrator session
 audit_logger = AuditLogger()
+
+# ---------------------------------------------------------------------------
+# Circuit breaker integration (Phase 28)
+# ---------------------------------------------------------------------------
+
+LLM_NODES: frozenset[str] = frozenset({
+    'macro_analyst', 'quant_modeler',
+    'bullish_researcher', 'bearish_researcher',
+})
+
+_circuit_breaker: CircuitBreaker | None = None
+
+
+def _get_circuit_breaker() -> CircuitBreaker:
+    global _circuit_breaker
+    if _circuit_breaker is None:
+        _circuit_breaker = CircuitBreaker()
+    return _circuit_breaker
+
+
+def _is_circuit_breaker_enabled() -> bool:
+    return os.environ.get("CIRCUIT_BREAKER_ENABLED", "true").lower() != "false"
 
 def with_audit_logging(node_fn, node_id: str):
     """
@@ -193,6 +216,21 @@ def with_audit_logging(node_fn, node_id: str):
         logger.info("node_enter", extra={"node": node_id})
         t0 = _time.monotonic()
 
+        # Circuit breaker: block LLM nodes when circuit is open
+        if node_id in LLM_NODES and _is_circuit_breaker_enabled():
+            cb = _get_circuit_breaker()
+            if not cb.check():
+                logger.info("node_circuit_break", extra={"node": node_id, "state": cb.state.value})
+                # Audit log for hash chain continuity
+                try:
+                    await audit_logger.log_transition(
+                        task_id=task_id, node_id=node_id,
+                        input_data=input_snapshot, output_data={},
+                    )
+                except Exception as e:
+                    logger.error("Failed to log audit transition for soft-failed node %s: %s", node_id, e)
+                return {"soft_failed_nodes": [node_id]}
+
         try:
             # Execute the actual node logic
             # Note: Some nodes might be sync, some async.
@@ -202,13 +240,33 @@ def with_audit_logging(node_fn, node_id: str):
             else:
                 # Run sync nodes in a thread pool to avoid blocking the event loop
                 result = await asyncio.to_thread(node_fn, state, **kwargs)
-        except Exception:
+        except Exception as exc:
             elapsed_ms = round((_time.monotonic() - t0) * 1000, 1)
             logger.info("node_exit", extra={"node": node_id, "duration_ms": elapsed_ms, "status": "error"})
-            raise
+
+            # Circuit breaker: record transient failures for LLM nodes
+            if node_id in LLM_NODES and _is_circuit_breaker_enabled():
+                if is_transient_llm_error(exc):
+                    _get_circuit_breaker().record_failure()
+                    logger.info("node_soft_fail", extra={"node": node_id, "error": str(exc)[:200]})
+                    # Audit log for hash chain continuity
+                    try:
+                        await audit_logger.log_transition(
+                            task_id=task_id, node_id=node_id,
+                            input_data=input_snapshot, output_data={},
+                        )
+                    except Exception as e:
+                        logger.error("Failed to log audit transition for soft-failed node %s: %s", node_id, e)
+                    return {"soft_failed_nodes": [node_id]}
+
+            raise  # Non-transient or non-LLM: re-raise as before
 
         elapsed_ms = round((_time.monotonic() - t0) * 1000, 1)
         logger.info("node_exit", extra={"node": node_id, "duration_ms": elapsed_ms, "status": "ok"})
+
+        # Circuit breaker: record success for LLM nodes
+        if node_id in LLM_NODES and _is_circuit_breaker_enabled():
+            _get_circuit_breaker().record_success()
 
         # Capture the output (the state update)
         output_snapshot = result if isinstance(result, dict) else {}
@@ -234,9 +292,21 @@ def create_orchestrator_graph(config: Dict, checkpointer: Any = None, memory: An
     """Builds the LangGraph orchestration graph.
 
     Args:
-        config: Dict containing agent and runtime settings.
+        config: Dict containing agent and runtime settings.  When empty,
+                swarm_config.yaml is loaded automatically so that intent
+                patterns and thresholds are always available.
         checkpointer: Optional LangGraph checkpointer (e.g. MemorySaver, PostgresSaver).
     """
+    # Load default YAML config when caller passes an empty dict
+    if not config:
+        config_path = os.path.join(
+            os.path.dirname(__file__), "../../config/swarm_config.yaml"
+        )
+        try:
+            with open(config_path) as f:
+                config = yaml.safe_load(f) or {}
+        except (FileNotFoundError, OSError):
+            logger.warning("swarm_config.yaml not found at %s — using empty defaults", config_path)
 
     workflow = StateGraph(SwarmState)
     board = Blackboard()
@@ -367,7 +437,10 @@ def create_orchestrator_graph(config: Dict, checkpointer: Any = None, memory: An
     # Phase 15: Warm up soul cache at graph creation time (fast-fail on missing soul dirs)
     warmup_soul_cache()
 
-    return workflow.compile(checkpointer=checkpointer)
+    compiled = workflow.compile(checkpointer=checkpointer)
+    # Expose budget so callers (e.g. CycleRunner) can reset between cycles
+    compiled.budget_manager = budget  # type: ignore[attr-defined]
+    return compiled
 
 
 def build_graph():
