@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v1.4
 milestone_name: "Beta: Observable Swarm"
 status: executing
-stopped_at: Completed 25-01-PLAN.md
-last_updated: "2026-03-09T05:39:14.036Z"
-last_activity: 2026-03-09 — Completed 24-01 CycleSnapshot model + persistence DDL
+stopped_at: Completed 25-02-PLAN.md
+last_updated: "2026-03-09T05:44:00Z"
+last_activity: 2026-03-09 — Completed 25-02 CLI entry point
 progress:
   total_phases: 4
   completed_phases: 2
   total_plans: 8
-  completed_plans: 7
-  percent: 83
+  completed_plans: 8
+  percent: 88
 ---
 
 # Project State
@@ -27,19 +27,19 @@ Previous: v1.3 MBS Persona System — SHIPPED 2026-03-08 (300+ tests, 8 phases)
 
 ## Current Phase
 
-Phase: 24 of 26 (Cycle Persistence)
-Plan: 1 of 4
+Phase: 25 of 26 (End-to-End Pipeline Runner)
+Plan: 2 of 2
 Status: Executing
-Last activity: 2026-03-09 — Completed 24-01 CycleSnapshot model + persistence DDL
+Last activity: 2026-03-09 — Completed 25-02 CLI entry point
 
-Progress: [########..] 83%
+Progress: [########..] 88%
 
 ## Project Reference
 
 See: `.planning/PROJECT.md` (updated 2026-03-08)
 
 **Core value:** Institutional-quality trade signal generation through adversarial AI debate, with self-improving memory rules validated by backtesting, hard compliance guardrails, and immutable per-trade audit trails
-**Current focus:** Cycle Persistence — CycleSnapshot model, CycleRunner, filesystem writer, query layer
+**Current focus:** End-to-End Pipeline Runner — CLI entry point, structured logging, data resilience
 
 ## Architecture
 
@@ -88,6 +88,7 @@ Status: Green
 | Phase 24 P01 | 2min | 2 tasks | 3 files |
 | Phase 24 P02 | 3min | 2 tasks | 3 files |
 | Phase 25 P01 | 3min | 2 tasks | 8 files |
+| Phase 25 P02 | 3min | 2 tasks | 3 files |
 
 ## Accumulated Context
 
@@ -108,6 +109,8 @@ Recent decisions affecting current work:
 - [Phase 24]: decision_card built as inline dict from audit_ref + status fields (no FK)
 - [Phase 25]: structlog ProcessorFormatter wraps stdlib loggers; logs to stderr for CycleSnapshot JSON isolation
 - [Phase 25]: Disk cache write-always, read-only with QS_DEV_CACHE=1; 1-hour TTL
+- [Phase 25]: Exit code 0 on success (completed/rejected), 1 on failure; DB pool degrades gracefully
+- [Phase 25]: configure_logging() called at module level before project imports for structlog coverage
 
 ### Pending Todos
 
@@ -122,6 +125,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-09T05:39:14.035Z
-Stopped at: Completed 25-01-PLAN.md
+Last session: 2026-03-09T05:44:00Z
+Stopped at: Completed 25-02-PLAN.md
 Resume file: None

@@ -25,9 +25,9 @@ Requirements for the Beta: Observable Swarm release. Each maps to roadmap phases
 
 ### End-to-End Pipeline
 
-- [ ] **PIPE-01**: User can run "Analyze BTC" and the full pipeline executes from intent to decision card
+- [x] **PIPE-01**: User can run "Analyze BTC" and the full pipeline executes from intent to decision card
 - [x] **PIPE-02**: Data fetcher has caching/retry layer resilient to yfinance rate limits
-- [ ] **PIPE-03**: Messages list is bounded to prevent checkpoint state bloat across cycles
+- [x] **PIPE-03**: Messages list is bounded to prevent checkpoint state bloat across cycles
 - [x] **PIPE-04**: Structured logging (structlog) captures pipeline execution for production debugging
 - [x] **PIPE-05**: Soul cache can be reloaded without process restart for development iteration
 
@@ -80,9 +80,9 @@ Which phases cover which requirements. Updated during roadmap creation.
 | CYCL-02 | Phase 24 | Complete |
 | CYCL-03 | Phase 24 | Complete |
 | CYCL-04 | Phase 24 | Complete |
-| PIPE-01 | Phase 25 | Pending |
+| PIPE-01 | Phase 25 | Complete |
 | PIPE-02 | Phase 25 | Complete |
-| PIPE-03 | Phase 25 | Pending |
+| PIPE-03 | Phase 25 | Complete |
 | PIPE-04 | Phase 25 | Complete |
 | PIPE-05 | Phase 25 | Complete |
 | REPL-01 | Phase 26 | Pending |
