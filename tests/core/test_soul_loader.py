@@ -103,9 +103,11 @@ class TestDriftRulesIntegration:
         flag_ids = {r.flag_id for r in soul.drift_rules}
         assert flag_ids == {"recency_bias", "narrative_capture", "certainty_overreach"}
 
-    def test_skeleton_agent_has_empty_drift_rules(self):
+    def test_populated_agent_has_drift_rules(self):
+        """After Phase 23 persona population, all agents have drift rules."""
         soul = load_soul("bullish_researcher")
-        assert soul.drift_rules == ()
+        assert len(soul.drift_rules) > 0
+        assert all(isinstance(r, DriftRule) for r in soul.drift_rules)
 
     def test_drift_rules_field_is_tuple(self):
         soul = load_soul("macro_analyst")
