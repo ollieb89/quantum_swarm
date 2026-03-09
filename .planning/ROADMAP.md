@@ -1,5 +1,5 @@
 ---
-updated: '2026-03-08'
+updated: '2026-03-09'
 ---
 
 # Roadmap: Quantum Swarm
@@ -86,13 +86,15 @@ See: `.planning/milestones/v1.3-ROADMAP.md` for full archive
 **Success Criteria** (what must be TRUE):
   1. User can run any L2 agent and observe reasoning that reflects its unique personality (MOMENTUM talks price action and flow, CASSANDRA talks tail risk and fragility, SIGMA talks quantitative models, GUARDIAN talks risk limits and exposure)
   2. Each persona's SOUL.md contains a valid YAML drift_guard block that ARS drift detection can parse and evaluate
-  3. HEXACO-6 profiles exist for all 5 agents with pairwise Euclidean distance exceeding 3.0 on the 6-dimension scale
+  3. HEXACO-6 profiles exist for all 5 agents with pairwise Euclidean distance exceeding 1.0 on the normalized 0.0-1.0 scale
   4. warmup_soul_cache() loads all 5 agents without errors at graph creation time
-**Plans**: TBD
+**Plans**: 4 plans
 
 Plans:
-- [ ] 23-01: TBD
-- [ ] 23-02: TBD
+- [ ] 23-01-PLAN.md — Test scaffolding + ROADMAP/REQUIREMENTS threshold update
+- [ ] 23-02-PLAN.md — Author MOMENTUM and CASSANDRA personas
+- [ ] 23-03-PLAN.md — Author SIGMA and GUARDIAN personas
+- [ ] 23-04-PLAN.md — HEXACO-6 profiles for all 5 agents + final validation
 
 ### Phase 24: Cycle Persistence
 **Goal**: Every pipeline run produces a complete, queryable cycle snapshot stored outside SwarmState
@@ -170,7 +172,7 @@ Phases execute in numeric order: 23 > 24 > 25 > 26
 | 20. Wire Drift Flags Pipeline | v1.3 | 2/2 | Complete | 2026-03-08 |
 | 21. Consume Soul-Sync Context in Debate | v1.3 | 1/1 | Complete | 2026-03-08 |
 | 22. Failure Path KAMI + Memory Logging | v1.3 | 2/2 | Complete | 2026-03-08 |
-| 23. Full Persona Population | v1.4 | 0/? | Not started | - |
+| 23. Full Persona Population | v1.4 | 0/4 | In Progress | - |
 | 24. Cycle Persistence | v1.4 | 0/? | Not started | - |
 | 25. End-to-End Pipeline Runner | v1.4 | 0/? | Not started | - |
 | 26. Replay CLI | v1.4 | 0/? | Not started | - |
