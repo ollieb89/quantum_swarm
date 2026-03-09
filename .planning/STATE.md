@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v1.4
 milestone_name: "Beta: Observable Swarm"
 status: executing
-stopped_at: Completed 23-02-PLAN.md
-last_updated: "2026-03-09T00:32:14.039Z"
+stopped_at: Completed 23-04-PLAN.md
+last_updated: "2026-03-09T00:37:59.081Z"
 last_activity: 2026-03-09 — Completed 23-03 SIGMA + GUARDIAN persona population
 progress:
   total_phases: 4
-  completed_phases: 0
+  completed_phases: 1
   total_plans: 4
-  completed_plans: 3
+  completed_plans: 4
   percent: 75
 ---
 
@@ -84,6 +84,7 @@ Status: Green
 *Updated after each plan completion*
 | Phase 23 P03 | 3min | 2 tasks | 6 files |
 | Phase 23 P02 | 3min | 2 tasks | 6 files |
+| Phase 23 P04 | 4min | 3 tasks | 6 files |
 
 ## Accumulated Context
 
@@ -98,6 +99,7 @@ Recent decisions affecting current work:
 - [Phase 23]: ROADMAP.md already had correct >1.0 threshold; only REQUIREMENTS.md needed update
 - [Phase 23]: 3 drift rules per agent: SIGMA (overfit_signal, false_precision, untested_signal), GUARDIAN (threshold_erosion, scope_creep, ambiguous_approval)
 - [Phase 23]: 3 drift rules per researcher: MOMENTUM (thesis_recycling, unbounded_optimism, vague_catalyst), CASSANDRA (catastrophism, reflexive_contrarianism, certainty_in_doom)
+- [Phase 23]: HEXACO-6 profiles tuned iteratively: AXIOM con=0.35, GUARDIAN HH=0.20 for max separation; min pairwise distance 1.001
 
 ### Pending Todos
 
@@ -112,6 +114,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-09T00:32:14.038Z
-Stopped at: Completed 23-02-PLAN.md
+Last session: 2026-03-09T00:37:59.080Z
+Stopped at: Completed 23-04-PLAN.md
 Resume file: None
