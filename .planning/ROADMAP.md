@@ -1,5 +1,5 @@
 ---
-updated: '2026-03-09'
+updated: '2026-03-10'
 ---
 
 # Roadmap: Quantum Swarm
@@ -146,7 +146,10 @@ Plans:
   3. After a cycle completes, CycleSnapshot contains per-agent token usage (prompt + completion) with USD cost estimate
   4. Token cost data is visible in the replay CLI when showing a cycle
   5. BudgetManager is the single authoritative source for token counts (no SwarmState reducer double-counting)
-**Plans**: TBD
+**Plans:** 2 plans
+Plans:
+- [ ] 30-01-PLAN.md -- Rebalance KAMI DEFAULT_WEIGHTS (alpha=0.08, delta=0.32) with EMA absorption
+- [ ] 30-02-PLAN.md -- Per-agent token tracking pipeline (BudgetManager -> CycleSnapshot -> replay CLI)
 
 ### Phase 31: ChromaDB Prune-to-Obsidian
 **Goal**: Old ChromaDB vectors are safely archived to searchable Obsidian Markdown and pruned from the database
@@ -195,5 +198,5 @@ Phases execute in numeric order: 27 -> 28 -> 29 -> 30 -> 31
 | 27. Environment Stabilization | v1.5 | 2/2 | Complete | 2026-03-09 |
 | 28. Gemini API Circuit Breaker | v1.5 | 2/2 | Complete | 2026-03-09 |
 | 29. PersonaScore 5D + KAMI Fidelity | 2/2 | Complete    | 2026-03-09 | - |
-| 30. KAMI Weight Rebalance + Token Tracking | v1.5 | 0/? | Not started | - |
+| 30. KAMI Weight Rebalance + Token Tracking | v1.5 | 0/2 | Not started | - |
 | 31. ChromaDB Prune-to-Obsidian | v1.5 | 0/? | Not started | - |
