@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v1.4
 milestone_name: "Beta: Observable Swarm"
 status: executing
-stopped_at: Phase 25 context updated
-last_updated: "2026-03-09T05:02:21.924Z"
+stopped_at: Completed 25-01-PLAN.md
+last_updated: "2026-03-09T05:39:14.036Z"
 last_activity: 2026-03-09 — Completed 24-01 CycleSnapshot model + persistence DDL
 progress:
   total_phases: 4
   completed_phases: 2
-  total_plans: 6
-  completed_plans: 6
+  total_plans: 8
+  completed_plans: 7
   percent: 83
 ---
 
@@ -87,6 +87,7 @@ Status: Green
 | Phase 23 P04 | 4min | 3 tasks | 6 files |
 | Phase 24 P01 | 2min | 2 tasks | 3 files |
 | Phase 24 P02 | 3min | 2 tasks | 3 files |
+| Phase 25 P01 | 3min | 2 tasks | 8 files |
 
 ## Accumulated Context
 
@@ -105,6 +106,8 @@ Recent decisions affecting current work:
 - [Phase 24]: Inline decision_card as Optional[dict] in CycleSnapshot (no FK, per research recommendation)
 - [Phase 24]: SERIAL PK with 'running' default status for placeholder row pattern in cycle_snapshots
 - [Phase 24]: decision_card built as inline dict from audit_ref + status fields (no FK)
+- [Phase 25]: structlog ProcessorFormatter wraps stdlib loggers; logs to stderr for CycleSnapshot JSON isolation
+- [Phase 25]: Disk cache write-always, read-only with QS_DEV_CACHE=1; 1-hour TTL
 
 ### Pending Todos
 
@@ -119,6 +122,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-09T05:02:21.923Z
-Stopped at: Phase 25 context updated
-Resume file: .planning/phases/25-end-to-end-pipeline-runner/25-CONTEXT.md
+Last session: 2026-03-09T05:39:14.035Z
+Stopped at: Completed 25-01-PLAN.md
+Resume file: None
