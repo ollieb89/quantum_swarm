@@ -26,10 +26,10 @@ MERIT_CEIL: float = 1.0
 # Default composite formula weights — must sum to 1.0.
 # Matching config/swarm_config.yaml kami: section.
 DEFAULT_WEIGHTS: Dict[str, float] = {
-    "alpha": 0.30,  # Accuracy weight
+    "alpha": 0.08,  # Accuracy weight (reduced -- frozen at 0.5 until thesis_records)
     "beta": 0.35,   # Recovery weight
     "gamma": 0.25,  # Consensus weight
-    "delta": 0.10,  # Fidelity weight
+    "delta": 0.32,  # Fidelity weight (increased -- fed by continuous PersonaScore)
 }
 
 # All authoritative soul handles in this system.
@@ -217,20 +217,29 @@ def _extract_consensus_signal(state: dict) -> float:
     return min(1.0, abs(score - 0.5) * 2.0)
 
 
-def _extract_fidelity_signal(agent_id: str) -> float:
-    """Derive the fidelity dimension signal by inspecting the agent's soul.
+def _extract_fidelity_signal(
+    agent_id: str, persona_composite: float | None = None
+) -> float:
+    """Derive the fidelity dimension signal.
 
-    Uses Option A from RESEARCH.md: call load_soul(agent_id) and check whether
-    soul.identity has non-empty content. An empty or absent IDENTITY.md indicates
-    a skeleton agent that has not been authored — fidelity 0.0.
+    Phase 29 rewiring: if a continuous PersonaScore composite is available
+    from the previous cycle, use it directly as the fidelity signal (0.0-1.0).
+    Otherwise fall back to the legacy binary soul check.
 
     Args:
         agent_id: Agent directory name under src/core/souls/ (e.g. 'macro_analyst').
+        persona_composite: Previous cycle's PersonaScore composite, or None for
+            legacy fallback. 0.0 is a valid score (does NOT trigger fallback).
 
     Returns:
-        1.0 if soul.identity.strip() is non-empty, otherwise 0.0.
+        Float in [0.0, 1.0]. Continuous when persona_composite provided,
+        binary (0.0 or 1.0) otherwise.
     """
-    # Lazy import inside function to avoid circular-import risk at module load time.
+    # Phase 29: use continuous PersonaScore when available
+    if persona_composite is not None:
+        return persona_composite
+
+    # Legacy fallback: binary soul identity check
     from src.core.soul_loader import load_soul  # noqa: PLC0415
 
     try:
