@@ -14,7 +14,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 # Test 1: invoke_dexter returns STDOUT markdown on success
 # ---------------------------------------------------------------------------
 
-@pytest.mark.asyncio
+
 async def test_dexter_success():
     """Mocked subprocess returns Markdown string."""
     expected_output = "# Report\nBullish"
@@ -41,7 +41,7 @@ async def test_dexter_success():
 # Test 2: invoke_dexter raises TimeoutError when proc takes too long
 # ---------------------------------------------------------------------------
 
-@pytest.mark.asyncio
+
 async def test_dexter_timeout():
     """asyncio.wait_for raises TimeoutError after 90s (mocked)."""
     mock_proc = AsyncMock()
@@ -64,7 +64,7 @@ async def test_dexter_timeout():
 # Test 3: invoke_dexter_safe returns FundamentalsData when env vars are absent
 # ---------------------------------------------------------------------------
 
-@pytest.mark.asyncio
+
 async def test_dexter_missing_env_vars():
     """Returns graceful FundamentalsData with unavailable message when env vars missing."""
     env_without_keys = {

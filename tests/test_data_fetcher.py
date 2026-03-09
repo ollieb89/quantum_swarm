@@ -7,7 +7,6 @@ Tests converted from xfail stubs to real assertions after 03-01 implementation.
 
 import asyncio
 import os
-import pytest
 from datetime import datetime, timezone
 from unittest.mock import AsyncMock, MagicMock, patch
 import pandas as pd
@@ -34,7 +33,7 @@ def _make_mock_df(symbol: str = "AAPL") -> pd.DataFrame:
 # Test 1: yfinance client returns MarketData for equity symbol
 # ---------------------------------------------------------------------------
 
-@pytest.mark.asyncio
+
 async def test_data_fetcher_yfinance():
     """Node returns dict with data_fetcher_result containing MarketData for 'AAPL'."""
     from src.models.data_models import SentimentData, EconomicData
@@ -77,7 +76,7 @@ async def test_data_fetcher_yfinance():
 # Test 2: ccxt client returns MarketData for crypto symbol
 # ---------------------------------------------------------------------------
 
-@pytest.mark.asyncio
+
 async def test_data_fetcher_ccxt():
     """data_fetcher_node with crypto quant_proposal uses the ccxt path."""
     from src.models.data_models import MarketData, SentimentData, EconomicData
@@ -128,7 +127,7 @@ async def test_data_fetcher_ccxt():
 # Test 3: Cache hit — second fetch_equity_data call doesn't invoke yf.download
 # ---------------------------------------------------------------------------
 
-@pytest.mark.asyncio
+
 async def test_data_fetcher_cache():
     """Same ticker queried twice returns cached result (one yfinance.download call)."""
     mock_df = _make_mock_df("MSFT")
@@ -150,7 +149,7 @@ async def test_data_fetcher_cache():
 # Test 4: data_fetcher_node result includes sentiment field
 # ---------------------------------------------------------------------------
 
-@pytest.mark.asyncio
+
 async def test_data_fetcher_news_sentiment():
     """data_fetcher_node result contains a sentiment field with SentimentData-like dict."""
     from src.models.data_models import SentimentData, EconomicData
@@ -193,7 +192,7 @@ async def test_data_fetcher_news_sentiment():
 # Test 5: data_fetcher_node result includes economic field
 # ---------------------------------------------------------------------------
 
-@pytest.mark.asyncio
+
 async def test_data_fetcher_economic():
     """data_fetcher_node result contains an economic field with EconomicData-like dict."""
     from src.models.data_models import SentimentData, EconomicData

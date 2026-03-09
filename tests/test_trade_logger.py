@@ -1,9 +1,8 @@
 """TradeLogger node unit tests."""
 import json
-import pytest
 
 
-@pytest.mark.asyncio
+
 async def test_trade_logger_appends_record():
     """trade_logger_node appends one TradeRecord dict to trade_history."""
     from src.graph.agents.l3.trade_logger import trade_logger_node
@@ -72,7 +71,7 @@ def test_trade_history_window_enforced():
     assert recent[-1]["trade_id"] == "t19"
 
 
-@pytest.mark.asyncio
+
 async def test_trade_record_is_serializable():
     """json.dumps(trade_history_entry) does not raise."""
     from src.graph.agents.l3.trade_logger import trade_logger_node

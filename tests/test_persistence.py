@@ -1,4 +1,3 @@
-import pytest
 import asyncio
 import uuid
 from langgraph.checkpoint.postgres.aio import AsyncPostgresSaver
@@ -6,7 +5,7 @@ from psycopg_pool import AsyncConnectionPool
 from src.graph.orchestrator import create_orchestrator_graph
 from src.core.db import DB_URL, get_pool, close_db_pool
 
-@pytest.mark.asyncio
+
 async def test_langgraph_persistence_postgres():
     """
     Verifies that LangGraph can persist and resume state using PostgreSQL.
@@ -43,7 +42,7 @@ async def test_langgraph_persistence_postgres():
         assert state2.values["user_input"] == "What is the macro outlook?"
         assert state2.next is not None
 
-@pytest.mark.asyncio
+
 async def test_trade_warehouse_persistence():
     """
     Verifies that trade_logger_node successfully writes to the trades table.

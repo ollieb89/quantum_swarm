@@ -17,7 +17,7 @@ async def audit_logger():
     yield logger
     await close_db_pool()
 
-@pytest.mark.asyncio
+
 async def test_audit_chain_integrity(audit_logger):
     """Tests that the hash chain is correctly linked and verifiable."""
     # Use a dummy task ID
@@ -49,7 +49,7 @@ async def test_audit_chain_integrity(audit_logger):
     is_valid = await audit_logger.verify_chain()
     assert is_valid is True, "Audit chain should be valid after normal logging"
 
-@pytest.mark.asyncio
+
 async def test_audit_chain_tamper_detection(audit_logger):
     """Tests that tampering with an entry breaks the chain verification."""
     from src.core.db import get_pool

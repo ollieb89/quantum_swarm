@@ -2,11 +2,10 @@
 tests.test_knowledge_base — Tests for the KnowledgeBase and its graph node.
 """
 
-import pytest
 from src.tools.knowledge_base import get_kb
 from src.graph.nodes.knowledge_base import knowledge_base_node
 
-@pytest.mark.asyncio
+
 async def test_knowledge_base_node_basic():
     """Verify that the knowledge_base_node produces a result in SwarmState."""
     state = {

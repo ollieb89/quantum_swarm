@@ -37,7 +37,7 @@ def test_extract_confidence():
     assert _extract_confidence({"strategy_context": {"confidence": -0.1}}) is None
 
 
-@pytest.mark.asyncio
+
 async def test_calibration_insufficient_data():
     """Audit returns insufficient_data when fewer than 5 closed trades."""
     mock_trades = [
@@ -67,7 +67,7 @@ async def test_calibration_insufficient_data():
     assert any("Insufficient data" in r for r in report.recommendations)
 
 
-@pytest.mark.asyncio
+
 async def test_calibration_band_win_rates():
     """Audit computes win rates per confidence band."""
     # 6 high-confidence: 4 wins, 2 losses
@@ -116,7 +116,7 @@ async def test_calibration_band_win_rates():
     assert report.metrics.calibration_quality in ("good", "degraded", "poor")
 
 
-@pytest.mark.asyncio
+
 async def test_calibration_poor_quality():
     """High-confidence trades that mostly lose yield poor calibration."""
     mock_trades = [
@@ -138,7 +138,7 @@ async def test_calibration_poor_quality():
     assert any("underperform" in r.lower() or "overconfidence" in r.lower() for r in report.recommendations)
 
 
-@pytest.mark.asyncio
+
 async def test_calibration_skips_trades_without_confidence():
     """Trades without confidence in strategy_context are excluded from metrics."""
     mock_trades = [
