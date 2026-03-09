@@ -121,11 +121,11 @@ Plans:
   3. Messages list is trimmed between cycles so checkpoint size stays bounded regardless of how many cycles have run
   4. Pipeline execution emits structured JSON logs (structlog) that capture each node entry/exit with timing for production debugging
   5. Soul cache can be reloaded without restarting the process so persona edits take effect during development iteration
-**Plans**: TBD
+**Plans**: 2 plans
 
 Plans:
-- [ ] 25-01: TBD
-- [ ] 25-02: TBD
+- [ ] 25-01-PLAN.md — structlog config, yfinance retry+cache, soul reload, node timing
+- [ ] 25-02-PLAN.md — CLI entry point (src/main.py) + integration test
 
 ### Phase 26: Replay CLI
 **Goal**: User can review and compare past swarm decisions through a terminal interface
@@ -174,5 +174,5 @@ Phases execute in numeric order: 23 > 24 > 25 > 26
 | 22. Failure Path KAMI + Memory Logging | v1.3 | 2/2 | Complete | 2026-03-08 |
 | 23. Full Persona Population | 4/4 | Complete    | 2026-03-09 | - |
 | 24. Cycle Persistence | 2/2 | Complete    | 2026-03-09 | - |
-| 25. End-to-End Pipeline Runner | v1.4 | 0/? | Not started | - |
+| 25. End-to-End Pipeline Runner | v1.4 | 0/2 | Not started | - |
 | 26. Replay CLI | v1.4 | 0/? | Not started | - |
