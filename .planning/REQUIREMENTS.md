@@ -18,7 +18,7 @@ Requirements for the Beta: Observable Swarm release. Each maps to roadmap phases
 
 ### Cycle Persistence
 
-- [ ] **CYCL-01**: Each pipeline run persists agent memos, debate, consensus, merit scores, and decision card to a numbered cycle folder
+- [x] **CYCL-01**: Each pipeline run persists agent memos, debate, consensus, merit scores, and decision card to a numbered cycle folder
 - [x] **CYCL-02**: CycleSnapshot Pydantic model defines the canonical artifact schema
 - [x] **CYCL-03**: PostgreSQL cycle_snapshots table indexes cycles with monotonic numbering and queryable metadata
 - [x] **CYCL-04**: Cycle manifest includes timestamp, symbol, status, and cycle_id
@@ -76,7 +76,7 @@ Which phases cover which requirements. Updated during roadmap creation.
 | PERS-04 | Phase 23 | Complete |
 | PERS-05 | Phase 23 | Complete |
 | PERS-06 | Phase 23 | Complete |
-| CYCL-01 | Phase 24 | Pending |
+| CYCL-01 | Phase 24 | Complete |
 | CYCL-02 | Phase 24 | Complete |
 | CYCL-03 | Phase 24 | Complete |
 | CYCL-04 | Phase 24 | Complete |
