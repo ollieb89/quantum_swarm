@@ -175,4 +175,4 @@ Phases execute in numeric order: 23 > 24 > 25 > 26
 | 23. Full Persona Population | 4/4 | Complete    | 2026-03-09 | - |
 | 24. Cycle Persistence | 2/2 | Complete    | 2026-03-09 | - |
 | 25. End-to-End Pipeline Runner | 2/2 | Complete    | 2026-03-09 | - |
-| 26. Replay CLI | v1.4 | 0/2 | Not started | - |
+| 26. Replay CLI | 1/2 | In Progress|  | - |
