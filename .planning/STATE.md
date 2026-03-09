@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v1.4
 milestone_name: "Beta: Observable Swarm"
 status: executing
-stopped_at: Completed 23-01-PLAN.md
-last_updated: "2026-03-09T00:26:47.098Z"
-last_activity: 2026-03-09 — Completed 23-01 test scaffolding + threshold update
+stopped_at: Completed 23-03-PLAN.md
+last_updated: "2026-03-09T00:32:07.611Z"
+last_activity: 2026-03-09 — Completed 23-03 SIGMA + GUARDIAN persona population
 progress:
   total_phases: 4
   completed_phases: 0
   total_plans: 4
-  completed_plans: 1
-  percent: 25
+  completed_plans: 3
+  percent: 75
 ---
 
 # Project State
@@ -28,11 +28,11 @@ Previous: v1.3 MBS Persona System — SHIPPED 2026-03-08 (300+ tests, 8 phases)
 ## Current Phase
 
 Phase: 23 of 26 (Full Persona Population)
-Plan: 1 of 4
+Plan: 3 of 4
 Status: Executing
-Last activity: 2026-03-09 — Completed 23-01 test scaffolding + threshold update
+Last activity: 2026-03-09 — Completed 23-03 SIGMA + GUARDIAN persona population
 
-Progress: [##........] 25%
+Progress: [########..] 75%
 
 ## Project Reference
 
@@ -82,6 +82,7 @@ Status: Green
 | Phase 23 P01 | 2min | 2 tasks | 2 files |
 
 *Updated after each plan completion*
+| Phase 23 P03 | 3min | 2 tasks | 6 files |
 
 ## Accumulated Context
 
@@ -94,6 +95,8 @@ Recent decisions affecting current work:
 - [v1.3]: Counter cosine for ARS sentiment (no numpy)
 - [v1.3]: ARS suspension gates evolution only (not trades)
 - [Phase 23]: ROADMAP.md already had correct >1.0 threshold; only REQUIREMENTS.md needed update
+- [Phase 23]: 3 drift rules per agent: SIGMA (overfit_signal, false_precision, untested_signal), GUARDIAN (threshold_erosion, scope_creep, ambiguous_approval)
+- [Phase 23]: 3 drift rules per researcher: MOMENTUM (thesis_recycling, unbounded_optimism, vague_catalyst), CASSANDRA (catastrophism, reflexive_contrarianism, certainty_in_doom)
 
 ### Pending Todos
 
@@ -108,6 +111,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-09T00:26:47.097Z
-Stopped at: Completed 23-01-PLAN.md
+Last session: 2026-03-09T00:31:41.063Z
+Stopped at: Completed 23-03-PLAN.md
 Resume file: None

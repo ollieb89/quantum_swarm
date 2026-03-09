@@ -172,7 +172,7 @@ Phases execute in numeric order: 23 > 24 > 25 > 26
 | 20. Wire Drift Flags Pipeline | v1.3 | 2/2 | Complete | 2026-03-08 |
 | 21. Consume Soul-Sync Context in Debate | v1.3 | 1/1 | Complete | 2026-03-08 |
 | 22. Failure Path KAMI + Memory Logging | v1.3 | 2/2 | Complete | 2026-03-08 |
-| 23. Full Persona Population | 1/4 | In Progress|  | - |
+| 23. Full Persona Population | 3/4 | In Progress|  | - |
 | 24. Cycle Persistence | v1.4 | 0/? | Not started | - |
 | 25. End-to-End Pipeline Runner | v1.4 | 0/? | Not started | - |
 | 26. Replay CLI | v1.4 | 0/? | Not started | - |
