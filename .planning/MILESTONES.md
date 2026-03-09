@@ -1,5 +1,21 @@
 # Milestones
 
+## v1.4 Beta: Observable Swarm (Shipped: 2026-03-09)
+
+**Phases completed:** 4 phases (23-26), 10 plans
+**Commits:** 46
+**LOC:** ~33,949 Python (+10,411 lines in milestone)
+**Timeline:** 2 days (2026-03-08 → 2026-03-09)
+**Git range:** feat(23-01) → feat(26-02)
+
+**Key accomplishments:**
+1. Full Persona Population — All 5 agents (AXIOM, MOMENTUM, CASSANDRA, SIGMA, GUARDIAN) fully authored with distinct HEXACO-6 personality profiles (min pairwise distance >1.0) and YAML drift_guard rules enabling ARS drift detection
+2. Cycle Persistence — CycleSnapshot Pydantic model + PostgreSQL cycle_snapshots table + CycleRunner async wrapper with hybrid DB/filesystem persistence for complete cycle artifacts
+3. End-to-End Pipeline Runner — Production CLI (`python -m src.main analyze BTC --mode paper`), structlog JSON logging, yfinance retry+disk cache, soul hot-reload, node timing in audit wrapper
+4. Replay CLI — Rich terminal interface for listing, stepping through, and comparing persisted cycles with merit bar charts, drift annotations, and side-by-side delta comparison
+
+---
+
 ## v1.3 MBS Persona System (Shipped: 2026-03-08)
 
 **Phases completed:** 8 phases (15-22), 18 plans

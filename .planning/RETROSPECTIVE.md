@@ -189,6 +189,51 @@
 - Sessions: ~3-4 sessions in 1 day
 - 90 commits covering 8 phases (5 core + 3 gap closure)
 
+## Milestone: v1.4 — Beta: Observable Swarm
+
+**Shipped:** 2026-03-09
+**Phases:** 4 (23-26) | **Plans:** 10 | **Tests:** 300+
+
+### What Was Built
+
+- Full persona population: all 5 agents (AXIOM, MOMENTUM, CASSANDRA, SIGMA, GUARDIAN) with distinct HEXACO-6 profiles and YAML drift_guard rules
+- CycleSnapshot Pydantic model + PostgreSQL cycle_snapshots table + CycleRunner async wrapper with hybrid DB/filesystem persistence
+- Production CLI: `python -m src.main analyze BTC --mode paper` with structlog, yfinance retry+cache, soul hot-reload
+- Replay CLI: `python -m src.main replay list|show|compare` with rich table rendering, merit bar charts, drift annotations
+
+### What Worked
+
+- **Persona authoring as content-first phases**: Phase 23 was pure content authoring (SOUL.md, IDENTITY.md, AGENTS.md) with zero code dependencies — simple, parallelizable, and testable through persona content tests
+- **HEXACO-6 diversity enforcement via tests**: Parametrized pytest suite validated pairwise Euclidean distance >1.0 across all agents, catching tuning issues early (AXIOM con=0.35, GUARDIAN HH=0.20 needed adjustment)
+- **CycleRunner external wrapper pattern**: Graph execution wrapped by DI (no graph imports in core) — clean separation between orchestration and persistence
+- **DB-with-filesystem-fallback**: Graceful degradation when PostgreSQL unavailable — replay CLI works in dev environments with filesystem-only cycles
+- **Console/stdout injection for CLI tests**: Handlers accept optional console and stdout params, enabling unit tests without capturing global state
+
+### What Was Inefficient
+
+- **10 plans in 2 days**: Very high velocity but Nyquist VALIDATION.md files skipped again. This is now a consistent pattern across v1.3 and v1.4.
+- **No milestone audit run**: Proceeded directly to milestone completion without running `/gsd:audit-milestone`. All requirements checked off, but integration gaps could exist.
+- **summary-extract CLI failed**: One-liner extraction from SUMMARY.md files returned null — frontmatter may be missing `one_liner` field in newer SUMMARY format.
+
+### Patterns Established
+
+- **Hybrid persistence (DB + filesystem)**: PostgreSQL for metadata queries, filesystem for full snapshot JSON — best of both worlds for queryability and portability
+- **ISO 8601 lexicographic sort**: Timestamp ordering without datetime parsing — simple string comparison works because ISO 8601 is naturally sortable
+- **structlog ProcessorFormatter on root logger**: Wrapping stdlib loggers gives structured logging to third-party libs (yfinance, langchain) without modifying them
+- **Disk cache TTL pattern**: Write-always, read with `QS_DEV_CACHE=1` flag and 1-hour TTL — production always fetches fresh, dev iterates on cached data
+
+### Key Lessons
+
+- **Persona diversity is measurable**: HEXACO-6 Euclidean distance gives a concrete, testable metric for cognitive diversity. The 1.0 threshold forced real tuning rather than "looks different enough."
+- **External wrapper > graph node for cross-cutting concerns**: CycleRunner wraps graph execution without being a graph node — avoids polluting SwarmState with persistence concerns.
+- **Structured logging must be configured before imports**: `configure_logging()` at module level before project imports ensures all modules get structlog formatters.
+
+### Cost Observations
+
+- Model: claude-sonnet-4-6 (balanced profile)
+- Sessions: ~3-4 sessions across 2 days
+- 46 commits covering 4 phases
+
 ## Cross-Milestone Trends
 
 | Milestone | Phases | Tests | Days | LOC |
@@ -197,3 +242,4 @@
 | v1.1 Self-Improvement | 4 | 246 | 3 | ~22,500 |
 | v1.2 Risk Governance  | 6 | 260+ | 2 | ~23,500 |
 | v1.3 MBS Persona System | 8 | 300+ | 1 | ~30,600 |
+| v1.4 Beta: Observable Swarm | 4 | 300+ | 2 | ~33,949 |

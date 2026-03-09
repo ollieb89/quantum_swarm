@@ -2,30 +2,21 @@
 
 ## What This Is
 
-A production-grade hierarchical multi-agent financial analysis swarm built on LangGraph. Specialized cognitive agents with persistent Mind-Body-Soul personas (Macro Analyst, Quant Modeler, adversarial Bull/Bear researchers) synthesize market intelligence through structured debate with merit-weighted consensus, apply institutional risk gating with portfolio-level constraints, execute trades via a multi-venue order router, and continuously self-improve through backtested rule generation and per-agent evolution logs — all with full MiFID II audit provenance, immutable decision cards, and out-of-band drift auditing.
+A production-grade hierarchical multi-agent financial analysis swarm built on LangGraph. Specialized cognitive agents with persistent Mind-Body-Soul personas (Macro Analyst, Quant Modeler, adversarial Bull/Bear researchers) synthesize market intelligence through structured debate with merit-weighted consensus, apply institutional risk gating with portfolio-level constraints, execute trades via a multi-venue order router, and continuously self-improve through backtested rule generation and per-agent evolution logs — all with full MiFID II audit provenance, immutable decision cards, out-of-band drift auditing, persisted cycle snapshots, and a CLI replay interface for reviewing swarm cognition.
 
 ## Core Value
 
 Institutional-quality trade signal generation through adversarial AI debate, with self-improving memory rules validated by backtesting, hard compliance guardrails, and immutable per-trade audit trails — from market data ingestion to PostgreSQL-persisted execution records.
 
-## Current Milestone: v1.4 Beta: Observable Swarm
-
-**Goal:** Make the institution observable — fully populate all personas, run end-to-end against real market data, persist cycles, and replay the swarm's thinking.
-
-**Target features:**
-- Fully populate all 5 agent personas (MOMENTUM, CASSANDRA, SIGMA, GUARDIAN)
-- End-to-end pipeline execution with real market data
-- Per-cycle artifact persistence (agent memos, debate, consensus, merit scores, decision cards)
-- Cycle replay CLI for stepping through and comparing swarm cognition
-- Observable output: merit weights, debate tension, drift flags visible across runs
-
-## Current State (v1.3 shipped)
+## Current State (v1.4 shipped)
 
 - **Runtime:** Python 3.12, LangGraph StateGraph, uv-managed
-- **Infrastructure:** PostgreSQL 17 (AsyncPostgresSaver + Trade Warehouse, port 5433)
+- **Infrastructure:** PostgreSQL 17 (AsyncPostgresSaver + Trade Warehouse + cycle_snapshots, port 5433)
 - **LLM:** Google Gemini (`gemini-2.0-flash`) via `langchain-google-genai`
 - **Tests:** 300+ passing, 0 failures (excluding pre-existing env test files)
-- **LOC:** ~30,600 Python
+- **LOC:** ~33,949 Python
+- **CLI:** `python -m src.main analyze BTC --mode paper` (end-to-end pipeline)
+- **Replay:** `python -m src.main replay list|show|compare` (cycle review)
 
 ### Architecture
 
@@ -44,7 +35,11 @@ L2 Domain Managers (MacroAnalyst, QuantModeler, BullishResearcher, BearishResear
 L3 Executors (DataFetcher → Backtester → OrderRouter → DecisionCardWriter → MeritUpdater → MemoryWriter → TradeLogger)
     │  └─ OrderRouter failures also route through DecisionCardWriter → MeritUpdater → MemoryWriter
     ↓
-PostgreSQL (LangGraph checkpoints + audit_logs + trades + decision_cards + agent_merit_scores + ars_state)
+PostgreSQL (LangGraph checkpoints + audit_logs + trades + decision_cards + agent_merit_scores + ars_state + cycle_snapshots)
+
+CycleRunner (external wrapper):
+    Allocates cycle_id → runs graph → captures CycleSnapshot → persists to DB + filesystem
+    → data/cycles/{padded_id}/snapshot.json
 
 Self-Improvement Pipeline (weekly):
     PerformanceReviewAgent → RuleGenerator → MemoryRegistry (proposed)
@@ -63,6 +58,11 @@ Agent Church (out-of-band, standalone script):
 ARS Drift Auditor (daily systemd timer):
     5 stdlib metrics from MEMORY.md → evolution_suspended if threshold exceeded
     → Never gates trade execution (strict scope boundary)
+
+Replay CLI (read-only):
+    list_cycles() → handle_list() → rich table with filters
+    load_cycle() → handle_show() → step-through with merit bar charts
+    handle_compare() → side-by-side delta with directional arrows
 ```
 
 ## Constraints
@@ -132,14 +132,41 @@ ARS Drift Auditor (daily systemd timer):
 - ✓ ARS-01: ARS Auditor computes 5 drift metrics from MEMORY.md with 30-cycle warm-up — v1.3 Phase 19/20
 - ✓ ARS-02: `evolution_suspended` gates MEMORY.md writes only; no trade path coupling — v1.3 Phase 19
 
-### Active (deferred from v1.2 / future)
+### Validated (v1.4)
 
-- [ ] SOUL-08: All 4 skeleton agent soul dirs fully populated with HEXACO-6 diverse profiles
+- ✓ PERS-01: MOMENTUM (BullishResearcher) fully authored with distinct price/flow personality — v1.4 Phase 23
+- ✓ PERS-02: CASSANDRA (BearishResearcher) fully authored with distinct tail-risk personality — v1.4 Phase 23
+- ✓ PERS-03: SIGMA (QuantModeler) fully authored with distinct quantitative personality — v1.4 Phase 23
+- ✓ PERS-04: GUARDIAN (RiskManager) fully authored with distinct risk-control personality — v1.4 Phase 23
+- ✓ PERS-05: HEXACO-6 diversity profiles with minimum pairwise distance >1.0 — v1.4 Phase 23
+- ✓ PERS-06: Functional YAML drift_guard blocks enabling ARS drift detection — v1.4 Phase 23
+- ✓ CYCL-01: Pipeline runs persist complete cycle artifacts to numbered folders — v1.4 Phase 24
+- ✓ CYCL-02: CycleSnapshot Pydantic model defines canonical artifact schema — v1.4 Phase 24
+- ✓ CYCL-03: PostgreSQL cycle_snapshots table with monotonic numbering — v1.4 Phase 24
+- ✓ CYCL-04: Cycle manifest includes timestamp, symbol, status, cycle_id — v1.4 Phase 24
+- ✓ PIPE-01: Full pipeline from "Analyze BTC" to persisted decision card — v1.4 Phase 25
+- ✓ PIPE-02: Data fetcher with caching/retry layer for yfinance resilience — v1.4 Phase 25
+- ✓ PIPE-03: Messages list bounded to prevent checkpoint bloat — v1.4 Phase 25
+- ✓ PIPE-04: Structured logging (structlog) for production debugging — v1.4 Phase 25
+- ✓ PIPE-05: Soul cache hot-reload without process restart — v1.4 Phase 25
+- ✓ REPL-01: List all cycles with summary metadata — v1.4 Phase 26
+- ✓ REPL-02: Step through cycle (memos → debate → consensus → decision card) — v1.4 Phase 26
+- ✓ REPL-03: Navigate between cycles (previous/next) — v1.4 Phase 26
+- ✓ REPL-04: Merit weights visualized per cycle — v1.4 Phase 26
+- ✓ REPL-05: Drift flags and ARS signals displayed — v1.4 Phase 26
+- ✓ REPL-06: Compare two cycles side-by-side — v1.4 Phase 26
+
+### Active (deferred / future)
+
+- [ ] SOUL-08: All 4 skeleton agent soul dirs fully populated with HEXACO-6 diverse profiles — DONE (completed as PERS-01 through PERS-06 in v1.4)
 - [ ] SOUL-09: PersonaScore 5D LLM-as-Judge fidelity evaluation pipeline
 - [ ] ANALY-05: RL optimization for order flow — v2.0
 - [ ] SEC-03: System-wide circuit breakers for API degradation or anomalous strategy behavior
 - [ ] MEM-07: Regime-aware vector memory for recognizing long-term historical parallels — v2.0
 - [ ] ORCH-06: Multi-modal input support (chart image analysis) — v2.0
+- [ ] OBS-01: Real-time WebSocket dashboard for live cycle monitoring
+- [ ] OBS-02: Token cost tracking per cycle for budget analysis
+- [ ] OBS-03: Obsidian vault integration for cycle data browsing
 
 ### Out of Scope
 
@@ -151,7 +178,7 @@ ARS Drift Auditor (daily systemd timer):
 - LLM-as-Judge for ARS drift detection — circular evaluation, adds API cost
 - Global SOUL.md (shared swarm identity) — collapses adversarial diversity
 - Real-time SOUL.md mutation mid-graph-run — lru_cache race condition
-- HEXACO-6 automated diversity enforcement gate — deferred until all personas fully populated
+- HEXACO-6 automated diversity enforcement gate — deferred until persona fidelity pipeline exists
 - Sentence-transformers for ARS — Counter cosine sufficient at current scale
 
 ## Key Decisions
@@ -177,12 +204,18 @@ ARS Drift Auditor (daily systemd timer):
 | ARS suspension gates evolution only (not trades) | Strict scope boundary prevents safety layer from blocking revenue | ✓ Good |
 | Counter cosine for ARS sentiment (no numpy) | stdlib only, no new dependencies for background audit | ✓ Good |
 | Direct edge for failure path (no conditional routing) | Clean routing; failures always flow through KAMI+memory | ✓ Good |
+| CycleSnapshot inline decision_card (no FK) | Simpler schema; cycle artifacts self-contained | ✓ Good |
+| SERIAL PK with 'running' default for cycle_snapshots | Placeholder row pattern enables pre-allocation of cycle_id | ✓ Good |
+| structlog ProcessorFormatter wraps stdlib loggers | Unified structured logging across project + third-party libs | ✓ Good |
+| Disk cache write-always, read with QS_DEV_CACHE=1 | Production always fetches fresh; dev iteration uses cache | ✓ Good |
+| DB-with-filesystem-fallback for cycle listing | Graceful degradation when PostgreSQL unavailable | ✓ Good |
+| Console/stdout injection for CLI testability | Handlers accept optional console/stdout params for testing | ✓ Good |
 
 ## Context
 
-Shipped v1.3 on 2026-03-08 (8 phases, 18 plans, 90 commits). Full Mind-Body-Soul persona system live: SoulLoader with frozen AgentSoul dataclass, KAMI merit-weighted consensus in DebateSynthesizer, per-agent MEMORY.md forensic logs, Agent Church approval gate for soul mutations, Theory of Mind soul-sync handshake before debate, ARS drift auditor with 5 stdlib metrics and daily systemd timer.
+Shipped v1.4 on 2026-03-09 (4 phases, 10 plans, 46 commits). Beta release makes the swarm fully observable: all 5 agents have distinct HEXACO-6 personalities with drift guard rules, end-to-end pipeline runs from CLI with structured logging and data resilience, cycles persist to PostgreSQL + filesystem, and replay CLI enables stepping through and comparing past swarm decisions.
 Known env issues: broken `ccxt`, missing `chromadb` and `pytest-asyncio` (~13 tests affected, not regressions).
-Tech debt from v1.3: skeleton agents have no YAML drift_guard block, Nyquist VALIDATION.md partial/missing for phases 15-22, thesis_records/ stub for deferred Accuracy dimension.
+Tech debt: KAMI Accuracy dimension frozen at 0.5 (30% of merit score inert) — needs thesis_records or weight reduction. Nyquist VALIDATION.md partial/missing for phases 15-26.
 
 ---
-*Last updated: 2026-03-08 after v1.4 milestone started*
+*Last updated: 2026-03-09 after v1.4 milestone*
