@@ -78,6 +78,7 @@ class CycleSnapshot(BaseModel):
     # -- Merit / persona --
     merit_scores: Optional[dict] = None
     soul_sync_context: Optional[dict] = None
+    persona_scores: Optional[dict] = None
 
     # -- Risk gate --
     risk_approved: Optional[bool] = None

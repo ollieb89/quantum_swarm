@@ -19,6 +19,7 @@ AUDIT_EXCLUDED_FIELDS: frozenset[str] = frozenset({
     "active_persona",
     "soul_sync_context",
     "soft_failed_nodes",
+    "persona_scores",
 })
 
 
