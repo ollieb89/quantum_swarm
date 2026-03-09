@@ -10,31 +10,18 @@ import logging
 from datetime import datetime, timezone
 from typing import Any, Dict, List, Tuple
 
-# import ccxt.async_support as ccxt
-from unittest.mock import MagicMock, AsyncMock
-import time
-
-ccxt = MagicMock()
-ccxt.async_support = MagicMock()
-
-# Mocking the exchange class (getattr(ccxt, exchange_id))
-def mock_exchange_class(*args, **kwargs):
-    exchange = MagicMock()
-    # Ensure fetch_ohlcv returns valid simulated data
-    # [timestamp_ms, open, high, low, close, volume]
-    mock_ohlcv = [[int(time.time() * 1000), 67000.0, 67500.0, 66500.0, 67000.0, 100.0]]
-    exchange.fetch_ohlcv = AsyncMock(return_value=mock_ohlcv)
-    exchange.close = AsyncMock()
-    return exchange
-
-# Direct mock for popular exchanges
-ccxt.binance = mock_exchange_class
-ccxt.coinbase = mock_exchange_class
-ccxt.kraken = mock_exchange_class
-
-
-
 from src.models.data_models import MarketData
+
+_ccxt_async = None
+
+
+def _get_ccxt_async():
+    """Lazy import of ccxt.async_support -- no side effects at module load."""
+    global _ccxt_async
+    if _ccxt_async is None:
+        import ccxt.async_support as _mod
+        _ccxt_async = _mod
+    return _ccxt_async
 
 logger = logging.getLogger(__name__)
 
@@ -69,8 +56,8 @@ async def fetch_crypto_ohlcv(
     logger.info("Fetching crypto data for %s from %s (%s)", symbol, exchange_id, timeframe)
 
     # Initialize async exchange client
-    exchange_class = getattr(ccxt, exchange_id)
-    # If we are in a test and the exchange_class is a Mock, it might return a Mock
+    ccxt_mod = _get_ccxt_async()
+    exchange_class = getattr(ccxt_mod, exchange_id)
     exchange = exchange_class({"enableRateLimit": True})
 
     try:
