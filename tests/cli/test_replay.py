@@ -208,6 +208,44 @@ class TestHandleShow:
         # MOMENTUM has soul_sync_context entry -> drift annotation
         assert "DRIFT" in output or "drift" in output.lower()
 
+    def test_show_renders_token_usage(self, tmp_cycles):
+        """handle_show renders token usage inline when present."""
+        from src.cli.replay import handle_show
+        import os
+
+        # Write a cycle with token_usage
+        snap_data = _make_snapshot(
+            cycle_id=50,
+            token_usage={
+                "macro_analyst": {
+                    "input_tokens": 500,
+                    "output_tokens": 200,
+                    "total_tokens": 700,
+                    "usd_cost": 0.0975,
+                },
+                "quant_modeler": {
+                    "input_tokens": 300,
+                    "output_tokens": 100,
+                    "total_tokens": 400,
+                    "usd_cost": 0.0525,
+                },
+            },
+        )
+        d = os.path.join(tmp_cycles, "000050")
+        os.makedirs(d)
+        with open(os.path.join(d, "snapshot.json"), "w") as f:
+            json.dump(snap_data, f)
+
+        args = Namespace(cycle_id=50, json=False)
+        buf = io.StringIO()
+        console = Console(file=buf, force_terminal=False, width=120)
+        code = handle_show(args, base_dir=tmp_cycles, console=console)
+        assert code == 0
+        output = buf.getvalue()
+        assert "Token Usage" in output
+        assert "macro_analyst" in output
+        assert "1,100" in output  # total tokens = 700 + 400
+
     def test_show_handles_failed_cycle(self, tmp_cycles):
         """Failed cycle with partial data should not crash."""
         from src.cli.replay import handle_show

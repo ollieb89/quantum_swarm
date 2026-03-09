@@ -9,7 +9,7 @@ They use create_react_agent from langgraph.prebuilt to build compiled sub-graphs
 that are invoked synchronously inside each node. Outputs are written back into
 state["messages"] as AIMessage entries.
 
-Model: gemini-2.0-flash (fast, cost-efficient for high-frequency analysis)
+Model: gemini-2.5-flash (fast, cost-efficient for high-frequency analysis)
 """
 
 import logging
@@ -156,7 +156,7 @@ def MacroAnalyst(state: SwarmState, budget: Optional[BudgetManager] = None) -> d
             usage = last_msg.usage_metadata
             input_tokens = usage.get("input_tokens", 0)
             output_tokens = usage.get("output_tokens", 0)
-            budget.record_usage(input_tokens=input_tokens, output_tokens=output_tokens)
+            budget.record_usage(input_tokens=input_tokens, output_tokens=output_tokens, agent_id="macro_analyst")
             tokens_to_add = input_tokens + output_tokens
     else:
         content = "MacroAnalyst: no output produced"
@@ -232,7 +232,7 @@ def QuantModeler(state: SwarmState, budget: Optional[BudgetManager] = None) -> d
             usage = last_msg.usage_metadata
             input_tokens = usage.get("input_tokens", 0)
             output_tokens = usage.get("output_tokens", 0)
-            budget.record_usage(input_tokens=input_tokens, output_tokens=output_tokens)
+            budget.record_usage(input_tokens=input_tokens, output_tokens=output_tokens, agent_id="quant_modeler")
             tokens_to_add = input_tokens + output_tokens
     else:
         content = "QuantModeler: no output produced"

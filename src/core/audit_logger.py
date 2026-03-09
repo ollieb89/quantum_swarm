@@ -20,6 +20,7 @@ AUDIT_EXCLUDED_FIELDS: frozenset[str] = frozenset({
     "soul_sync_context",
     "soft_failed_nodes",
     "persona_scores",
+    "token_usage",
 })
 
 

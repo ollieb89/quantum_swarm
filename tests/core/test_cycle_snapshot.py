@@ -165,6 +165,32 @@ class TestSerialization:
         assert isinstance(d["timestamp"], str)
 
 
+class TestTokenUsage:
+    """Tests for token_usage field (Phase 30)."""
+
+    def test_token_usage_field(self):
+        """token_usage round-trips through model_dump/model_validate."""
+        token_data = {
+            "macro_analyst": {
+                "input_tokens": 100,
+                "output_tokens": 50,
+                "total_tokens": 150,
+                "usd_cost": 0.0225,
+            }
+        }
+        snap = CycleSnapshot(**_full_snapshot(token_usage=token_data))
+        assert snap.token_usage == token_data
+
+        dumped = snap.model_dump(mode="json")
+        restored = CycleSnapshot.model_validate(dumped)
+        assert restored.token_usage == token_data
+
+    def test_token_usage_defaults_none(self):
+        """token_usage defaults to None when not provided."""
+        snap = CycleSnapshot(**_full_snapshot())
+        assert snap.token_usage is None
+
+
 class TestManifestFields:
     """Manifest fields are always present on any valid snapshot."""
 

@@ -324,6 +324,11 @@ class CycleRunner:
                 },
             )
 
+        # Populate per-agent token usage from BudgetManager before persist
+        budget = getattr(self._graph, "budget_manager", None)
+        if budget is not None:
+            snapshot.token_usage = budget.per_agent_summary()
+
         # Validate completed cycles (skip for degraded — partial runs are valid)
         if snapshot.status == "completed" and not snapshot.degraded:
             snapshot.validate_completed()

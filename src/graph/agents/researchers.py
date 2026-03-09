@@ -8,7 +8,7 @@ BullishResearcher seeks SUPPORTING evidence for a bullish thesis.
 BearishResearcher seeks REFUTING evidence, looking for bearish signals.
 
 Both agents:
-  - Use gemini-2.0-flash (fast, cost-efficient)
+  - Use gemini-2.5-flash (fast, cost-efficient)
   - Have a tool budget of 5 calls per invocation (via BudgetedTool)
   - Require a hypothesis= kwarg on every tool call (enforced by BudgetedTool)
   - Append tagged AIMessage findings to state["messages"] for DebateSynthesizer
@@ -160,6 +160,7 @@ def _run_researcher_agent(
     budgeted_tools: list[BudgetedTool],
     budget: Optional[BudgetManager] = None,
     soul_system_message: Optional[SystemMessage] = None,
+    agent_id: Optional[str] = None,
 ) -> tuple[str, int]:
     """Run a simple ReAct loop with budgeted tools and return the final text and tokens used.
 
@@ -197,7 +198,7 @@ def _run_researcher_agent(
             u = response.usage_metadata
             inp = int(u.get("input_tokens", 0))
             out = int(u.get("output_tokens", 0))
-            budget.record_usage(input_tokens=inp, output_tokens=out)
+            budget.record_usage(input_tokens=inp, output_tokens=out, agent_id=agent_id)
             tokens_used += inp + out
 
         # Check for tool calls
@@ -299,6 +300,7 @@ def BullishResearcher(state: SwarmState, budget: Optional[BudgetManager] = None)
             budgeted_tools=budgeted_tools,
             budget=budget,
             soul_system_message=SystemMessage(content=soul.system_prompt),
+            agent_id="bullish_research",
         )
     except Exception as exc:
         logger.warning("BullishResearcher encountered error: %s", exc)
@@ -317,8 +319,6 @@ def BullishResearcher(state: SwarmState, budget: Optional[BudgetManager] = None)
         "messages": [response],
         "total_tokens": tokens_to_add,
         "bullish_thesis": {"text": content},
-        "system_prompt": soul.system_prompt,
-        "active_persona": soul.active_persona,
     }
 
 
@@ -379,6 +379,7 @@ def BearishResearcher(state: SwarmState, budget: Optional[BudgetManager] = None)
             budgeted_tools=budgeted_tools,
             budget=budget,
             soul_system_message=SystemMessage(content=soul.system_prompt),
+            agent_id="bearish_research",
         )
     except Exception as exc:
         logger.warning("BearishResearcher encountered error: %s", exc)
@@ -397,8 +398,6 @@ def BearishResearcher(state: SwarmState, budget: Optional[BudgetManager] = None)
         "messages": [response],
         "total_tokens": tokens_to_add,
         "bearish_thesis": {"text": content},
-        "system_prompt": soul.system_prompt,
-        "active_persona": soul.active_persona,
     }
 
 

@@ -288,6 +288,21 @@ def handle_show(
         con,
     )
 
+    # -- Token Usage --
+    if snapshot.token_usage:
+        parts = []
+        total_tokens = 0
+        total_cost = 0.0
+        for agent_id, usage in snapshot.token_usage.items():
+            agent_total = usage.get("total_tokens", 0)
+            total_tokens += agent_total
+            total_cost += usage.get("usd_cost", 0.0)
+            parts.append(f"{agent_id}: {agent_total:,}")
+        token_line = f"Tokens: {total_tokens:,} (${total_cost:.4f})"
+        if parts:
+            token_line += " | " + " | ".join(parts)
+        con.print(f"\n[bold]Token Usage:[/bold] {token_line}")
+
     # -- Decision Card --
     con.print()
     con.print("[bold]Decision Card[/bold]")

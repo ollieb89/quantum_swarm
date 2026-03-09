@@ -128,7 +128,7 @@ def classify_intent_with_registry(
     if budget is not None:
         budget.check_budget()
         # Record a dummy cost for intent classification (e.g. 50 input tokens)
-        budget.record_usage(input_tokens=50, output_tokens=0)
+        budget.record_usage(input_tokens=50, output_tokens=0, agent_id="classify_intent")
 
     user_input = state.get("user_input", "")
     registry = _get_registry()
