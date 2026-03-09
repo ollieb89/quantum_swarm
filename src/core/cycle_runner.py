@@ -16,6 +16,12 @@ from pathlib import Path
 from typing import Any, Optional
 
 from .cycle_snapshot import CycleSnapshot
+from .persona_scorer import (
+    evaluate_all_agents,
+    persist_persona_scores,
+    HANDLE_TO_OUTPUT_FIELD,
+    PersonaScoreEntry,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -214,6 +220,54 @@ class CycleRunner:
         return file_path
 
     # ------------------------------------------------------------------
+    # Post-cycle persona evaluation (Phase 29)
+    # ------------------------------------------------------------------
+
+    async def _evaluate_persona_scores(
+        self, snapshot: CycleSnapshot, final_state: dict
+    ) -> None:
+        """Evaluate persona fidelity for all agents after cycle completion.
+
+        Extracts agent outputs from final_state using HANDLE_TO_OUTPUT_FIELD,
+        runs LLM-as-Judge evaluation, persists scores to DB, and updates the
+        snapshot JSON file. Never raises -- all exceptions are caught and logged.
+        """
+        try:
+            # Extract agent outputs from final state
+            agent_outputs = {
+                handle: final_state.get(field)
+                for handle, field in HANDLE_TO_OUTPUT_FIELD.items()
+            }
+
+            # Run evaluation
+            scores = await evaluate_all_agents(agent_outputs, snapshot.cycle_id)
+
+            # Persist to DB
+            await persist_persona_scores(snapshot.cycle_id, scores)
+
+            # Update snapshot model
+            snapshot.persona_scores = {
+                h: e.model_dump() for h, e in scores.items()
+            }
+
+            # Rewrite snapshot file with persona_scores
+            snap_dir = Path(snapshot.snapshot_dir(base=self._base_dir))
+            snap_file = snap_dir / "snapshot.json"
+            if snap_file.exists():
+                existing = json.loads(snap_file.read_text(encoding="utf-8"))
+                existing["persona_scores"] = snapshot.persona_scores
+                snap_file.write_text(
+                    json.dumps(existing, indent=2, default=str),
+                    encoding="utf-8",
+                )
+
+        except Exception:
+            logger.exception(
+                "Persona scoring failed for cycle %s — continuing without scores",
+                snapshot.cycle_id,
+            )
+
+    # ------------------------------------------------------------------
     # Main entry point
     # ------------------------------------------------------------------
 
@@ -277,6 +331,10 @@ class CycleRunner:
         # Persist
         self._write_snapshot_file(snapshot)
         await self._update_cycle_row(snapshot)
+
+        # Post-cycle persona evaluation (Phase 29) -- skip for failed cycles
+        if snapshot.status != "failed":
+            await self._evaluate_persona_scores(snapshot, final_state)
 
         logger.info(
             "Cycle %s (%s) finished: status=%s",
