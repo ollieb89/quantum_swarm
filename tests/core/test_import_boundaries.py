@@ -61,6 +61,9 @@ class TestCoreLeafImports:
     def test_logging_config_imports_cleanly(self):
         _isolated_import("src.core.logging_config")
 
+    def test_cycle_store_imports_cleanly(self):
+        _isolated_import("src.core.cycle_store")
+
 
 class TestNoCoreToAgentImport:
     """Leaf core modules must not import from agents or orchestrator."""
@@ -152,4 +155,14 @@ class TestNoCoreToAgentImport:
         for line in import_lines:
             assert "src.graph" not in line, (
                 f"cycle_runner.py must not import from src.graph.*: {line.strip()}"
+            )
+
+    def test_cycle_store_does_not_import_graph(self):
+        import src.core.cycle_store as m
+        with open(m.__file__, encoding="utf-8") as f:
+            lines = f.readlines()
+        import_lines = [l for l in lines if l.startswith("from ") or l.startswith("import ")]
+        for line in import_lines:
+            assert "src.graph" not in line, (
+                f"cycle_store.py must not import from src.graph.*: {line.strip()}"
             )

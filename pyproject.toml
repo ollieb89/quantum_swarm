@@ -34,6 +34,8 @@ dependencies = [
     "psycopg>=3.3.3",
     "langgraph-checkpoint-postgres>=3.0.4",
     "fredapi>=0.5.2",
+    "rich>=13.0",
+    "structlog>=25.0",
 ]
 
 [dependency-groups]
