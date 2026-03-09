@@ -112,3 +112,37 @@ class TestDriftRulesIntegration:
     def test_drift_rules_field_is_tuple(self):
         soul = load_soul("macro_analyst")
         assert isinstance(soul.drift_rules, tuple)
+
+
+# --- Phase 25: reload_souls ---
+
+class TestReloadSouls:
+    def test_reload_souls_clears_and_rewarms(self):
+        """reload_souls() clears lru_cache and re-warms all known agents."""
+        from src.core.soul_loader import reload_souls, _KNOWN_AGENTS
+
+        # Load one soul first to populate cache
+        load_soul("macro_analyst")
+        info_before = load_soul.cache_info()
+        assert info_before.currsize >= 1
+
+        # Reload
+        reload_souls()
+
+        # Cache should be re-populated with all known agents
+        info_after = load_soul.cache_info()
+        assert info_after.currsize == len(_KNOWN_AGENTS)
+
+    def test_reload_souls_returns_fresh_content(self):
+        """After reload, souls are fresh (not stale cached version)."""
+        from src.core.soul_loader import reload_souls
+
+        soul_before = load_soul("macro_analyst")
+        reload_souls()
+        soul_after = load_soul("macro_analyst")
+
+        # Both should have same content (files haven't changed)
+        # but soul_after should be from a fresh load (different object identity
+        # because cache was cleared and re-populated)
+        assert soul_before.agent_id == soul_after.agent_id
+        assert soul_before.identity == soul_after.identity

@@ -161,3 +161,13 @@ def warmup_soul_cache() -> None:
     """
     for agent_id in _KNOWN_AGENTS:
         load_soul(agent_id)
+
+
+def reload_souls() -> None:
+    """Clear soul lru_cache and re-warm all known agents.
+
+    Use when SOUL.md files have been modified at runtime and the
+    orchestrator needs to pick up the new content without restarting.
+    """
+    load_soul.cache_clear()
+    warmup_soul_cache()

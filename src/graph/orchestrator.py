@@ -177,27 +177,42 @@ def with_audit_logging(node_fn, node_id: str):
     """
     Decorator/Wrapper to automatically log node transitions with the AuditLogger.
     Ensures every node execution is recorded with its input, output, and hash chain.
+    Emits node_enter / node_exit structured log events with wall-clock duration_ms.
     """
     async def wrapped_node(state: SwarmState, **kwargs):
+        import time as _time
+
         # Identify the task context
         task_id = state.get("task_id", "unknown")
-        
+
         # In a real LangGraph node, input is the state.
         # We capture a snippet of the state for audit (avoiding massive binary blobs if any)
         input_snapshot = {k: v for k, v in state.items() if not k.startswith("_")}
-        
-        # Execute the actual node logic
-        # Note: Some nodes might be sync, some async. 
-        # Since we are in an async context (orchestrator), we handle both.
-        if asyncio.iscoroutinefunction(node_fn):
-            result = await node_fn(state, **kwargs)
-        else:
-            # Run sync nodes in a thread pool to avoid blocking the event loop
-            result = await asyncio.to_thread(node_fn, state, **kwargs)
-        
+
+        # Emit structured node_enter event
+        logger.info("node_enter", extra={"node": node_id})
+        t0 = _time.monotonic()
+
+        try:
+            # Execute the actual node logic
+            # Note: Some nodes might be sync, some async.
+            # Since we are in an async context (orchestrator), we handle both.
+            if asyncio.iscoroutinefunction(node_fn):
+                result = await node_fn(state, **kwargs)
+            else:
+                # Run sync nodes in a thread pool to avoid blocking the event loop
+                result = await asyncio.to_thread(node_fn, state, **kwargs)
+        except Exception:
+            elapsed_ms = round((_time.monotonic() - t0) * 1000, 1)
+            logger.info("node_exit", extra={"node": node_id, "duration_ms": elapsed_ms, "status": "error"})
+            raise
+
+        elapsed_ms = round((_time.monotonic() - t0) * 1000, 1)
+        logger.info("node_exit", extra={"node": node_id, "duration_ms": elapsed_ms, "status": "ok"})
+
         # Capture the output (the state update)
         output_snapshot = result if isinstance(result, dict) else {}
-        
+
         # Asynchronously log the transition
         try:
             await audit_logger.log_transition(
@@ -210,9 +225,9 @@ def with_audit_logging(node_fn, node_id: str):
             logger.error("Failed to log audit transition for node %s: %s", node_id, e)
             # In institutional compliance, a logging failure might require a halt.
             # For now, we log the error and continue.
-            
+
         return result
-        
+
     return wrapped_node
 
 def create_orchestrator_graph(config: Dict, checkpointer: Any = None, memory: Any = None):
