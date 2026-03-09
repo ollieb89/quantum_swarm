@@ -12,7 +12,7 @@ Config keys (under ``budget:`` in swarm_config.yaml)::
       daily_token_limit:   1000000      # max tokens per calendar day (rough)
       daily_usd_limit:     5.00         # max USD spend per day
       model_pricing:
-        gemini-2.0-flash:
+        gemini-2.5-flash:
           input_per_million:  0.075     # USD per 1 M input tokens
           output_per_million: 0.30      # USD per 1 M output tokens
 
@@ -86,6 +86,7 @@ class BudgetManager:
         self._session_input_tokens: int = 0
         self._session_output_tokens: int = 0
         self._session_usd: float = 0.0
+        self._per_agent: Dict[str, Dict[str, Any]] = {}
 
     # ------------------------------------------------------------------
     # Public API
@@ -96,6 +97,7 @@ class BudgetManager:
         input_tokens: int,
         output_tokens: int,
         model: Optional[str] = None,
+        agent_id: Optional[str] = None,
     ) -> None:
         """Add token counts to the session total and update USD estimate.
 
@@ -103,6 +105,7 @@ class BudgetManager:
             input_tokens:  Number of prompt/input tokens consumed.
             output_tokens: Number of completion/output tokens generated.
             model:         Model name for pricing lookup (falls back to default).
+            agent_id:      Optional agent identifier for per-agent tracking.
         """
         model = model or self._default_model
         pricing = self._pricing.get(model, self._pricing.get(self._default_model, {}))
@@ -114,6 +117,14 @@ class BudgetManager:
             self._session_input_tokens += input_tokens
             self._session_output_tokens += output_tokens
             self._session_usd += cost
+
+            if agent_id is not None:
+                entry = self._per_agent.setdefault(agent_id, {
+                    "input_tokens": 0, "output_tokens": 0, "usd_cost": 0.0,
+                })
+                entry["input_tokens"] += input_tokens
+                entry["output_tokens"] += output_tokens
+                entry["usd_cost"] += cost
 
         logger.debug(
             "BudgetManager: +%d in / +%d out / +$%.6f → total %d tokens / $%.4f",
@@ -146,6 +157,14 @@ class BudgetManager:
             total, usd,
         )
 
+    def reset_session(self) -> None:
+        """Reset session counters to zero. Call between independent cycles."""
+        with self._lock:
+            self._session_input_tokens = 0
+            self._session_output_tokens = 0
+            self._session_usd = 0.0
+            self._per_agent.clear()
+
     # ------------------------------------------------------------------
     # Read-only properties
     # ------------------------------------------------------------------
@@ -159,6 +178,15 @@ class BudgetManager:
     def session_usd(self) -> float:
         with self._lock:
             return self._session_usd
+
+    def per_agent_summary(self) -> Dict[str, Dict[str, Any]]:
+        """Return a deep copy of per-agent token usage with total_tokens computed."""
+        import copy
+        with self._lock:
+            result = copy.deepcopy(self._per_agent)
+        for entry in result.values():
+            entry["total_tokens"] = entry["input_tokens"] + entry["output_tokens"]
+        return result
 
     def summary(self) -> Dict[str, Any]:
         """Return a snapshot dict suitable for logging or state storage."""
