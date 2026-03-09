@@ -129,4 +129,24 @@ async def setup_persistence():
             );
             """)
 
+        # 6. Cycle Snapshots (Phase 24: Cycle Persistence)
+        async with pool.connection() as conn:
+            await conn.execute("""
+            CREATE TABLE IF NOT EXISTS cycle_snapshots (
+                cycle_id        SERIAL PRIMARY KEY,
+                task_id         VARCHAR(64) NOT NULL,
+                symbol          VARCHAR(32) NOT NULL,
+                status          VARCHAR(16) NOT NULL DEFAULT 'running',
+                timestamp       TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+                consensus_score NUMERIC(6, 4),
+                snapshot_path   TEXT,
+                error_summary   TEXT,
+                CONSTRAINT valid_status CHECK (status IN ('running', 'completed', 'rejected', 'failed'))
+            );
+            CREATE INDEX IF NOT EXISTS idx_cycle_task_id ON cycle_snapshots(task_id);
+            CREATE INDEX IF NOT EXISTS idx_cycle_symbol ON cycle_snapshots(symbol);
+            CREATE INDEX IF NOT EXISTS idx_cycle_status ON cycle_snapshots(status);
+            CREATE INDEX IF NOT EXISTS idx_cycle_timestamp ON cycle_snapshots(timestamp);
+            """)
+
     logger.info("PostgreSQL schemas initialized.")
