@@ -1,268 +1,273 @@
-# Stack Research — v1.4 Beta: Observable Swarm
+# Technology Stack
 
-**Domain:** Cycle persistence, cycle replay CLI, HEXACO-6 persona population, E2E pipeline hardening
-**Researched:** 2026-03-08
+**Project:** Quantum Swarm v1.5 -- Reliable Infrastructure
+**Researched:** 2026-03-09
 **Confidence:** HIGH
 
 ---
 
-## Verdict: Two New Dependencies, One Promotion
+## Verdict: ZERO New Dependencies
+
+v1.5 is an infrastructure stabilization milestone. Every feature builds on the existing stack. Adding dependencies in a "reliability" milestone would be contradictory to the project's stdlib-first philosophy.
 
 | Feature | Implementation | New Dep? |
 |---------|---------------|----------|
-| Per-cycle artifact persistence | `pathlib`, `json`, `shutil` (stdlib) + existing `psycopg` | None |
-| Cycle replay CLI | `typer` + `rich` (both already installed as transitive deps) | **Promote to explicit** |
-| HEXACO-6 persona profiles | Pure content authoring in SOUL.md files + `pydantic` validation | None |
-| E2E pipeline hardening | Existing stack + `structlog` for structured logging | **New: structlog** |
-
-**Net result:** Add `typer>=0.24.0` and `rich>=14.0.0` to `pyproject.toml` as explicit dependencies (already installed via langgraph transitive chain). Add `structlog>=24.0.0` as new dependency for structured logging in production runs.
+| PersonaScore 5D LLM-as-Judge | Pydantic + `with_structured_output()` on existing Gemini | None |
+| Token cost tracking per cycle | Extend existing `BudgetManager` + `CycleSnapshot` | None |
+| Gemini API circuit breaker | stdlib (`threading`, `time`, `enum`) | None |
+| ChromaDB pruning / archive-to-Obsidian | Existing ChromaDB 1.5.2 delete/filter API via `MemoryService` | None |
+| Dependency fixes (ccxt, chromadb, pytest-asyncio) | Version fixes / reinstalls only | None |
 
 ---
 
-## Recommended Stack
+## Existing Stack (Confirmed Installed 2026-03-09)
 
-### New Explicit Dependencies
-
-| Technology | Version | Purpose | Why |
-|------------|---------|---------|-----|
-| typer | `>=0.24.0` | Cycle replay CLI framework | Already installed (transitive via langgraph). Type-hint-driven CLI with zero boilerplate. Built on Click internally, so complex subcommands available if needed. Promotes to explicit dep to prevent accidental removal. |
-| rich | `>=14.0.0` | Terminal formatting for replay CLI | Already installed (transitive). Tables, syntax highlighting, panels, progress bars -- all needed for step-through cycle replay display. |
-| structlog | `>=24.0.0` | Structured JSON logging for E2E runs | stdlib `logging` produces unstructured text. Production market data runs need machine-parseable JSON logs with correlation IDs (task_id), timing, and error context. structlog wraps stdlib logging -- no migration needed, additive. |
-
-### Core Technologies (Existing -- No Change)
-
-| Technology | Current Version | v1.4 Role |
-|------------|----------------|-----------|
-| Python 3.12 | runtime | All features |
-| LangGraph | 1.0.10 | Graph orchestration, checkpointing |
-| psycopg | 3.3.3 | Cycle metadata persistence to PostgreSQL |
-| pydantic | 2.12.5 | HEXACO-6 profile validation, cycle artifact schemas |
-| pyyaml | 6.0.3 | Soul file YAML drift_guard blocks, config parsing |
-| langgraph-checkpoint-postgres | 3.0.4 | Crash recovery for E2E pipeline runs |
-
-### Supporting Stdlib Modules (Zero Install Cost)
-
-| Module | Purpose | Specific Use |
-|--------|---------|-------------|
-| `pathlib.Path` | Cycle folder creation | `data/cycles/{cycle_number}/` numbered directories |
-| `json` | Artifact serialization | Agent memos, debate transcripts, consensus snapshots as JSON |
-| `shutil` | Cycle folder management | Atomic directory operations, archive old cycles |
-| `os.replace` | Atomic file writes | Prevent partial-write corruption on cycle artifacts (existing pattern from MemoryRegistry) |
-| `textwrap` | CLI output formatting | Wrap long thesis summaries in replay display |
-| `itertools.count` | Cycle numbering | Monotonic cycle counter from last persisted cycle |
+| Technology | Version | Purpose |
+|------------|---------|---------|
+| Python | 3.12 | Runtime |
+| LangGraph | 1.0.10 | StateGraph orchestrator |
+| langchain-google-genai | 4.2.1 | Gemini LLM integration |
+| langchain-core | 1.2.17 | AIMessage, UsageMetadata |
+| langchain-community | 0.4.1 | Community integrations |
+| PostgreSQL 17 | psycopg 3.3.3 | Persistence, audit trail |
+| ChromaDB | 1.5.2 | Vector memory store |
+| structlog | 25.5.0 | Structured logging |
+| Rich | 14.3.3 | CLI rendering |
+| Pydantic | 2.12.5 | Data validation |
+| pytest-asyncio | 1.3.0 | Async test support |
+| ccxt | 4.5.41 (BROKEN) | Crypto exchange connectivity |
+| scipy | installed | Spearman correlation in calibration |
 
 ---
 
 ## Feature-by-Feature Stack Decisions
 
-### 1. Per-Cycle Artifact Persistence
+### 1. PersonaScore 5D LLM-as-Judge (SOUL-09)
 
-**Implementation:** Filesystem (numbered directories) + PostgreSQL metadata index.
+**Stack used:** `ChatGoogleGenerativeAI.with_structured_output()` + `pydantic.BaseModel`
 
-**Why filesystem, not pure PostgreSQL:**
-- Decision cards are already written to `data/audit.jsonl` (filesystem)
-- MEMORY.md entries are already filesystem-based
-- Numbered cycle folders (`data/cycles/0001/`, `data/cycles/0002/`) provide instant human browsability
-- PostgreSQL stores the cycle metadata index (cycle_number, task_id, timestamp, outcome, artifact_paths) for queries
+**Why no new dependencies:**
+- langchain-google-genai 4.2.1 supports `.with_structured_output()` via Gemini's native structured output mode
+- Pydantic 2.12.5 defines the score schema
+- This is the same pattern used by LangChain's `openevals` `create_llm_as_judge` -- we just do it directly without the wrapper package
 
-**Artifact schema (Pydantic -- already installed):**
+| Component | Technology | Already Installed |
+|-----------|-----------|-------------------|
+| Judge LLM | `ChatGoogleGenerativeAI` (gemini-2.5-flash) | Yes |
+| Score schema | `pydantic.BaseModel` | Yes |
+| Prompt template | `langchain_core.prompts.ChatPromptTemplate` | Yes |
+| Result storage | PostgreSQL `agent_merit_scores` table (JSONB) | Yes |
+
+**Pydantic schema:**
+
 ```python
-class CycleArtifact(BaseModel):
-    cycle_number: int
-    task_id: str
-    timestamp: datetime
-    agent_memos: dict[str, dict]       # {handle: memo_content}
-    debate_transcript: list[dict]       # Full debate_history from SwarmState
-    consensus: dict                     # weighted_consensus_score + debate_resolution
-    merit_scores: dict[str, dict]       # KAMI scores snapshot
-    decision_card: Optional[dict]       # Full DecisionCard if trade executed
-    execution_result: Optional[dict]    # OrderRouter result
-    cycle_status: str                   # "executed" | "held" | "rejected" | "failed"
+class PersonaScore(BaseModel):
+    """5D persona fidelity score from LLM-as-Judge."""
+    consistency: float = Field(ge=0.0, le=1.0, description="Adherence to stated persona identity")
+    tone: float = Field(ge=0.0, le=1.0, description="Voice/style match to SOUL.md personality")
+    logic: float = Field(ge=0.0, le=1.0, description="Reasoning follows persona's stated methodology")
+    depth: float = Field(ge=0.0, le=1.0, description="Analysis depth matches persona's expertise claims")
+    bias: float = Field(ge=0.0, le=1.0, description="Appropriate bias alignment (bull/bear/neutral)")
+    rationale: str = Field(description="Brief justification for scores")
 ```
 
-**File layout per cycle:**
-```
-data/cycles/0001/
-    manifest.json          # CycleArtifact serialized (single source of truth)
-    decision_card.json     # Extracted for standalone audit (duplicate of field in manifest)
-    debate_transcript.json # Extracted for replay CLI readability
-```
+**Integration point:** Call after each L2 node completes (in `merit_updater_node` or new `persona_evaluator_node`). Pass agent's output text + agent's SOUL.md content as evaluation context. The composite PersonaScore feeds into KAMI's delta (Fidelity) dimension, replacing the current basic fidelity signal.
 
-**No new library needed.** `pydantic.BaseModel.model_dump(mode="json")` + `json.dumps()` + `pathlib.Path.write_text()` covers all persistence. The `os.replace()` atomic write pattern from `MemoryRegistry` should be reused for manifest.json to prevent corruption.
+**Cost:** One extra Gemini call per agent per cycle (~4 calls x ~500 input tokens = ~2000 tokens/cycle, ~$0.0002/cycle). Negligible vs existing 4-agent fan-out.
 
-**PostgreSQL index table:**
-```sql
-CREATE TABLE cycle_index (
-    cycle_number INTEGER PRIMARY KEY,
-    task_id VARCHAR(64) NOT NULL,
-    started_at TIMESTAMPTZ NOT NULL,
-    completed_at TIMESTAMPTZ,
-    cycle_status VARCHAR(32) NOT NULL,
-    consensus_score REAL,
-    artifact_path TEXT NOT NULL
-);
-```
+**LLM lazy init pattern (MUST follow):** The evaluator LLM must use the project's lazy init pattern (getter function, not module-level instantiation) because `ChatGoogleGenerativeAI` validates the API key at instantiation. See existing pattern in researchers.py.
 
-Uses existing `psycopg` async pattern -- no new library.
-
-**Confidence:** HIGH -- all components are proven patterns already in use.
+**Confidence:** HIGH -- `with_structured_output` on ChatGoogleGenerativeAI verified in langchain-google-genai 4.x docs.
 
 ---
 
-### 2. Cycle Replay CLI
+### 2. Token/Cost Tracking per Cycle (OBS-02)
 
-**Implementation:** `typer` CLI + `rich` terminal output.
+**Stack used:** Existing `BudgetManager` + `AIMessage.usage_metadata` + `CycleSnapshot`
 
-**Why typer (not argparse or click directly):**
-- Already installed (v0.24.1, transitive dependency)
-- Type-hint-driven -- matches project's Pydantic/typing-heavy style
-- Built on Click internally, so advanced features (chaining, groups) available
-- Auto-generated --help with rich formatting
-- Python 3.12 compatible (requires >=3.10)
+**Why no new dependencies:**
+- Token capture already works: `analysts.py:155-160` and `researchers.py:196-197` read `usage_metadata` from AIMessage and call `budget.record_usage()`
+- `BudgetManager.summary()` already returns `{session_input_tokens, session_output_tokens, total_tokens, session_usd}` as a dict
+- `CycleSnapshot` already persists to PostgreSQL + filesystem
+- Just need to: (a) call `budget.reset_session()` at cycle start, (b) include `budget.summary()` in CycleSnapshot, (c) display in replay CLI
 
-**Why rich (not plain print or tabulate):**
-- Already installed (v14.3.3, transitive dependency)
-- `rich.table.Table` for merit score comparison across cycles
-- `rich.panel.Panel` for agent memo display with borders
-- `rich.syntax.Syntax` for JSON highlighting of decision cards
-- `rich.console.Console.pager()` for long debate transcripts
-- `rich.progress.Progress` for scanning cycle directories
+| Component | Technology | Already Exists |
+|-----------|-----------|----------------|
+| Token capture | `AIMessage.usage_metadata` | Yes (analysts.py, researchers.py) |
+| Accumulation | `BudgetManager.summary()` | Yes (budget_manager.py) |
+| Per-cycle storage | `CycleSnapshot` Pydantic model | Yes (persistence.py) |
+| Persistence | PostgreSQL `cycle_snapshots` JSONB | Yes |
+| Display | Rich table in replay CLI | Yes |
 
-**CLI structure:**
-```
-quantum-swarm replay list                    # List all cycles with summary
-quantum-swarm replay show <cycle_number>     # Full cycle display
-quantum-swarm replay step <cycle_number>     # Step-through navigation (n/p/q)
-quantum-swarm replay compare <c1> <c2>       # Side-by-side merit/consensus diff
-quantum-swarm replay merit-trend             # Merit score trend across cycles
-```
+**What NOT to add:**
+- `langfuse` -- heavyweight observability SaaS/self-hosted platform; overkill for per-cycle cost column
+- `langchain-token-usage` PyPI package -- thin wrapper over direct `usage_metadata` access which is already implemented
+- `opentelemetry` -- wrong abstraction layer for simple cost aggregation
+- `GoogleGenAICallbackHandler` -- does NOT exist in langchain-community 0.4.1; the direct `usage_metadata` approach is correct
 
-**Step-through navigation:** Not a TUI (Textual would be overkill). Instead, use `rich.prompt.Prompt` for simple n(ext)/p(rev)/q(uit) navigation between cycle phases:
-1. Agent Memos (macro_report, quant_proposal, bullish_thesis, bearish_thesis)
-2. Soul-Sync Handshake context
-3. Debate Transcript + Consensus
-4. Risk Gate Decision
-5. Execution Result + Decision Card
-6. KAMI Merit Update
-
-This is a sequential pager, not a reactive TUI. Much simpler to build and maintain.
-
-**Do NOT use Textual:** Full TUI framework is unnecessary complexity for a replay viewer. The replay CLI is a diagnostic tool, not a dashboard. rich + typer covers the need completely.
-
-**Confidence:** HIGH -- both libraries already installed and well-documented.
+**Confidence:** HIGH -- usage_metadata already working in codebase, verified.
 
 ---
 
-### 3. HEXACO-6 Personality Model for Diverse Personas
+### 3. Gemini API Circuit Breaker (SEC-03)
 
-**Implementation:** Pure content authoring + Pydantic validation schema. No personality library needed.
+**Stack used:** Python stdlib (`threading.Lock`, `time.monotonic`, `enum.Enum`)
 
-**What HEXACO-6 is:** A six-factor personality model (Honesty-Humility, Emotionality, eXtraversion, Agreeableness, Conscientiousness, Openness). Each factor has 4 facets (24 facets total). It extends the Big Five with the Honesty-Humility dimension -- relevant for financial agents where trustworthiness and manipulation-resistance matter.
+**Why stdlib, not a library:**
+- Project philosophy is stdlib-first (Counter cosine for ARS instead of numpy, manual retry in yfinance_client instead of tenacity)
+- Circuit breaker is ~60 lines of code for 3-state machine (CLOSED -> OPEN -> HALF_OPEN -> CLOSED)
+- Only one integration point (Gemini API via ChatGoogleGenerativeAI)
 
-**Why HEXACO-6 (not Big Five or MBTI):**
-- Honesty-Humility dimension directly maps to financial ethics (manipulation avoidance, fairness in analysis)
-- Six orthogonal dimensions provide more personality space for 5 agents than Big Five's 5 dimensions
-- Academic foundation with published scales (hexaco.org) -- not pop psychology
-- Each agent can be profiled on all 6 dimensions with concrete behavioral predictions
+| Library Evaluated | Why Rejected |
+|-------------------|-------------|
+| `pybreaker` 1.2.0 | Tornado dependency; heavyweight for one integration point |
+| `circuitbreaker` 2.0.0 | Decorator-based, no async support, poor fit for LangChain's invoke pattern |
+| `aiobreaker` 1.3.0 | asyncio fork of pybreaker; reasonable but ~60 LOC does not justify new dependency |
 
-**Implementation approach:**
-1. Define a `HexacoProfile` Pydantic model with 6 float fields (1.0-5.0 scale matching HEXACO-PI-R)
-2. Each agent's SOUL.md gains a `hexaco_profile:` YAML block alongside existing `drift_guard:`
-3. The profile is loaded by `soul_loader.py` (extend `AgentSoul` with a `hexaco: HexacoProfile` field)
-4. Profiles inform SOUL.md prose content (manual authoring, not generated)
-5. Diversity validation: ensure all 5 agents span the HEXACO space (no two agents with identical high-H, high-C profiles)
+**Implementation sketch:**
 
-**Proposed agent HEXACO profiles (authoring guide, not code):**
-
-| Agent | H | E | X | A | C | O | Design Rationale |
-|-------|---|---|---|---|---|---|-----------------|
-| AXIOM (macro) | 4.5 | 2.0 | 2.5 | 3.0 | 4.5 | 4.0 | High honesty (no manipulation), low emotionality (stoic veteran), high conscientiousness (methodical) |
-| MOMENTUM (bull) | 3.5 | 3.0 | 4.5 | 2.5 | 3.0 | 4.5 | High extraversion (bold, energetic), low agreeableness (willing to fight for thesis), high openness (creative) |
-| CASSANDRA (bear) | 4.0 | 4.0 | 2.0 | 2.0 | 4.0 | 3.5 | High emotionality (anxiety-driven risk awareness), low extraversion (cautious), low agreeableness (contrarian) |
-| SIGMA (quant) | 4.0 | 1.5 | 2.0 | 3.5 | 5.0 | 3.0 | Lowest emotionality (pure logic), highest conscientiousness (rigorous), moderate agreeableness (data-driven compromise) |
-| GUARDIAN (risk) | 5.0 | 3.0 | 2.0 | 3.0 | 5.0 | 2.0 | Highest honesty (incorruptible gate), highest conscientiousness, lowest openness (conservative, rule-bound) |
-
-**Pydantic schema (already installed):**
 ```python
-class HexacoProfile(BaseModel):
-    honesty_humility: float = Field(ge=1.0, le=5.0)
-    emotionality: float = Field(ge=1.0, le=5.0)
-    extraversion: float = Field(ge=1.0, le=5.0)
-    agreeableness: float = Field(ge=1.0, le=5.0)
-    conscientiousness: float = Field(ge=1.0, le=5.0)
-    openness: float = Field(ge=1.0, le=5.0)
+import enum
+import threading
+import time
+
+class CircuitState(enum.Enum):
+    CLOSED = "closed"       # Normal operation
+    OPEN = "open"           # Failing -- reject calls, enter soft-fail pause
+    HALF_OPEN = "half_open" # Recovery probe -- allow one call to test
+
+class GeminiCircuitBreaker:
+    def __init__(self, failure_threshold: int = 3, recovery_timeout: float = 60.0):
+        self._state = CircuitState.CLOSED
+        self._failure_count = 0
+        self._failure_threshold = failure_threshold
+        self._recovery_timeout = recovery_timeout
+        self._last_failure_time: float = 0.0
+        self._lock = threading.Lock()
+
+    def pre_call(self) -> None:
+        """Check if call is allowed. Raises CircuitOpenError if breaker is OPEN."""
+        with self._lock:
+            if self._state == CircuitState.OPEN:
+                if time.monotonic() - self._last_failure_time > self._recovery_timeout:
+                    self._state = CircuitState.HALF_OPEN  # Allow probe
+                else:
+                    raise CircuitOpenError(
+                        f"Gemini API circuit breaker OPEN -- "
+                        f"soft-fail pause for {self._recovery_timeout}s"
+                    )
+
+    def record_success(self) -> None:
+        with self._lock:
+            self._failure_count = 0
+            self._state = CircuitState.CLOSED
+
+    def record_failure(self) -> None:
+        with self._lock:
+            self._failure_count += 1
+            self._last_failure_time = time.monotonic()
+            if self._failure_count >= self._failure_threshold:
+                self._state = CircuitState.OPEN
 ```
 
-**Diversity validation (stdlib):** Euclidean distance between all agent profile pairs; flag if any pair distance < 1.5 (too similar). This is a build-time check, not runtime -- pure `math.sqrt` and `sum`, no numpy needed.
+**Soft-fail behavior (per PROJECT.md: "soft-fail pause, not blind retry"):**
+- When circuit is OPEN, graph nodes return a graceful "service unavailable" state update
+- The node output indicates the pause reason for downstream recording
+- DecisionCardWriter and MeritUpdater handle the `circuit_open` status appropriately
+- structlog logs the circuit state transition with timestamp for debugging
 
-**No personality generation library.** The HEXACO profile is a structured metadata tag that guides human SOUL.md authoring. The LLM does not "run" the HEXACO model -- it receives the authored prose that was informed by the profile. This is intentional: personality is in the prose, not in a runtime trait engine.
+**Integration:** Wrap the LLM call site, not the HTTP layer. A single `GeminiCircuitBreaker` instance shared via `BudgetManager`-like pattern (instantiate in orchestrator, pass through state or closure).
 
-**Confidence:** HIGH -- HEXACO-6 is well-documented, Pydantic validation is trivial, authoring is manual.
+**Thread safety:** Uses `threading.Lock` matching `BudgetManager`'s existing pattern. LangGraph's fan-out runs L2 nodes concurrently -- the circuit breaker must be thread-safe.
+
+**Confidence:** HIGH -- well-understood pattern, stdlib-only, no novel dependencies.
 
 ---
 
-### 4. End-to-End Pipeline Hardening
+### 4. ChromaDB Pruning / Archive-to-Obsidian (OBS-03)
 
-**Implementation:** `structlog` (new) + existing `psycopg` + configuration hardening.
+**Stack used:** ChromaDB 1.5.2 native API + existing `MemoryService` + `pathlib`
 
-**Why structlog (not stdlib logging alone):**
-- Production market data runs need JSON-structured logs for post-mortem analysis
-- structlog wraps stdlib logging -- existing `logging.getLogger()` calls continue to work
-- Adds contextual fields (task_id, cycle_number, agent_handle) to every log line without explicit passing
-- Zero-migration: configure once at application entry point, all existing loggers gain structure
-- Lightweight: pure Python, no C extensions, no heavy dependencies
+**Why no new dependencies:**
+- ChromaDB 1.5.2 has `collection.get(where=...)` for metadata-filtered queries and `collection.delete(ids=[...])` for removal
+- WAL auto-pruning is enabled by default in ChromaDB 1.5.x -- no manual WAL cleanup needed
+- `MemoryService` (src/memory/service.py) is already the sole ChromaDB interface -- pruning belongs there
+- Obsidian markdown generation already exists (generate_transclusion_indexes.py pattern)
 
-**Why NOT alternatives:**
+| Library Evaluated | Why Rejected |
+|-------------------|-------------|
+| `chromadb-ops` CLI | CLI tool for standalone maintenance; we need programmatic pruning integrated in the pipeline |
 
-| Alternative | Rejected Because |
-|-------------|-----------------|
-| `python-json-logger` | Less flexible binding model; structlog's processors are more powerful |
-| `loguru` | Replaces stdlib logging entirely -- too invasive for 30,600 LOC codebase |
-| `stdlib logging` (as-is) | Unstructured text is not parseable for production incident analysis |
+**Pruning strategy:**
 
-**Hardening additions (no new deps):**
+1. Query documents older than N days via `collection.get(where={"timestamp": {"$lt": cutoff_iso}})`
+2. Export each document to Markdown in Obsidian vault (`quantum-swarm/Archive/Memory/{date}/{document_id}.md`)
+3. Delete from ChromaDB via `collection.delete(ids=[...])`
+4. ChromaDB auto-handles WAL compaction
 
-| Area | What | Library |
-|------|------|---------|
-| Retry with backoff | Wrap `data_fetcher_node` for transient API failures (yfinance, ccxt) | stdlib `time.sleep` + manual exponential backoff (3 retries, 1s/2s/4s) |
-| Circuit breaker | Track consecutive failures per external API; skip after N failures | stdlib `collections.defaultdict` + counter logic |
-| Timeout enforcement | Wrap LLM calls with configurable timeout | `asyncio.wait_for()` (stdlib) |
-| Graceful degradation | If data_fetcher fails, populate partial state and continue to consensus | Existing LangGraph conditional edges |
-| Cycle numbering | Monotonic counter from PostgreSQL `cycle_index` sequence | `psycopg` (existing) |
+**New method on MemoryService:**
 
-**Production configuration (no new deps):**
-```yaml
-# config/swarm_config.yaml additions
-pipeline:
-  max_retries: 3
-  retry_backoff_base: 1.0
-  llm_timeout_seconds: 60
-  circuit_breaker_threshold: 5
-  circuit_breaker_reset_seconds: 300
+```python
+@dataclass
+class PruneResult:
+    documents_archived: int
+    documents_deleted: int
+    archive_path: str
+
+def prune_old_documents(self, cutoff_days: int = 90) -> PruneResult:
+    """Archive old documents to Obsidian vault and delete from ChromaDB."""
 ```
 
-**Confidence:** HIGH for structlog integration. MEDIUM for circuit breaker (pattern is clear but needs careful testing with real market data APIs).
+**Metadata requirement:** The existing `MemorySource` types all require `timestamp` in metadata (enforced by `_REQUIRED_FIELDS` dict). This timestamp is the pruning key.
+
+**Confidence:** HIGH -- ChromaDB delete and metadata filtering are stable, well-documented APIs.
 
 ---
 
-## Installation
+### 5. Dependency Fixes (ENV-01)
+
+#### ccxt (BROKEN -- ModuleNotFoundError)
+
+**Problem:** ccxt 4.5.41 fails at import: `ModuleNotFoundError: No module named 'ccxt.static_dependencies.lighter_client'`. The Lighter exchange integration's native library is not properly bundled in the pip package.
+
+**Fix strategy:**
 
 ```bash
-# Promote transitive deps to explicit (already installed, no download)
-# Add new dependency
-uv add typer rich structlog
+# Step 1: Try force reinstall of current version
+uv pip install --force-reinstall ccxt
+
+# Step 2: If still broken, check if latest version fixes it
+uv pip install --upgrade ccxt
+
+# Step 3: If still broken, pin to last known pre-Lighter version
+# (ccxt GitHub issue #23307 shows similar static_dependencies packaging bugs
+#  with starkware in 4.3.x, resolved in later patches)
+uv pip install "ccxt>=4.4,<4.5"
 ```
 
-**Changes to pyproject.toml:**
-```toml
-dependencies = [
-    # ... existing ...
-    # v1.4: Observable Swarm
-    "typer>=0.24.0",
-    "rich>=14.0.0",
-    "structlog>=24.0.0",
-]
-```
+**Confidence:** MEDIUM -- the lighter_client error is not widely documented; may need version bisection. Similar `static_dependencies` packaging bugs have occurred before (starkware in 4.3.71) and were patched.
+
+#### chromadb
+
+**Status:** Actually INSTALLED (1.5.2 confirmed via `uv pip list`). The "missing" designation in project memory may refer to:
+- Tests failing because `sentence-transformers` model download required at first run
+- Import path issues in test mocking
+- `KnowledgeBase.__init__` in `src/tools/knowledge_base.py` imports chromadb eagerly (not lazy) -- could fail if chromadb has import-time issues
+
+**Fix:** Verify actual test failure messages. If sentence-transformers model not cached, either (a) add model warmup to test fixtures, or (b) mock the embedding function in tests.
+
+**Confidence:** MEDIUM -- need to diagnose actual test failures rather than assume missing package.
+
+#### pytest-asyncio
+
+**Status:** Actually INSTALLED (1.3.0 confirmed via `uv pip list`). Version 1.3.0 is current (released late 2025) and supports `asyncio_mode = "auto"` as configured in pyproject.toml.
+
+**Fix:** Verify test failures. Potential issues:
+- Ensure pytest >= 8.2 (pytest-asyncio 1.3.0 requirement) -- check with `uv pip list | grep pytest`
+- Confirm no leftover `@pytest.mark.asyncio` decorators conflicting with auto mode
+- Check if tests using `asyncio.run()` conflict with pytest-asyncio's event loop management
+
+**Confidence:** MEDIUM -- versions look correct; need to diagnose actual test failures.
 
 ---
 
@@ -270,17 +275,15 @@ dependencies = [
 
 | Category | Recommended | Alternative | Why Not |
 |----------|-------------|-------------|---------|
-| CLI framework | typer | argparse | Verbose, no auto-complete, no rich integration |
-| CLI framework | typer | click (direct) | More boilerplate; typer wraps click with type hints |
-| Terminal output | rich | tabulate | No panels, no syntax highlighting, no pager |
-| TUI framework | rich (panels) | textual | Full TUI is overkill for replay; textual adds async complexity |
-| Structured logging | structlog | loguru | loguru replaces stdlib logging entirely; too invasive |
-| Structured logging | structlog | python-json-logger | Less flexible processor pipeline |
-| Personality model | HEXACO-6 | Big Five (OCEAN) | Missing Honesty-Humility; only 5 dimensions for 5 agents |
-| Personality model | HEXACO-6 | MBTI | Not empirically validated; 16 types are categorical not continuous |
-| Cycle persistence | Filesystem + PG index | Pure PostgreSQL JSONB | Loses human-browsable artifact files; JSONB querying is slower for large blobs |
-| Cycle persistence | Filesystem + PG index | SQLite per cycle | Adds second DB engine; PostgreSQL already handles metadata well |
-| Retry logic | Manual backoff | tenacity library | One more dependency for 15 lines of retry code; not justified |
+| LLM-as-Judge | Pydantic + `with_structured_output` | `openevals` package | Adds dependency for one evaluation call; structured output does the same thing directly |
+| LLM-as-Judge | Pydantic + `with_structured_output` | `deepeval` | Heavy testing framework; overkill for single fidelity evaluation |
+| Token tracking | BudgetManager + usage_metadata | Langfuse | Heavyweight SaaS/self-hosted observability platform for a single cost column |
+| Token tracking | BudgetManager + usage_metadata | `langchain-token-usage` PyPI | Thin wrapper; direct usage_metadata access is simpler and already implemented |
+| Circuit breaker | stdlib implementation | `pybreaker` | Tornado dependency; 60 LOC vs new dependency for single integration point |
+| Circuit breaker | stdlib implementation | `aiobreaker` | Reasonable but unnecessary dependency; project prefers stdlib |
+| Circuit breaker | stdlib implementation | `tenacity` with retry+circuit | tenacity is retry-focused, not circuit-breaker-focused; conflates two patterns |
+| ChromaDB pruning | Direct ChromaDB API | `chromadb-ops` | CLI tool, not programmatic; need integration in cycle pipeline |
+| PersonaScore storage | PostgreSQL JSONB | Separate evaluation DB | Over-engineering; JSONB in existing merit table is sufficient |
 
 ---
 
@@ -288,85 +291,74 @@ dependencies = [
 
 | Avoid | Why | Use Instead |
 |-------|-----|------------|
-| textual (TUI framework) | Async TUI framework for a sequential replay tool is architectural overkill; adds 2MB+ dep | rich panels + typer prompts for step-through |
-| tenacity (retry library) | 15 lines of manual backoff code does not justify a new dependency | `for attempt in range(max_retries): time.sleep(backoff)` |
-| loguru | Replaces stdlib logging; 30,600 LOC codebase uses `logging.getLogger()` everywhere | structlog (wraps stdlib, non-invasive) |
-| SQLAlchemy / Alembic | Project uses raw psycopg3 throughout; ORM adds complexity without value at this scale | Raw `CREATE TABLE` + `psycopg.execute()` |
-| pandas for cycle analysis | Already installed but importing pandas for simple merit trend display is wasteful | List comprehensions + rich.table |
-| Any HEXACO personality library | HEXACO profiles are static metadata tags, not runtime simulations | Pydantic model + manual SOUL.md authoring |
-| sentence-transformers for replay search | Full-text search over cycles is not a v1.4 requirement | grep-style filtering by cycle_status or consensus_score range |
+| `openevals` / `agentevals` | LangChain evaluation packages add dependency for what amounts to a structured output call + prompt template | Direct `with_structured_output(PersonaScore)` |
+| `langfuse` | Full observability platform (self-hosted or SaaS) for simple per-cycle cost tracking | `BudgetManager.summary()` dict in CycleSnapshot |
+| `pybreaker` / `aiobreaker` / `circuitbreaker` | External circuit breaker library for a single LLM integration point | 60-line stdlib implementation |
+| `tenacity` | Retry library for what is already handled by manual backoff in yfinance_client.py | Existing manual retry pattern |
+| `chromadb-ops` | CLI maintenance tool when programmatic API access is needed | `collection.get()` + `collection.delete()` |
+| `opentelemetry` | Distributed tracing framework for simple cost aggregation | structlog context + BudgetManager |
+| `numpy` for PersonaScore aggregation | Arithmetic mean of 5 floats does not need numpy | `sum(scores) / len(scores)` |
 
 ---
 
-## SwarmState Extensions Required
+## Installation
 
-```python
-# To add to src/graph/state.py for v1.4
-cycle_number: Optional[int]              # Monotonic cycle counter from PostgreSQL sequence
-cycle_artifact_path: Optional[str]       # Path to data/cycles/{number}/ for current run
+```bash
+# No new packages needed for v1.5 features!
+
+# Fix broken ccxt:
+uv pip install --force-reinstall ccxt
+
+# Verify all deps resolve:
+uv sync
+
+# Verify key packages:
+uv pip list | grep -iE 'ccxt|chromadb|pytest-asyncio'
 ```
 
-Minimal additions. The cycle artifact writer node reads existing state fields (macro_report, quant_proposal, bullish_thesis, bearish_thesis, debate_history, weighted_consensus_score, merit_scores, decision_card_audit_ref, execution_result) and persists them to the cycle folder. No new data flows through state.
+**No changes to pyproject.toml required** (unless ccxt needs version pinning).
 
 ---
 
-## PostgreSQL Schema Extensions
-
-```sql
--- Cycle index table (new)
-CREATE TABLE cycle_index (
-    cycle_number SERIAL PRIMARY KEY,
-    task_id VARCHAR(64) NOT NULL UNIQUE,
-    started_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    completed_at TIMESTAMPTZ,
-    cycle_status VARCHAR(32) NOT NULL DEFAULT 'running',
-    consensus_score REAL,
-    artifact_path TEXT NOT NULL,
-    CONSTRAINT valid_status CHECK (cycle_status IN ('running', 'executed', 'held', 'rejected', 'failed'))
-);
-
-CREATE INDEX idx_cycle_status ON cycle_index(cycle_status);
-CREATE INDEX idx_cycle_started ON cycle_index(started_at);
-```
-
-Uses existing `psycopg` async pool from `src/core/db.py`. The `SERIAL` type provides monotonic cycle numbering without application-level coordination.
-
----
-
-## Integration Points
+## Integration Points with Existing Stack
 
 | New Component | Integrates With | How |
 |---------------|----------------|-----|
-| Cycle artifact writer (new node) | orchestrator.py | New node after `memory_writer`, before `trade_logger` in graph edge chain |
-| Cycle number allocator | db.py `get_pool()` | INSERT INTO cycle_index RETURNING cycle_number at graph entry |
-| Replay CLI | data/cycles/ filesystem | Reads manifest.json files; no graph dependency |
-| HEXACO profiles | soul_loader.py | Extend `AgentSoul` dataclass with `hexaco: Optional[HexacoProfile]` |
-| structlog | orchestrator.py entry | Configure at `create_orchestrator_graph()` -- all downstream loggers gain structure |
-
----
-
-## Version Compatibility
-
-| Package | Version | Python 3.12 | Notes |
-|---------|---------|-------------|-------|
-| typer | 0.24.1 (installed) | Yes (>=3.10) | Pin `>=0.24.0` to stay on current major |
-| rich | 14.3.3 (installed) | Yes | Pin `>=14.0.0` for Panel/Table API stability |
-| structlog | latest (new) | Yes | Pure Python, no binary deps |
-| pydantic | 2.12.5 (installed) | Yes | Already used for DecisionCard; reuse for CycleArtifact + HexacoProfile |
-| psycopg | 3.3.3 (installed) | Yes | Async pool pattern unchanged |
+| PersonaScore evaluator | `merit_updater_node` (src/graph/nodes/merit_updater.py) | New `_evaluate_persona_fidelity()` called during KAMI update; result feeds delta dimension |
+| PersonaScore evaluator | `soul_loader.py` | Reads agent's SOUL.md content as evaluation context |
+| PersonaScore evaluator | `kami.py` DEFAULT_WEIGHTS | Rebalance: alpha (Accuracy) drops from 0.30 to 0.05-0.10, delta (Fidelity/PersonaScore) absorbs the difference |
+| Token tracking per cycle | `BudgetManager` (src/core/budget_manager.py) | Add `summary()` snapshot to CycleSnapshot at cycle completion |
+| Token tracking per cycle | `cycle_runner.py` | Call `budget.reset_session()` at cycle start; `budget.summary()` at cycle end |
+| Token tracking display | Replay CLI handlers | New column in cycle list table; new section in cycle show |
+| Circuit breaker | New `src/core/circuit_breaker.py` | Shared instance accessible from L2 agent nodes |
+| Circuit breaker | L2 agent nodes (analysts.py, researchers.py) | Wrap `llm.invoke()` / `llm.ainvoke()` with `breaker.pre_call()` / `breaker.record_success()` / `breaker.record_failure()` |
+| Circuit breaker | `structlog` | Log state transitions (CLOSED->OPEN, OPEN->HALF_OPEN, HALF_OPEN->CLOSED) |
+| ChromaDB pruner | `MemoryService` (src/memory/service.py) | New `prune_old_documents()` method |
+| ChromaDB pruner | Obsidian vault generation scripts | Export archived documents as Markdown before deletion |
 
 ---
 
 ## Sources
 
-- [HEXACO-PI-R Scale Descriptions](https://hexaco.org/scaledescriptions) -- Official HEXACO factor/facet definitions. HIGH confidence.
-- [Rich PyPI](https://pypi.org/project/rich/) -- v14.3.3 confirmed current. HIGH confidence.
-- [Typer PyPI](https://pypi.org/project/typer/) -- v0.24.1 confirmed current. HIGH confidence.
-- pyproject.toml (project file, current) -- Verified installed dependency set. HIGH confidence.
-- `uv pip list` (local env) -- Confirmed rich 14.3.3, typer 0.24.1, pydantic 2.12.5 already installed. HIGH confidence.
-- src/core/decision_card.py, src/graph/nodes/memory_writer.py (project files) -- Existing persistence patterns. HIGH confidence.
-- src/graph/orchestrator.py (project file) -- Graph edge topology for integration point planning. HIGH confidence.
+- [ChatGoogleGenerativeAI reference](https://reference.langchain.com/python/integrations/langchain_google_genai/ChatGoogleGenerativeAI/) -- HIGH confidence
+- [langchain_core UsageMetadata API](https://python.langchain.com/api_reference/core/messages/langchain_core.messages.ai.UsageMetadata.html) -- HIGH confidence
+- [LangChain LLM-as-Judge docs](https://docs.langchain.com/langsmith/llm-as-judge) -- HIGH confidence
+- [openevals LLM-as-Judge evaluators](https://github.com/langchain-ai/openevals) -- MEDIUM confidence (evaluated, not adopted)
+- [ChromaDB delete data docs](https://docs.trychroma.com/docs/collections/delete-data) -- HIGH confidence
+- [ChromaDB WAL pruning cookbook](https://cookbook.chromadb.dev/core/advanced/wal-pruning/) -- MEDIUM confidence
+- [ChromaDB maintenance cookbook](https://cookbook.chromadb.dev/running/maintenance/) -- MEDIUM confidence
+- [pybreaker GitHub](https://github.com/danielfm/pybreaker) -- evaluated, rejected
+- [circuitbreaker PyPI](https://pypi.org/project/circuitbreaker/) -- evaluated, rejected
+- [aiobreaker docs](https://aiobreaker.netlify.app/) -- evaluated, rejected
+- [ccxt static_dependencies issue #23307](https://github.com/ccxt/ccxt/issues/23307) -- MEDIUM confidence (analogous bug)
+- [pytest-asyncio PyPI](https://pypi.org/project/pytest-asyncio/) -- HIGH confidence
+- Codebase: `src/graph/agents/analysts.py:155-160` -- usage_metadata already consumed
+- Codebase: `src/core/budget_manager.py` -- BudgetManager tracks tokens + USD with thread-safe counters
+- Codebase: `src/memory/service.py` -- MemoryService is sole ChromaDB interface with timestamp metadata
+- Codebase: `src/core/kami.py` -- DEFAULT_WEIGHTS shows alpha=0.30 (Accuracy) needs rebalancing
+- Environment: `uv pip list` output 2026-03-09 -- all versions confirmed
 
 ---
-*Stack research for: Quantum Swarm v1.4 Beta: Observable Swarm*
-*Researched: 2026-03-08*
+
+*Stack research for: Quantum Swarm v1.5 Reliable Infrastructure*
+*Researched: 2026-03-09*

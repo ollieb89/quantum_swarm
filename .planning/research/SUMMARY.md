@@ -1,182 +1,175 @@
 # Project Research Summary
 
-**Project:** Quantum Swarm v1.4 Beta: Observable Swarm
-**Domain:** Multi-agent LLM trading swarm observability, persona diversity, cycle persistence and replay
-**Researched:** 2026-03-08
+**Project:** Quantum Swarm v1.5 -- Reliable Infrastructure
+**Domain:** Multi-agent LLM financial analysis swarm (reliability, observability, evaluation)
+**Researched:** 2026-03-09
 **Confidence:** HIGH
 
 ## Executive Summary
 
-Quantum Swarm v1.4 transforms a functioning but opaque multi-agent trading system into an observable one. The existing v1.3 codebase (300+ tests, ~30,600 LOC) has strong infrastructure -- LangGraph StateGraph orchestration, PostgreSQL-backed audit logging with SHA-256 hash chains, KAMI merit scoring, and a soul/persona system -- but 4 of 5 agent personas are skeletons, no complete cycle has run against real market data, and there is no way to review what the swarm decided or why. The v1.4 milestone closes these gaps: populate all personas with HEXACO-6-informed personality diversity, run end-to-end against real data, persist complete cycle snapshots, and provide a CLI replay tool for post-mortem analysis.
+Quantum Swarm v1.5 is an infrastructure stabilization milestone for an existing 33,949 LOC, 300+ test LangGraph-based multi-agent financial analysis swarm. The research confirms that every v1.5 feature can be built with zero new dependencies -- the existing stack (Python 3.12, LangGraph 1.0.10, Gemini 2.5 Flash, PostgreSQL 17, ChromaDB 1.5.2, Pydantic 2.12.5) provides all necessary capabilities. The marquee feature is PersonaScore 5D LLM-as-Judge, which replaces the currently inert binary fidelity signal in KAMI with a continuous 5-dimension persona evaluation. This is supported by a stdlib circuit breaker for Gemini API resilience, per-cycle token cost tracking via existing BudgetManager, ChromaDB prune-to-Obsidian lifecycle management, and KAMI weight rebalancing.
 
-The recommended approach is strictly additive: the existing graph topology stays unchanged. New capabilities wrap the graph (CycleRunner for snapshot capture), extend it minimally (one new SwarmState field, one new PostgreSQL table), or consume its output read-only (replay CLI). The stack additions are minimal -- promote two transitive dependencies (typer, rich) to explicit, add structlog for structured logging. No new frameworks. HEXACO-6 persona profiles are a design-time authoring guide validated by Pydantic, not a runtime personality engine. The architecture research strongly recommends post-graph snapshot extraction rather than adding snapshot nodes inside the graph, avoiding the complexity of routing four distinct exit paths.
+The recommended approach is to fix broken dependencies first (ccxt, chromadb test isolation, pytest-asyncio), then build the circuit breaker as a safety net before adding more LLM calls, then implement PersonaScore and wire it into KAMI fidelity before rebalancing weights. Token tracking and ChromaDB pruning are independent workstreams that slot in around the critical path. The most important architectural decision is that PersonaScore should merge INTO the existing fidelity dimension (delta) rather than adding a 5th KAMI dimension -- this avoids cascading changes across kami.py, merit_updater, merit_loader, KAMIDimensions dataclass, all tests, and config. PersonaScore evaluation must run as a CycleRunner post-cycle hook, not as a graph node, to avoid circular evaluation, budget contamination, and audit hash chain corruption.
 
-The primary risks are: (1) checkpoint state bloat from operator.add accumulator fields if cycle artifacts are naively stored in SwarmState, (2) yfinance rate limiting killing end-to-end pipeline runs during development, (3) persona collapse where Gemini's RLHF training overrides HEXACO-diverse persona instructions, and (4) silent failures from missing drift_guard YAML blocks and dummy paper fill prices masking data quality issues. All have concrete mitigations identified in the research. The critical ordering constraint is that persona population must come first -- everything downstream depends on agents producing meaningful, differentiated output.
-
----
+The primary risks are: (1) PersonaScore creating circular evaluation if placed inside the graph, (2) KAMI weight rebalancing breaking score continuity if shipped before PersonaScore provides a continuous fidelity signal, and (3) circuit breaker becoming a sticky boolean that prevents recovery without restart (mirroring the existing `_db_unavailable` anti-pattern in db.py). All three have clear prevention strategies. A notable conflict exists between research files: ARCHITECTURE.md recommends PersonaScore as a graph node while PITFALLS.md warns against this. The PITFALLS analysis is more thorough on this point and should be followed -- post-cycle hook is the safer placement.
 
 ## Key Findings
 
 ### Recommended Stack
 
-The v1.4 stack is deliberately conservative. Two dependencies already installed as transitive deps (typer, rich) get promoted to explicit in pyproject.toml. One new dependency (structlog) is added for structured JSON logging. Everything else uses stdlib or existing installed packages.
+Zero new dependencies. Every feature builds on existing installed packages, consistent with the project's stdlib-first philosophy. The circuit breaker is ~60 lines of stdlib code (threading, time, enum). PersonaScore uses `ChatGoogleGenerativeAI.with_structured_output()` plus Pydantic. Token tracking extends the existing BudgetManager. ChromaDB pruning uses native collection.get/delete APIs.
 
-**New explicit dependencies:**
-- **typer** (>=0.24.0): CLI framework for replay tool -- already installed, type-hint-driven, built on Click
-- **rich** (>=14.0.0): Terminal formatting for replay display -- already installed, provides tables/panels/syntax highlighting
-- **structlog** (>=24.0.0): Structured JSON logging for production runs -- wraps stdlib logging, non-invasive
+**Core technologies (all already installed):**
+- **Pydantic 2.12.5 + Gemini structured output:** PersonaScore 5D schema with `with_structured_output()` -- eliminates need for openevals/deepeval packages
+- **BudgetManager + AIMessage.usage_metadata:** Token cost tracking per cycle -- eliminates need for Langfuse/LangSmith/LiteLLM
+- **Python stdlib (threading, time, enum):** Circuit breaker 3-state machine -- eliminates need for pybreaker/aiobreaker/circuitbreaker packages
+- **ChromaDB 1.5.2 native API:** Metadata-filtered delete + get for pruning -- eliminates need for chromadb-ops CLI
 
-**Existing stack unchanged:** Python 3.12, LangGraph 1.0.10, psycopg 3.3.3, pydantic 2.12.5, pyyaml 6.0.3, langgraph-checkpoint-postgres 3.0.4.
-
-**Explicitly rejected:** textual (TUI overkill), tenacity (15 lines of manual backoff suffice), loguru (replaces stdlib logging -- too invasive), SQLAlchemy (raw psycopg3 pattern works), any HEXACO personality runtime library (profiles are static metadata, not simulations).
+**Critical version note:** ccxt 4.5.41 is BROKEN (ModuleNotFoundError for lighter_client). Fix requires force-reinstall or version pin to pre-Lighter release (~4.4.x).
 
 ### Expected Features
 
-**Must have (table stakes for "observable beta" label):**
-- Fully populated personas (MOMENTUM, CASSANDRA, SIGMA, GUARDIAN) with AXIOM-quality content and drift_guard YAML
-- End-to-end pipeline execution against real market data (yfinance equities path)
-- Per-cycle artifact persistence (CycleSnapshot to PostgreSQL cycle_snapshots table)
-- Cycle list and single-cycle detail CLI commands
-- Step-through replay CLI walking execution order
-- Merit weight and drift flag time series from existing MEMORY.md data
+**Must have (table stakes):**
+- Token cost tracking per cycle -- BudgetManager already has the data, just needs persistence to CycleSnapshot
+- Dependency restoration (ccxt, chromadb test isolation, pytest-asyncio) -- 13 broken tests erode CI trust
+- Circuit breaker for Gemini API -- no failure-state management currently; 429/503 cascades burn budget
+- KAMI weight rebalancing -- 30% of merit score is inert (Accuracy frozen at 0.5)
 
-**Should have (differentiators, post-beta validation):**
-- HEXACO-6 persona diversity profiles with pairwise distance validation
-- Debate tension score quantifying Bull/Bear disagreement
-- Cross-cycle comparison CLI (side-by-side diff of two cycles)
-- Dashboard-ready JSON export for external visualization
+**Should have (differentiators):**
+- PersonaScore 5D LLM-as-Judge -- no comparable open-source multi-agent system does per-cycle persona fidelity evaluation
+- Prune-to-Obsidian ChromaDB lifecycle -- most vector DB deployments grow unbounded; archive creates searchable history
 
 **Defer (v2+):**
-- Checkpoint fork / what-if replay (re-runs LLM calls, non-deterministic, expensive)
-- PersonaScore 5D fidelity evaluation (5 extra LLM calls per evaluation)
-- Real-time streaming dashboard (massive frontend complexity, low marginal value)
-- Automated HEXACO diversity enforcement gate (diversity is design-time, not runtime)
+- Multi-model fallback chains -- breaks soul fidelity assumptions; wrong for this architecture
+- Automated KAMI weight optimization -- premature without 100+ cycles of PersonaScore data
+- Real-time cost dashboard -- CLI replay queries are sufficient until WebSocket dashboard milestone
+- Sentence-transformers for PersonaScore embeddings -- heavyweight torch dependency for marginal gain
+- LLM-as-Judge for ARS drift detection -- creates circular evaluation; keep stdlib-only ARS metrics
 
 ### Architecture Approach
 
-The architecture follows one principle: the existing graph topology is frozen. All new capabilities attach outside or alongside. CycleRunner wraps graph invocation, assigns a cycle_id, extracts a curated CycleSnapshot from the final state after ainvoke() returns, and persists it to a dedicated PostgreSQL table. The replay CLI is a pure read-only consumer of that table. Persona population is content-only changes to existing soul directories.
+The existing LangGraph StateGraph topology is preserved with minimal modification. PersonaScore evaluation runs as a post-cycle hook in CycleRunner (not as a graph node) to avoid circular evaluation, budget contamination, and audit hash chain corruption. Token tracking uses BudgetManager as the single authoritative source with summary captured in CycleSnapshot after graph execution completes. The circuit breaker wraps LLM invocations via enhancement to the existing `with_audit_logging` wrapper in orchestrator.py, providing a single integration point with shared circuit state across all nodes. ChromaDB pruning is a CLI-only operation, never a graph node.
 
 **Major components:**
-1. **CycleRunner** (new, `src/core/cycle_runner.py`) -- wraps graph invocation, assigns cycle_id, captures and persists CycleSnapshot post-invocation
-2. **cycle_snapshots table** (new PostgreSQL DDL) -- denormalized JSONB storage with indexed columns for fast filtering
-3. **swarm-replay CLI** (new, `src/cli/replay.py`) -- list, show, diff, timeline commands using typer + rich
-4. **src/runner.py** (new) -- proper end-to-end entry point replacing legacy main.py simulation stub
-5. **Soul persona content** (modified files only) -- 4 agents x 3 files (IDENTITY.md, SOUL.md with drift_guard, AGENTS.md)
+1. **PersonaScore5D evaluator** (`src/core/persona_scorer.py`) -- pure core function, accepts plain dict args (not SwarmState), returns Pydantic-validated scores per agent. Called by CycleRunner post-hook for ALL agents that produced output
+2. **GeminiCircuitBreaker** (`src/core/circuit_breaker.py`) -- stdlib 3-state machine (closed/open/half-open) with time-based recovery, thread-safe singleton. Integrated into `with_audit_logging` wrapper. Only wraps L2 analysis nodes, not compliance-critical paths
+3. **Token cost extension** -- extend BudgetManager with per-agent counters and `category` parameter. Capture summary in CycleSnapshot before session reset. No LangChain callback handler needed (avoids known GoogleGenAI callback gap)
+4. **ChromaPruner** (`src/core/chroma_pruner.py`) -- prune-to-Obsidian workflow via MemoryService API, triggered by CLI subcommand only. Archive-before-delete with rule-aware cutoff dates
+5. **KAMI weight reconfig** -- merge PersonaScore INTO fidelity (delta=0.32), minimize frozen Accuracy (alpha=0.08). No 5th dimension
 
-**Key patterns to follow:**
-- Post-graph snapshot extraction (not an in-graph node) -- handles all 4 exit paths uniformly
-- Cycle ID separate from LangGraph thread_id -- domain concept vs. checkpoint management concept
-- Replay via direct PostgreSQL query (not LangGraph time-travel) -- one snapshot per cycle, decoupled from checkpoint internals
-- LangGraphOrchestrator gets a new run_cycle_async() method; existing run_task_async() delegates to it (non-breaking)
+**Key architectural decisions resolved:**
+- **Merge vs add dimension:** PersonaScore IS fidelity at higher resolution. Merge into delta, do not add epsilon. Dramatically simpler.
+- **Graph node vs post-cycle hook:** Post-cycle hook in CycleRunner. Avoids 5 pitfalls simultaneously (circular eval, budget contamination, audit corruption, asyncio.run crash, single-agent limitation).
+- **Callback vs BudgetManager for tokens:** BudgetManager only. Avoids double-counting (Pitfall #4) and ChatGoogleGenerativeAI callback gaps (GitHub #927).
+- **pybreaker vs stdlib:** Stdlib. Zero new dependencies for a reliability milestone. ~60 LOC.
+- **Lagged signal pattern:** PersonaScore from cycle N feeds fidelity in cycle N+1, same pattern as existing Accuracy dimension. Eliminates circular dependency.
 
 ### Critical Pitfalls
 
-1. **Checkpoint state bloat** -- Do NOT store cycle artifacts in SwarmState. Write to dedicated PostgreSQL table or filesystem. operator.add fields checkpoint the FULL accumulated list at every step. Fix BEFORE implementing persistence.
-2. **operator.add message list growth** -- messages accumulate 15-20 entries per cycle with no trimming. Implement message trimming or a custom sliding-window reducer. Fix BEFORE adding cycle persistence.
-3. **yfinance rate limiting** -- No retry logic in data_fetcher_node. Add exponential backoff (3 retries), data caching layer for development, and a --cached-data flag. Fix FIRST in end-to-end hardening.
-4. **Missing drift_guard YAML** -- 4 skeleton personas silently disable drift detection (empty rules = no flags). Require drift_guard YAML as a mandatory deliverable per persona. Validate at warmup_soul_cache().
-5. **Audit hash chain breakage** -- Every new SwarmState field enters the audit hash by default. Add cycle_id and any new fields to AUDIT_EXCLUDED_FIELDS immediately. Test verify_chain() after integration.
+1. **PersonaScore circular evaluation inside graph** -- If run as a graph node, judge tokens contaminate BudgetManager session ceiling (premature SafetyShutdown at ~50% actual budget), judge output enters audit hash chain, and judge failure triggers `return {}` that skips ALL merit updates. **Prevention:** CycleRunner post-cycle hook with separate budget category and try/except fallback to previous score.
 
----
+2. **KAMI weight rebalancing without continuous fidelity signal** -- Increasing fidelity weight from 0.10 to 0.32 while `_extract_fidelity_signal()` still returns binary 0/1 makes 32% of merit a meaningless constant (worse than the frozen Accuracy it replaces). **Prevention:** Wire PersonaScore into fidelity BEFORE changing weights. Never ship weight change without PersonaScore.
+
+3. **Circuit breaker sticky open state** -- Module-level singleton retains "open" state across CycleRunner invocations, mirroring the `_db_unavailable` anti-pattern in db.py. **Prevention:** Time-based half-open recovery with probe timer, not boolean flag. Log state transitions to structlog and audit.jsonl.
+
+4. **Token cost double-counting via operator.add reducer** -- SwarmState `total_tokens` uses `Annotated[int, operator.add]` which permanently accumulates. If both BudgetManager.record_usage() and a callback report the same tokens, counts inflate 2x and trigger premature SafetyShutdown. **Prevention:** BudgetManager as single authoritative source. Store cost in CycleSnapshot, not SwarmState.
+
+5. **ChromaDB pruning orphans active memory rules** -- No foreign key between MemoryRegistry rules and ChromaDB document IDs. Age-based pruning can delete vectors that inform active PREFER/AVOID rules, breaking MiFID II evidence trail. **Prevention:** Rule-aware cutoff dates, archive-before-delete with verification, pruning manifest in `data/pruning/`.
 
 ## Implications for Roadmap
 
 Based on research, suggested phase structure:
 
-### Phase 1: Full Persona Population + HEXACO-6 Profiles
+### Phase 27: Environment Stabilization + Dependency Fixes
+**Rationale:** Unblocks all testing; 13 broken tests undermine CI trust. Must come first because ChromaDB pruning requires working chromadb, and all features need green tests to validate against.
+**Delivers:** Green CI, restored ccxt/chromadb/pytest-asyncio, version pins in pyproject.toml
+**Addresses:** ENV-01 (dependency restoration)
+**Avoids:** Pitfall #11 (ChromaDB version mismatch breaks MemoryService API)
 
-**Rationale:** Critical path blocker. Everything downstream depends on agents producing meaningful, differentiated output. Skeleton personas produce shallow, convergent memos that make observability uninteresting. Zero code risk -- pure content authoring. HEXACO-6 profiling should happen during authoring, not after, because it informs SOUL.md prose.
-**Delivers:** 4 fully populated personas (MOMENTUM, CASSANDRA, SIGMA, GUARDIAN) with AXIOM-quality IDENTITY.md, SOUL.md (including drift_guard YAML), AGENTS.md, and HEXACO.yaml profiles. Pairwise diversity validation passing minimum distance threshold.
-**Addresses:** Fully populated personas (P1 table stake), HEXACO-6 diversity framework (P2 differentiator -- pulled forward because authoring is concurrent)
-**Avoids:** Pitfall 4 (stale cache -- add --reload-souls flag), Pitfall 6 (persona collapse -- behavioral descriptions not raw trait scores), Pitfall 10 (missing drift YAML -- mandatory deliverable per persona)
+### Phase 28: Gemini API Circuit Breaker
+**Rationale:** Safety net must exist before adding more LLM calls (PersonaScore adds 5 per cycle). Independent of other features, clean stdlib implementation. Establishes the `with_audit_logging` enhancement pattern.
+**Delivers:** `src/core/circuit_breaker.py`, enhanced `with_audit_logging`, soft-fail pause behavior, failure type classification (429 vs 5xx vs auth), structlog state transitions
+**Addresses:** SEC-03 (circuit breaker)
+**Avoids:** Pitfall #5 (sticky open state), Pitfall #9 (compliance path blocking), Pitfall #15 (failure type conflation)
 
-### Phase 2: Cycle Persistence Infrastructure
+### Phase 29: PersonaScore 5D LLM-as-Judge + KAMI Fidelity Wiring
+**Rationale:** The marquee differentiator. Must ship WITH KAMI fidelity wiring as a single unit -- Pitfall #16 makes them inseparable. PersonaScore replaces binary fidelity signal with continuous gradient data, justifying subsequent weight rebalancing.
+**Delivers:** `src/core/persona_scorer.py`, CycleRunner post-cycle evaluation hook, 5D rubric (Consistency, Tone, Logic, Depth, Bias) with anchored examples, PersonaScore persistence to DB, `_extract_fidelity_signal()` updated to read PersonaScore composite, evaluation of ALL agents per cycle
+**Addresses:** SOUL-09 (PersonaScore 5D), partial KAMI-05 (fidelity signal wiring)
+**Avoids:** Pitfall #1 (circular evaluation), Pitfall #3 (asyncio.run crash), Pitfall #7 (Import Layer Law), Pitfall #8 (non-deterministic scores), Pitfall #13 (single-agent evaluation)
 
-**Rationale:** Core data contract. Without a CycleSnapshot schema and persistence layer, there is nothing to replay or compare. Must be built before the runner or CLI. The snapshot schema serves as the contract between producer (CycleRunner) and consumer (replay CLI).
-**Delivers:** CycleSnapshot Pydantic model, cycle_snapshots PostgreSQL table with denormalized columns, CycleRunner class wrapping graph invocation, extract_cycle_snapshot() function, SwarmState.cycle_id field, AUDIT_EXCLUDED_FIELDS update.
-**Uses:** pydantic (existing), psycopg (existing), pathlib/json (stdlib)
-**Implements:** CycleRunner component, cycle_snapshots table, post-graph extraction pattern
-**Avoids:** Pitfall 1 (state bloat -- artifacts go to dedicated table, not SwarmState), Pitfall 2 (message growth -- add trimming), Pitfall 3 (sync I/O -- use asyncio.to_thread), Pitfall 8 (audit hash -- update exclusion set)
+### Phase 30: KAMI Weight Rebalancing + Token Cost Tracking
+**Rationale:** Weight rebalancing is safe only after PersonaScore provides continuous fidelity data (Phase 29). Token tracking is independent but low-complexity and groups well with this config-focused phase.
+**Delivers:** Updated DEFAULT_WEIGHTS (alpha=0.08, beta=0.35, gamma=0.25, delta=0.32), weight epoch tagging in DB, extended BudgetManager with per-agent counters and category parameter, cost field in CycleSnapshot, cost display in replay CLI
+**Addresses:** KAMI-05 (weight rebalancing), OBS-02 (token cost tracking)
+**Avoids:** Pitfall #2 (score discontinuity), Pitfall #4 (double-counting), Pitfall #16 (binary fidelity -- resolved by Phase 29)
 
-### Phase 3: End-to-End Pipeline Runner + Hardening
-
-**Rationale:** Must exercise the full pipeline with real data before building the replay tool. Validates that all 5 agents produce non-None output, debate synthesis works, risk gate fires, and CycleRunner persists a complete snapshot. Pipeline hardening (retry logic, structured logging, fallback price elimination) is inseparable from this phase.
-**Delivers:** src/runner.py entry point, data_fetcher retry with exponential backoff, structlog integration, paper fill price validation (fail explicitly on bad data), data caching layer for development, deprecation of legacy main.py.
-**Uses:** structlog (new), psycopg (existing), asyncio (stdlib)
-**Addresses:** End-to-end pipeline execution (P1 table stake)
-**Avoids:** Pitfall 5 (yfinance rate limiting -- retry + caching), Pitfall 9 (fallback prices -- fail explicitly), Pitfall 14 (wrong entrypoint -- new runner.py), Pitfall 15 (sleep blocking -- documented for future fix)
-
-### Phase 4: Replay CLI + Observability Commands
-
-**Rationale:** Read-only consumer of data from phases 2-3. Building last means real cycle data exists to test against. Merit and drift time series can be built in parallel since they read existing MEMORY.md data.
-**Delivers:** swarm-replay CLI (list, show, diff, timeline), merit history command, drift history command, debate tension score computation. All using typer + rich.
-**Uses:** typer (promoted), rich (promoted)
-**Implements:** swarm-replay CLI component
-**Avoids:** Pitfall 7 (event loop -- asyncio.run() only at CLI entry point, async internals), Pitfall 13 (schema dependency -- CycleSnapshot schema defined in Phase 2)
+### Phase 31: ChromaDB Prune-to-Obsidian
+**Rationale:** Least urgent, most self-contained. Requires stable MemoryService (Phase 27 fixes). Destructive operation benefits from all safety infrastructure being in place first.
+**Delivers:** `src/core/chroma_pruner.py`, CLI `prune` subcommand with --dry-run, Obsidian markdown export with YAML frontmatter, configurable age/source thresholds, rule-aware cutoff dates, pruning manifest, re-import script
+**Addresses:** OBS-03 (ChromaDB lifecycle management)
+**Avoids:** Pitfall #6 (orphaned active rules), Pitfall #12 (non-parseable archive)
 
 ### Phase Ordering Rationale
 
-- **Personas before infrastructure:** Content authoring has zero code risk and unblocks meaningful output from every subsequent phase. Running the pipeline with skeleton agents produces uninteresting data.
-- **Persistence before runner:** The CycleSnapshot schema is the data contract. Defining it first prevents the runner and CLI from making incompatible format assumptions (Pitfall 13).
-- **Runner before CLI:** The replay tool needs real data to test against. Without completed cycles in cycle_snapshots, the CLI is untestable.
-- **Hardening bundled with runner:** Retry logic, structured logging, and fallback price elimination are prerequisites for producing trustworthy observable output, not afterthoughts.
+- **Dependencies first (Phase 27):** Every subsequent phase needs green tests to validate. ChromaDB pruning cannot be built without working chromadb.
+- **Circuit breaker before PersonaScore (Phase 28 before 29):** PersonaScore adds 5 LLM calls per cycle; the safety net must exist first. Also the simplest feature (~60 LOC stdlib), establishing patterns for later phases.
+- **PersonaScore + fidelity wiring as atomic unit (Phase 29):** Research unanimously identifies shipping weight changes without continuous fidelity data as the most dangerous pitfall. These must be a single phase.
+- **Weight rebalancing after PersonaScore (Phase 30):** Hard dependency on Phase 29. Grouped with token tracking because both are config/schema extensions with low implementation risk.
+- **ChromaDB pruning last (Phase 31):** Fully independent, least urgent. Can be deferred to v1.6 if timeline is tight without impacting other features.
 
 ### Research Flags
 
 Phases likely needing deeper research during planning:
-- **Phase 1 (Persona Population):** Needs research into effective HEXACO-to-prose translation patterns. Risk of persona collapse under Gemini Flash (Pitfall 6) requires iterative testing. The drift_guard YAML schema per persona needs careful design.
-- **Phase 3 (Pipeline Runner):** Data fetcher retry strategy and caching layer design need implementation research. structlog configuration with existing logging infrastructure needs verification.
+- **Phase 29 (PersonaScore):** Judge prompt rubric design with anchored examples needs careful iteration. Non-deterministic scoring requires calibration testing. Post-cycle hook integration with CycleRunner needs exact hook point design. merit_updater single-agent limitation (Pitfall #13) may need fixing in this phase.
 
 Phases with standard patterns (skip research-phase):
-- **Phase 2 (Cycle Persistence):** Well-documented patterns. Pydantic model + PostgreSQL JSONB + post-invocation extraction is straightforward. Architecture research provides complete schema and code patterns.
-- **Phase 4 (Replay CLI):** Standard typer + rich CLI patterns. Read-only PostgreSQL queries. No novel design decisions.
-
----
+- **Phase 27 (Dependency fixes):** Package version pinning and diagnosis. No architectural decisions.
+- **Phase 28 (Circuit breaker):** Well-documented 3-state pattern. Implementation sketch complete in STACK.md. Integration point identified.
+- **Phase 30 (KAMI weights + token tracking):** Config changes plus BudgetManager extension. Existing patterns fully cover this.
+- **Phase 31 (ChromaDB pruning):** ChromaDB API is stable. MemoryService already provides the needed interface.
 
 ## Confidence Assessment
 
 | Area | Confidence | Notes |
 |------|------------|-------|
-| Stack | HIGH | Minimal additions. Two deps already installed, one new. All verified against pyproject.toml and uv pip list. |
-| Features | HIGH | Feature landscape well-mapped. Clear P1/P2/P3 prioritization. Dependency chain validated against codebase. |
-| Architecture | HIGH | All patterns grounded in existing codebase analysis. Integration points identified with line-level specificity. |
-| Pitfalls | HIGH | 15 pitfalls identified, all verified against specific source files. Critical pitfalls have concrete prevention strategies. |
+| Stack | HIGH | All technologies already installed and verified via `uv pip list`. Zero new dependencies. |
+| Features | HIGH | Feature landscape well-mapped. Dependencies between features clearly identified. Anti-features have explicit rejection rationale. |
+| Architecture | HIGH | Based on direct codebase analysis with specific file/line references. Integration points verified. Import Layer Law compliance checked. |
+| Pitfalls | HIGH | 16 pitfalls identified with concrete codebase references. Integration risk matrix maps every new feature to every existing system at risk. |
 
 **Overall confidence:** HIGH
 
 ### Gaps to Address
 
-- **Gemini Flash persona fidelity:** No empirical data on whether Gemini Flash maintains HEXACO-diverse personas across multi-turn interactions. Pitfall 6 is based on general LLM research, not Gemini-specific testing. Validate during Phase 1 with comparative output analysis.
-- **yfinance reliability for beta:** Rate limiting is well-documented but the exact threshold for "rapid development" is unknown. The data caching layer in Phase 3 is the mitigation, but cache invalidation strategy needs definition.
-- **KAMI Accuracy dimension frozen at 0.5:** 30% of merit score is permanently inert (Pitfall 11). Decision needed: reduce Accuracy weight to 0.0 for beta, or implement thesis_records. This is a product decision, not a research gap.
-- **PostgreSQL connection pool race (Pitfall 12):** Pool open pattern is scattered across 10+ call sites. Low severity (psycopg3 pool open is idempotent) but should be consolidated during Phase 3 runner work.
-
----
+- **ccxt fix strategy:** The lighter_client ModuleNotFoundError is not widely documented. May need version bisection. Confidence MEDIUM on first-try fix.
+- **PersonaScore judge prompt calibration:** No existing calibration data. The 5D rubric with anchored examples needs iterative refinement against real agent outputs. Plan for 2-3 prompt iterations.
+- **ChatGoogleGenerativeAI callback behavior:** Known GitHub issue #927 where usage_metadata may not flow through callbacks. Recommendation is to avoid callbacks entirely and use BudgetManager direct recording, but validate if callback approach is attempted.
+- **merit_updater single-agent limitation:** Currently updates only the last agent's merit per cycle. PersonaScore evaluates all agents, but merit_updater may need fixing too. Scope during Phase 29 planning.
+- **KAMI weight transition strategy:** Changing weights mid-lifecycle causes one-time shift in all composites. Decide whether to reset scores to cold-start (0.5) at weight boundary or let EMA absorb. Document as decision record.
+- **Research file conflicts resolved:** FEATURES.md recommends pybreaker (rejected -- stdlib per STACK.md). ARCHITECTURE.md places PersonaScore as graph node (rejected -- post-cycle hook per PITFALLS.md analysis). These resolutions should be treated as binding for roadmap planning.
 
 ## Sources
 
 ### Primary (HIGH confidence)
-- Project codebase (v1.3, ~30,600 LOC) -- orchestrator, state, persistence, soul_loader, audit_logger, memory_writer, drift_eval, order_router, decision_card, kami
-- [HEXACO-PI-R Official Scale Descriptions](https://hexaco.org/scaledescriptions)
-- [LangGraph Persistence Documentation](https://docs.langchain.com/oss/python/langgraph/persistence)
-- [LangGraph Time Travel Documentation](https://docs.langchain.com/oss/python/langgraph/use-time-travel)
-- pyproject.toml + uv pip list (verified dependency set)
-- [Rich PyPI](https://pypi.org/project/rich/), [Typer PyPI](https://pypi.org/project/typer/)
+- Existing codebase: orchestrator.py, kami.py, cycle_runner.py, budget_manager.py, audit_logger.py, state.py, merit_updater.py, analysts.py, researchers.py, memory/service.py, db.py, persistence.py
+- [ChatGoogleGenerativeAI reference](https://reference.langchain.com/python/integrations/langchain_google_genai/ChatGoogleGenerativeAI/) -- structured output, usage_metadata
+- [LangChain UsageMetadata API](https://python.langchain.com/api_reference/core/messages/langchain_core.messages.ai.UsageMetadata.html) -- token tracking
+- [ChromaDB delete data docs](https://docs.trychroma.com/docs/collections/delete-data) -- pruning API
+- Import Layer Law enforcement: `tests/core/test_import_boundaries.py`
 
 ### Secondary (MEDIUM confidence)
-- [LangGraph Issue #2943: operator.add field clearing](https://github.com/langchain-ai/langgraph/issues/2943)
-- [Applying Psychometrics to LLM Simulated Populations (arxiv:2508.00742)](https://arxiv.org/html/2508.00742v1)
-- [Turing Institute: Patterns Not People](https://cetas.turing.ac.uk/publications/patterns-not-people-personality-structures-llm-powered-persona-agents)
-- [yfinance Rate Limiting Issues #2422, #2431](https://github.com/ranaroussi/yfinance/issues/2422)
-- [LangGraph Checkpointing Best Practices 2025](https://sparkco.ai/blog/mastering-langgraph-checkpointing-best-practices-for-2025)
-- [Observability for AI Agents](https://www.getmaxim.ai/articles/observability-for-ai-agents-langgraph-openai-agents-and-crew-ai/)
-- [Psychologically Enhanced AI Agents (2025)](https://www.emergentmind.com/papers/2509.04343)
-- [Nature: Psychometric framework for LLM personality traits](https://www.nature.com/articles/s42256-025-01115-6)
+- [Langfuse: LLM-as-a-Judge Guide](https://langfuse.com/docs/evaluation/evaluation-methods/llm-as-a-judge) -- pointwise scoring best practices
+- [Evidently AI: LLM-as-a-Judge Guide](https://www.evidentlyai.com/llm-guide/llm-as-a-judge) -- rubric design
+- [arXiv 2411.15594: Survey on LLM-as-a-Judge](https://arxiv.org/abs/2411.15594) -- CoT elicitation, few-shot calibration
+- [ChromaDB Cookbook: Maintenance](https://cookbook.chromadb.dev/running/maintenance/) -- WAL pruning, auto-compaction
+- [ChatGoogleGenerativeAI usage_metadata issue #927](https://github.com/langchain-ai/langchain-google/issues/927) -- callback gap
+- [ccxt static_dependencies issue #23307](https://github.com/ccxt/ccxt/issues/23307) -- analogous packaging bug
+- [Portkey: Circuit Breakers in LLM Apps](https://portkey.ai/blog/retries-fallbacks-and-circuit-breakers-in-llm-apps/) -- pattern reference
 
 ### Tertiary (LOW confidence)
-- [TradingAgents Framework](https://github.com/TauricResearch/TradingAgents) -- multi-agent LLM trading reference, not deeply analyzed
-- [Best LLM Observability Tools 2026](https://awesomeagents.ai/tools/best-llm-observability-tools-2026/)
+- ccxt lighter_client fix strategy -- not widely documented, may require version bisection
 
 ---
-*Research completed: 2026-03-08*
+*Research completed: 2026-03-09*
 *Ready for roadmap: yes*
