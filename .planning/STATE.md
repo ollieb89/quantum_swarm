@@ -3,11 +3,11 @@ gsd_state_version: 1.0
 milestone: v1.5
 milestone_name: "Reliable Infrastructure"
 status: active
-stopped_at: Defining requirements
+stopped_at: Roadmap created, ready to plan Phase 27
 last_updated: "2026-03-09"
-last_activity: 2026-03-09 — Milestone v1.5 started
+last_activity: 2026-03-09 — Roadmap created for v1.5 (5 phases, 23 requirements)
 progress:
-  total_phases: 0
+  total_phases: 5
   completed_phases: 0
   total_plans: 0
   completed_plans: 0
@@ -17,26 +17,26 @@ progress:
 # Project State
 
 > Machine-readable state lives in YAML frontmatter above.
-> This markdown body is auto-generated — do not edit manually.
+> This markdown body is auto-generated -- do not edit manually.
 
 ## Milestone
 
-**v1.5 Reliable Infrastructure** — ACTIVE
+**v1.5 Reliable Infrastructure** -- ACTIVE
 
-Previous: v1.4 Beta: Observable Swarm — SHIPPED 2026-03-09 (4 phases, 10 plans)
+Previous: v1.4 Beta: Observable Swarm -- SHIPPED 2026-03-09 (4 phases, 10 plans)
 
 ## Current Phase
 
-Not started (defining requirements)
+Phase 27 of 31 (Environment Stabilization) -- ready to plan
 
-Progress: [░░░░░░░░░░] 0%
+Progress: [..........] 0%
 
 ## Project Reference
 
 See: `.planning/PROJECT.md` (updated 2026-03-09)
 
 **Core value:** Institutional-quality trade signal generation through adversarial AI debate, with self-improving memory rules validated by backtesting, hard compliance guardrails, and immutable per-trade audit trails
-**Current focus:** Stabilize foundation — fix deps, rebalance KAMI, add PersonaScore 5D, token cost tracking, Gemini circuit breakers
+**Current focus:** Phase 27 -- fix broken ccxt/chromadb/pytest-asyncio deps to unblock all subsequent phases
 
 ## Architecture
 
@@ -63,11 +63,11 @@ See: `.planning/PROJECT.md` (updated 2026-03-09)
 
 Status: Yellow
 - v1.4 shipped: 300+ tests passing, 0 failures (excluding pre-existing env issues)
-- 13 tests broken due to env issues (ccxt, chromadb, pytest-asyncio) — P0 for v1.5
-- KAMI Accuracy frozen at 0.5 (30% of merit inert) — P0 for v1.5
+- 13 tests broken due to env issues (ccxt, chromadb, pytest-asyncio) -- P0 for Phase 27
+- KAMI Accuracy frozen at 0.5 (30% of merit inert) -- P0 for Phase 30
 
 ## Session Continuity
 
 Last session: 2026-03-09
-Stopped at: Defining requirements for v1.5
+Stopped at: Roadmap created for v1.5. Ready to plan Phase 27.
 Resume file: None

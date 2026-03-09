@@ -16,7 +16,7 @@ Requirements for v1.5 Reliable Infrastructure. Each maps to roadmap phases.
 
 ### Resilience
 
-- [ ] **SEC-03**: Gemini API circuit breaker detects transient failures (429, 503, timeout) and transitions through CLOSED → OPEN → HALF-OPEN states
+- [ ] **SEC-03**: Gemini API circuit breaker detects transient failures (429, 503, timeout) and transitions through CLOSED -> OPEN -> HALF-OPEN states
 - [ ] **SEC-04**: Circuit breaker in OPEN state returns soft-fail response (empty dict) instead of crashing the graph run
 - [ ] **SEC-05**: Circuit breaker integrates into existing `with_audit_logging` wrapper as single integration point
 - [ ] **SEC-06**: Circuit breaker state transitions are logged via structlog for debugging
@@ -26,7 +26,7 @@ Requirements for v1.5 Reliable Infrastructure. Each maps to roadmap phases.
 
 - [ ] **SOUL-09**: PersonaScore 5D evaluates persona fidelity across Consistency, Tone, Logic, Depth, and Bias dimensions using LLM-as-Judge
 - [ ] **SOUL-10**: PersonaScore runs as CycleRunner post-cycle hook (not a graph node) to avoid circular evaluation and audit hash corruption
-- [ ] **SOUL-11**: PersonaScore evaluates 4 LLM agents (AXIOM, MOMENTUM, CASSANDRA, SIGMA) — excludes RiskManager (rules-only)
+- [ ] **SOUL-11**: PersonaScore evaluates 4 LLM agents (AXIOM, MOMENTUM, CASSANDRA, SIGMA) -- excludes RiskManager (rules-only)
 - [ ] **SOUL-12**: PersonaScore results persist to PostgreSQL and are available to KAMI fidelity dimension in next cycle
 - [ ] **SOUL-13**: PersonaScore uses structured output (Pydantic schema) with 5 float dimensions + rationale string
 - [ ] **KAMI-05**: KAMI fidelity dimension consumes PersonaScore continuous signal (replaces binary 0/1)
@@ -39,7 +39,7 @@ Requirements for v1.5 Reliable Infrastructure. Each maps to roadmap phases.
 - [ ] **OBS-04**: Token cost data persisted to CycleSnapshot for replay CLI visibility
 - [ ] **OBS-05**: Token tracking uses single authoritative source (BudgetManager extension, not SwarmState reducer) to prevent double-counting
 - [ ] **OBS-03**: CLI `prune` command archives ChromaDB entries older than configurable threshold to Obsidian-compatible Markdown files
-- [ ] **OBS-06**: Prune operation respects active MemoryRegistry rules — never deletes vectors backing active rules
+- [ ] **OBS-06**: Prune operation respects active MemoryRegistry rules -- never deletes vectors backing active rules
 - [ ] **OBS-07**: Prune operation logs archived/deleted counts via structlog
 
 ## v2 Requirements
@@ -69,7 +69,7 @@ Deferred to future release. Tracked but not in current roadmap.
 | PersonaScore as graph node | Circular evaluation risk, audit hash corruption, budget contamination |
 | 5th KAMI dimension for PersonaScore | Cascading changes across 8+ files; merge into fidelity is simpler and sufficient |
 | KAMI score reset on weight change | EMA absorption preserves merit history; reset would discard earned reputation |
-| PersonaScore for RiskManager | Rules-only agent with no LLM call — no persona to evaluate |
+| PersonaScore for RiskManager | Rules-only agent with no LLM call -- no persona to evaluate |
 | Langfuse/OpenTelemetry for token tracking | Heavyweight SaaS dependency; BudgetManager extension is sufficient |
 | Real-time token cost alerting | Defer to v2 after baseline tracking validates cost patterns |
 
@@ -79,35 +79,35 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| ENV-01 | Pending | Pending |
-| ENV-02 | Pending | Pending |
-| ENV-03 | Pending | Pending |
-| ENV-04 | Pending | Pending |
-| SEC-03 | Pending | Pending |
-| SEC-04 | Pending | Pending |
-| SEC-05 | Pending | Pending |
-| SEC-06 | Pending | Pending |
-| SEC-07 | Pending | Pending |
-| SOUL-09 | Pending | Pending |
-| SOUL-10 | Pending | Pending |
-| SOUL-11 | Pending | Pending |
-| SOUL-12 | Pending | Pending |
-| SOUL-13 | Pending | Pending |
-| KAMI-05 | Pending | Pending |
-| KAMI-06 | Pending | Pending |
-| KAMI-07 | Pending | Pending |
-| OBS-02 | Pending | Pending |
-| OBS-03 | Pending | Pending |
-| OBS-04 | Pending | Pending |
-| OBS-05 | Pending | Pending |
-| OBS-06 | Pending | Pending |
-| OBS-07 | Pending | Pending |
+| ENV-01 | Phase 27 | Pending |
+| ENV-02 | Phase 27 | Pending |
+| ENV-03 | Phase 27 | Pending |
+| ENV-04 | Phase 27 | Pending |
+| SEC-03 | Phase 28 | Pending |
+| SEC-04 | Phase 28 | Pending |
+| SEC-05 | Phase 28 | Pending |
+| SEC-06 | Phase 28 | Pending |
+| SEC-07 | Phase 28 | Pending |
+| SOUL-09 | Phase 29 | Pending |
+| SOUL-10 | Phase 29 | Pending |
+| SOUL-11 | Phase 29 | Pending |
+| SOUL-12 | Phase 29 | Pending |
+| SOUL-13 | Phase 29 | Pending |
+| KAMI-05 | Phase 29 | Pending |
+| KAMI-06 | Phase 30 | Pending |
+| KAMI-07 | Phase 30 | Pending |
+| OBS-02 | Phase 30 | Pending |
+| OBS-04 | Phase 30 | Pending |
+| OBS-05 | Phase 30 | Pending |
+| OBS-03 | Phase 31 | Pending |
+| OBS-06 | Phase 31 | Pending |
+| OBS-07 | Phase 31 | Pending |
 
 **Coverage:**
 - v1.5 requirements: 23 total
-- Mapped to phases: 0
-- Unmapped: 23
+- Mapped to phases: 23
+- Unmapped: 0
 
 ---
 *Requirements defined: 2026-03-09*
-*Last updated: 2026-03-09 after initial definition*
+*Last updated: 2026-03-09 after roadmap creation*
