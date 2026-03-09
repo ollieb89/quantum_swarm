@@ -301,3 +301,101 @@ class TestCircuitBreakerDisabled:
 
         with pytest.raises(ServerError):
             asyncio.run(wrapped(state))
+
+
+# ---------------------------------------------------------------------------
+# Task 2: End-to-end integration tests
+# ---------------------------------------------------------------------------
+
+
+class TestCircuitOpensAfterThreshold:
+    """Verify circuit opens after N transient errors and blocks subsequent calls."""
+
+    def test_circuit_opens_after_threshold(self, mock_audit_logger):
+        """Fire 3 transient errors through wrapped LLM node, verify 4th call returns empty without invoking node_fn."""
+        from src.graph.orchestrator import with_audit_logging
+
+        call_count = 0
+
+        async def flaky_node(state, **kwargs):
+            nonlocal call_count
+            call_count += 1
+            raise _make_server_error(503)
+
+        cb = CircuitBreaker(threshold=3, cooldown_s=9999)
+
+        with patch("src.graph.orchestrator._get_circuit_breaker", return_value=cb):
+            wrapped = with_audit_logging(flaky_node, "macro_analyst")
+            state = {"task_id": "threshold-test", "soft_failed_nodes": []}
+
+            # Fire 3 transient errors -- each should soft-fail
+            for i in range(3):
+                result = asyncio.run(wrapped(state))
+                assert result == {"soft_failed_nodes": ["macro_analyst"]}, f"Call {i+1} failed"
+
+            assert call_count == 3
+            assert cb.state == CircuitState.OPEN
+
+            # 4th call: circuit is OPEN, node_fn should NOT be invoked
+            call_count = 0
+            result = asyncio.run(wrapped(state))
+            assert result == {"soft_failed_nodes": ["macro_analyst"]}
+            assert call_count == 0  # node_fn was NOT called
+
+
+class TestNonLLMNodeStillRaises:
+    """Verify non-LLM nodes are not protected by circuit breaker."""
+
+    def test_with_audit_logging_non_llm_node_still_raises(self, mock_audit_logger):
+        """Non-LLM node that raises ServerError(503) still propagates the error."""
+        from src.graph.orchestrator import with_audit_logging
+
+        node_fn = AsyncMock(side_effect=_make_server_error(503))
+
+        wrapped = with_audit_logging(node_fn, "data_fetcher")
+        state = {"task_id": "non-llm-test"}
+
+        with pytest.raises(ServerError):
+            asyncio.run(wrapped(state))
+
+
+class TestCycleSnapshotSerialization:
+    """Verify CycleSnapshot serialization with degraded field."""
+
+    def test_cycle_snapshot_degraded_field_serialization(self):
+        """CycleSnapshot with degraded=True serializes correctly."""
+        from src.core.cycle_snapshot import CycleSnapshot
+
+        snap = CycleSnapshot(
+            cycle_id=1, task_id="t", symbol="BTC", status="completed",
+            degraded=True, soft_failed_nodes=["macro_analyst"],
+        )
+        data = snap.model_dump(mode="json")
+        assert data["degraded"] is True
+        assert data["soft_failed_nodes"] == ["macro_analyst"]
+
+        # Round-trip
+        snap2 = CycleSnapshot.model_validate(data)
+        assert snap2.degraded is True
+        assert snap2.soft_failed_nodes == ["macro_analyst"]
+
+
+class TestSwarmStateAccumulation:
+    """Verify operator.add reducer works for soft_failed_nodes."""
+
+    def test_swarm_state_soft_failed_nodes_accumulates(self):
+        """The operator.add annotation means multiple soft_failed_nodes lists merge."""
+        # Simulate what LangGraph does: operator.add([a], [b]) = [a, b]
+        list_a = ["macro_analyst"]
+        list_b = ["quant_modeler"]
+        accumulated = operator.add(list_a, list_b)
+        assert accumulated == ["macro_analyst", "quant_modeler"]
+
+        # Verify the SwarmState annotation is correct
+        from src.graph.state import SwarmState
+        import typing
+        hints = typing.get_type_hints(SwarmState, include_extras=True)
+        sfn_hint = hints["soft_failed_nodes"]
+        # Check it's Annotated with operator.add
+        assert hasattr(sfn_hint, "__metadata__")
+        assert operator.add in sfn_hint.__metadata__
