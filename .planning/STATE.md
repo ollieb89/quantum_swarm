@@ -2,15 +2,15 @@
 gsd_state_version: 1.0
 milestone: v1.5
 milestone_name: Reliable Infrastructure
-status: Yellow
-stopped_at: Completed 27-01-PLAN.md
-last_updated: "2026-03-09T15:50:25.975Z"
+status: Green
+stopped_at: Completed 27-02-PLAN.md
+last_updated: "2026-03-09T16:14:31.797Z"
 progress:
   total_phases: 5
-  completed_phases: 0
+  completed_phases: 1
   total_plans: 2
-  completed_plans: 1
-  percent: 10
+  completed_plans: 2
+  percent: 20
 ---
 
 # Project State
@@ -26,16 +26,16 @@ Previous: v1.4 Beta: Observable Swarm -- SHIPPED 2026-03-09 (4 phases, 10 plans)
 
 ## Current Phase
 
-Phase 27 of 31 (Environment Stabilization) -- Plan 2 of 2
+Phase 27 of 31 (Environment Stabilization) -- COMPLETE (2 of 2 plans done)
 
-Progress: [=====.....] 10%
+Progress: [==........] 20%
 
 ## Project Reference
 
 See: `.planning/PROJECT.md` (updated 2026-03-09)
 
 **Core value:** Institutional-quality trade signal generation through adversarial AI debate, with self-improving memory rules validated by backtesting, hard compliance guardrails, and immutable per-trade audit trails
-**Current focus:** Phase 27 -- fix broken ccxt/chromadb/pytest-asyncio deps to unblock all subsequent phases
+**Current focus:** Phase 27 complete -- env deps fixed; ready for Phase 28
 
 ## Architecture
 
@@ -60,13 +60,13 @@ See: `.planning/PROJECT.md` (updated 2026-03-09)
 
 ## Health
 
-Status: Yellow
-- v1.4 shipped: 300+ tests passing, 0 failures (excluding pre-existing env issues)
-- 13 tests broken due to env issues (ccxt, chromadb, pytest-asyncio) -- P0 for Phase 27
+Status: Green
+- Phase 27 complete: 680 passed, 4 skipped, 0 failures
+- Environment issues resolved (ccxt lazy init, asyncio_mode=auto, PG skipif)
 - KAMI Accuracy frozen at 0.5 (30% of merit inert) -- P0 for Phase 30
 
 ## Session Continuity
 
-Last session: 2026-03-09T15:50:25.974Z
-Stopped at: Completed 27-01-PLAN.md
+Last session: 2026-03-09T16:14:31.796Z
+Stopped at: Completed 27-02-PLAN.md
 Resume file: None

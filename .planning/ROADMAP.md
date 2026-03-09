@@ -85,7 +85,7 @@ See: `.planning/milestones/v1.4-ROADMAP.md` for full archive
 
 **Milestone Goal:** Stabilize the foundation -- fix broken deps, add Gemini API resilience, introduce 5D persona fidelity evaluation, rebalance KAMI merit, track token costs, and archive ChromaDB to Obsidian.
 
-- [ ] **Phase 27: Environment Stabilization** - Restore all broken dependencies and green-light 13 failing tests
+- [x] **Phase 27: Environment Stabilization** - Restore all broken dependencies and green-light 13 failing tests (completed 2026-03-09)
 - [ ] **Phase 28: Gemini API Circuit Breaker** - Safety net for LLM call failures with 3-state soft-fail pause
 - [ ] **Phase 29: PersonaScore 5D + KAMI Fidelity Wiring** - LLM-as-Judge persona evaluation with continuous fidelity signal
 - [ ] **Phase 30: KAMI Weight Rebalance + Token Tracking** - Merit weight redistribution and per-cycle cost observability
@@ -102,7 +102,7 @@ See: `.planning/milestones/v1.4-ROADMAP.md` for full archive
   2. Running `pytest` produces 0 failures from chromadb import or configuration errors
   3. Running `pytest` produces 0 failures from pytest-asyncio mode configuration issues
   4. CI test suite reports 13 previously-broken tests now passing
-**Plans:** 1/2 plans executed
+**Plans:** 2/2 plans complete
 Plans:
 - [ ] 27-01-PLAN.md -- Pin exact dependency versions, restore ccxt lazy init, fix Pydantic ConfigDict
 - [ ] 27-02-PLAN.md -- Strip redundant @pytest.mark.asyncio decorators, verify full suite green
@@ -186,7 +186,7 @@ Phases execute in numeric order: 27 -> 28 -> 29 -> 30 -> 31
 | 24. Cycle Persistence | v1.4 | 2/2 | Complete | 2026-03-09 |
 | 25. End-to-End Pipeline Runner | v1.4 | 2/2 | Complete | 2026-03-09 |
 | 26. Replay CLI | v1.4 | 2/2 | Complete | 2026-03-09 |
-| 27. Environment Stabilization | 1/2 | In Progress|  | - |
+| 27. Environment Stabilization | 2/2 | Complete   | 2026-03-09 | - |
 | 28. Gemini API Circuit Breaker | v1.5 | 0/? | Not started | - |
 | 29. PersonaScore 5D + KAMI Fidelity | v1.5 | 0/? | Not started | - |
 | 30. KAMI Weight Rebalance + Token Tracking | v1.5 | 0/? | Not started | - |

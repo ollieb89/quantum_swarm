@@ -12,7 +12,7 @@ Requirements for v1.5 Reliable Infrastructure. Each maps to roadmap phases.
 - [x] **ENV-01**: All ccxt-dependent tests pass after dependency fix (lighter_client packaging bug resolved or ccxt pinned to working version)
 - [x] **ENV-02**: All chromadb-dependent tests pass after dependency fix (verify installation, fix import/config issues)
 - [x] **ENV-03**: All pytest-asyncio-dependent tests pass after dependency fix (verify installation, fix mode configuration)
-- [ ] **ENV-04**: CI test suite runs green with 0 env-related failures (13 previously broken tests restored)
+- [x] **ENV-04**: CI test suite runs green with 0 env-related failures (13 previously broken tests restored)
 
 ### Resilience
 
@@ -82,7 +82,7 @@ Which phases cover which requirements. Updated during roadmap creation.
 | ENV-01 | Phase 27 | Complete |
 | ENV-02 | Phase 27 | Complete |
 | ENV-03 | Phase 27 | Complete |
-| ENV-04 | Phase 27 | Pending |
+| ENV-04 | Phase 27 | Complete |
 | SEC-03 | Phase 28 | Pending |
 | SEC-04 | Phase 28 | Pending |
 | SEC-05 | Phase 28 | Pending |
