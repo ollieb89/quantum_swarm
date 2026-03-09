@@ -36,9 +36,9 @@ Requirements for the Beta: Observable Swarm release. Each maps to roadmap phases
 - [x] **REPL-01**: User can list all available cycles with summary metadata
 - [x] **REPL-02**: User can step through a cycle (agent memos → debate → consensus → decision card)
 - [x] **REPL-03**: User can navigate between cycles (previous/next)
-- [ ] **REPL-04**: Merit weights are visualized per cycle showing agent influence
+- [x] **REPL-04**: Merit weights are visualized per cycle showing agent influence
 - [x] **REPL-05**: Drift flags and ARS signals are displayed when viewing a cycle
-- [ ] **REPL-06**: User can compare two cycles side-by-side to see how the institution changed
+- [x] **REPL-06**: User can compare two cycles side-by-side to see how the institution changed
 
 ## Future Requirements
 
@@ -88,9 +88,9 @@ Which phases cover which requirements. Updated during roadmap creation.
 | REPL-01 | Phase 26 | Complete |
 | REPL-02 | Phase 26 | Complete |
 | REPL-03 | Phase 26 | Complete |
-| REPL-04 | Phase 26 | Pending |
+| REPL-04 | Phase 26 | Complete |
 | REPL-05 | Phase 26 | Complete |
-| REPL-06 | Phase 26 | Pending |
+| REPL-06 | Phase 26 | Complete |
 
 **Coverage:**
 - v1.4 requirements: 21 total

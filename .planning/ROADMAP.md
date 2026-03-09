@@ -75,7 +75,7 @@ See: `.planning/milestones/v1.3-ROADMAP.md` for full archive
 - [x] **Phase 23: Full Persona Population** - Populate all 4 skeleton agents with HEXACO-6 diverse personalities and drift_guard YAML (completed 2026-03-09)
 - [x] **Phase 24: Cycle Persistence** - CycleSnapshot schema, PostgreSQL cycle_snapshots table, CycleRunner wrapper (completed 2026-03-09)
 - [x] **Phase 25: End-to-End Pipeline Runner** - Production runner with retry, caching, structured logging, message trimming (completed 2026-03-09)
-- [ ] **Phase 26: Replay CLI** - Read-only CLI for listing, stepping through, and comparing persisted cycles
+- [x] **Phase 26: Replay CLI** - Read-only CLI for listing, stepping through, and comparing persisted cycles (completed 2026-03-09)
 
 ## Phase Details
 
@@ -175,4 +175,4 @@ Phases execute in numeric order: 23 > 24 > 25 > 26
 | 23. Full Persona Population | 4/4 | Complete    | 2026-03-09 | - |
 | 24. Cycle Persistence | 2/2 | Complete    | 2026-03-09 | - |
 | 25. End-to-End Pipeline Runner | 2/2 | Complete    | 2026-03-09 | - |
-| 26. Replay CLI | 1/2 | In Progress|  | - |
+| 26. Replay CLI | 2/2 | Complete   | 2026-03-09 | - |
