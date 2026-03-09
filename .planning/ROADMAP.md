@@ -88,7 +88,7 @@ See: `.planning/milestones/v1.4-ROADMAP.md` for full archive
 - [x] **Phase 27: Environment Stabilization** - Restore all broken dependencies and green-light 13 failing tests (completed 2026-03-09)
 - [x] **Phase 28: Gemini API Circuit Breaker** - Safety net for LLM call failures with 3-state soft-fail pause (completed 2026-03-09)
 - [x] **Phase 29: PersonaScore 5D + KAMI Fidelity Wiring** - LLM-as-Judge persona evaluation with continuous fidelity signal (completed 2026-03-09)
-- [ ] **Phase 30: KAMI Weight Rebalance + Token Tracking** - Merit weight redistribution and per-cycle cost observability
+- [x] **Phase 30: KAMI Weight Rebalance + Token Tracking** - Merit weight redistribution and per-cycle cost observability (completed 2026-03-09)
 - [ ] **Phase 31: ChromaDB Prune-to-Obsidian** - Archive old vectors to Markdown with rule-aware safety
 
 ## Phase Details
@@ -146,7 +146,7 @@ Plans:
   3. After a cycle completes, CycleSnapshot contains per-agent token usage (prompt + completion) with USD cost estimate
   4. Token cost data is visible in the replay CLI when showing a cycle
   5. BudgetManager is the single authoritative source for token counts (no SwarmState reducer double-counting)
-**Plans:** 1/2 plans executed
+**Plans:** 2/2 plans complete
 Plans:
 - [ ] 30-01-PLAN.md -- Rebalance KAMI DEFAULT_WEIGHTS (alpha=0.08, delta=0.32) with EMA absorption
 - [ ] 30-02-PLAN.md -- Per-agent token tracking pipeline (BudgetManager -> CycleSnapshot -> replay CLI)
@@ -198,5 +198,5 @@ Phases execute in numeric order: 27 -> 28 -> 29 -> 30 -> 31
 | 27. Environment Stabilization | v1.5 | 2/2 | Complete | 2026-03-09 |
 | 28. Gemini API Circuit Breaker | v1.5 | 2/2 | Complete | 2026-03-09 |
 | 29. PersonaScore 5D + KAMI Fidelity | 2/2 | Complete    | 2026-03-09 | - |
-| 30. KAMI Weight Rebalance + Token Tracking | 1/2 | In Progress|  | - |
+| 30. KAMI Weight Rebalance + Token Tracking | 2/2 | Complete   | 2026-03-09 | - |
 | 31. ChromaDB Prune-to-Obsidian | v1.5 | 0/? | Not started | - |

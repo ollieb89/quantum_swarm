@@ -3,13 +3,13 @@ gsd_state_version: 1.0
 milestone: v1.5
 milestone_name: Reliable Infrastructure
 status: Green
-stopped_at: Completed 30-01-PLAN.md
-last_updated: "2026-03-09T23:41:49.880Z"
+stopped_at: Completed 30-02-PLAN.md
+last_updated: "2026-03-09T23:48:15.199Z"
 progress:
   total_phases: 5
-  completed_phases: 3
+  completed_phases: 4
   total_plans: 8
-  completed_plans: 7
+  completed_plans: 8
   percent: 98
 ---
 
@@ -72,9 +72,10 @@ Status: Green
 - Fallback on evaluation failure: spread previous composite across all 5 dims, or 0.5 if no history
 - KAMI fidelity reads continuous PersonaScore composite; falls back to binary soul check when None
 - [Phase 30]: Shift 22% weight from Accuracy to Fidelity to eliminate inert composite contribution
+- [Phase 30]: agent_id Optional[str]=None for backward compat; token_usage excluded from audit hash; BudgetManager single authoritative source
 
 ## Session Continuity
 
-Last session: 2026-03-09T23:41:49.879Z
-Stopped at: Completed 30-01-PLAN.md
+Last session: 2026-03-09T23:48:15.198Z
+Stopped at: Completed 30-02-PLAN.md
 Resume file: None

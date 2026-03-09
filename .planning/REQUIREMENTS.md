@@ -35,9 +35,9 @@ Requirements for v1.5 Reliable Infrastructure. Each maps to roadmap phases.
 
 ### Observability
 
-- [ ] **OBS-02**: Token usage (prompt + completion) tracked per-agent per-cycle with USD cost estimate
-- [ ] **OBS-04**: Token cost data persisted to CycleSnapshot for replay CLI visibility
-- [ ] **OBS-05**: Token tracking uses single authoritative source (BudgetManager extension, not SwarmState reducer) to prevent double-counting
+- [x] **OBS-02**: Token usage (prompt + completion) tracked per-agent per-cycle with USD cost estimate
+- [x] **OBS-04**: Token cost data persisted to CycleSnapshot for replay CLI visibility
+- [x] **OBS-05**: Token tracking uses single authoritative source (BudgetManager extension, not SwarmState reducer) to prevent double-counting
 - [ ] **OBS-03**: CLI `prune` command archives ChromaDB entries older than configurable threshold to Obsidian-compatible Markdown files
 - [ ] **OBS-06**: Prune operation respects active MemoryRegistry rules -- never deletes vectors backing active rules
 - [ ] **OBS-07**: Prune operation logs archived/deleted counts via structlog
@@ -96,9 +96,9 @@ Which phases cover which requirements. Updated during roadmap creation.
 | KAMI-05 | Phase 29 | Pending |
 | KAMI-06 | Phase 30 | Complete |
 | KAMI-07 | Phase 30 | Complete |
-| OBS-02 | Phase 30 | Pending |
-| OBS-04 | Phase 30 | Pending |
-| OBS-05 | Phase 30 | Pending |
+| OBS-02 | Phase 30 | Complete |
+| OBS-04 | Phase 30 | Complete |
+| OBS-05 | Phase 30 | Complete |
 | OBS-03 | Phase 31 | Pending |
 | OBS-06 | Phase 31 | Pending |
 | OBS-07 | Phase 31 | Pending |
