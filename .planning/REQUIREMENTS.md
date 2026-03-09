@@ -16,11 +16,11 @@ Requirements for v1.5 Reliable Infrastructure. Each maps to roadmap phases.
 
 ### Resilience
 
-- [ ] **SEC-03**: Gemini API circuit breaker detects transient failures (429, 503, timeout) and transitions through CLOSED -> OPEN -> HALF-OPEN states
+- [x] **SEC-03**: Gemini API circuit breaker detects transient failures (429, 503, timeout) and transitions through CLOSED -> OPEN -> HALF-OPEN states
 - [ ] **SEC-04**: Circuit breaker in OPEN state returns soft-fail response (empty dict) instead of crashing the graph run
 - [ ] **SEC-05**: Circuit breaker integrates into existing `with_audit_logging` wrapper as single integration point
-- [ ] **SEC-06**: Circuit breaker state transitions are logged via structlog for debugging
-- [ ] **SEC-07**: Circuit breaker recovery_timeout allows automatic probe after configurable cooldown period
+- [x] **SEC-06**: Circuit breaker state transitions are logged via structlog for debugging
+- [x] **SEC-07**: Circuit breaker recovery_timeout allows automatic probe after configurable cooldown period
 
 ### Merit System (KAMI + PersonaScore)
 
@@ -83,11 +83,11 @@ Which phases cover which requirements. Updated during roadmap creation.
 | ENV-02 | Phase 27 | Complete |
 | ENV-03 | Phase 27 | Complete |
 | ENV-04 | Phase 27 | Complete |
-| SEC-03 | Phase 28 | Pending |
+| SEC-03 | Phase 28 | Complete |
 | SEC-04 | Phase 28 | Pending |
 | SEC-05 | Phase 28 | Pending |
-| SEC-06 | Phase 28 | Pending |
-| SEC-07 | Phase 28 | Pending |
+| SEC-06 | Phase 28 | Complete |
+| SEC-07 | Phase 28 | Complete |
 | SOUL-09 | Phase 29 | Pending |
 | SOUL-10 | Phase 29 | Pending |
 | SOUL-11 | Phase 29 | Pending |

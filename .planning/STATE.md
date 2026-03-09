@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v1.5
 milestone_name: Reliable Infrastructure
 status: Green
-stopped_at: Phase 28 plans verified
-last_updated: "2026-03-09T17:51:36.001Z"
+stopped_at: "Completed 28-01-PLAN.md"
+last_updated: "2026-03-09T18:07:35Z"
 progress:
   total_phases: 5
   completed_phases: 1
   total_plans: 4
-  completed_plans: 2
-  percent: 20
+  completed_plans: 3
+  percent: 40
 ---
 
 # Project State
@@ -26,16 +26,16 @@ Previous: v1.4 Beta: Observable Swarm -- SHIPPED 2026-03-09 (4 phases, 10 plans)
 
 ## Current Phase
 
-Phase 27 of 31 (Environment Stabilization) -- COMPLETE (2 of 2 plans done)
+Phase 28 of 31 (Gemini API Circuit Breaker) -- IN PROGRESS (1 of 2 plans done)
 
-Progress: [==........] 20%
+Progress: [====......] 40%
 
 ## Project Reference
 
 See: `.planning/PROJECT.md` (updated 2026-03-09)
 
 **Core value:** Institutional-quality trade signal generation through adversarial AI debate, with self-improving memory rules validated by backtesting, hard compliance guardrails, and immutable per-trade audit trails
-**Current focus:** Phase 27 complete -- env deps fixed; ready for Phase 28
+**Current focus:** Phase 28 plan 01 complete -- CircuitBreaker class with error classification; ready for plan 02 orchestrator integration
 
 ## Architecture
 
@@ -61,12 +61,12 @@ See: `.planning/PROJECT.md` (updated 2026-03-09)
 ## Health
 
 Status: Green
-- Phase 27 complete: 680 passed, 4 skipped, 0 failures
-- Environment issues resolved (ccxt lazy init, asyncio_mode=auto, PG skipif)
+- Phase 28 plan 01 complete: 693 passed, 4 skipped, 0 failures (excl. pre-existing duckdb)
+- CircuitBreaker class with 20 unit tests, all passing
 - KAMI Accuracy frozen at 0.5 (30% of merit inert) -- P0 for Phase 30
 
 ## Session Continuity
 
-Last session: 2026-03-09T17:51:36.000Z
-Stopped at: Phase 28 plans verified
-Resume file: .planning/phases/28-gemini-api-circuit-breaker/28-01-PLAN.md
+Last session: 2026-03-09T18:07:35Z
+Stopped at: Completed 28-01-PLAN.md
+Resume file: .planning/phases/28-gemini-api-circuit-breaker/28-02-PLAN.md
