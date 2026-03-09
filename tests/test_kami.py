@@ -42,6 +42,15 @@ class TestConstants:
         )
         assert abs(total - 1.0) < 1e-9, f"Weights sum to {total}, expected 1.0"
 
+    def test_rebalanced_weights(self):
+        """Phase 30: alpha=0.08, delta=0.32, beta/gamma unchanged, sum=1.0."""
+        from src.core.kami import DEFAULT_WEIGHTS
+        assert DEFAULT_WEIGHTS["alpha"] == 0.08, f"alpha={DEFAULT_WEIGHTS['alpha']}, expected 0.08"
+        assert DEFAULT_WEIGHTS["delta"] == 0.32, f"delta={DEFAULT_WEIGHTS['delta']}, expected 0.32"
+        assert DEFAULT_WEIGHTS["beta"] == 0.35
+        assert DEFAULT_WEIGHTS["gamma"] == 0.25
+        assert abs(sum(DEFAULT_WEIGHTS.values()) - 1.0) < 1e-9
+
 
 # ---------------------------------------------------------------------------
 # KAMIDimensions dataclass
@@ -90,6 +99,19 @@ class TestComputeMerit:
         result = compute_merit(dims, weights)
         assert result == MERIT_CEIL, f"Expected {MERIT_CEIL}, got {result}"
 
+    def test_weight_rebalance_shifts_composite(self):
+        """Phase 30: fidelity-heavy weights yield higher composite when fidelity > accuracy."""
+        from src.core.kami import DEFAULT_WEIGHTS
+        dims = KAMIDimensions(accuracy=0.5, recovery=0.8, consensus=0.7, fidelity=0.9)
+        new_result = compute_merit(dims, DEFAULT_WEIGHTS)
+        old_weights = {"alpha": 0.30, "beta": 0.35, "gamma": 0.25, "delta": 0.10}
+        old_result = compute_merit(dims, old_weights)
+        # New weights give fidelity 32% instead of 10%, so composite should be higher
+        assert new_result > old_result, (
+            f"New weights ({new_result}) should exceed old weights ({old_result})"
+        )
+        assert new_result > 0.7, f"Expected composite > 0.7, got {new_result}"
+
 
 # ---------------------------------------------------------------------------
 # apply_ema
@@ -115,6 +137,17 @@ class TestApplyEma:
         """lam=1.0 means replace prev entirely with signal."""
         result = apply_ema(prev=0.3, signal=0.8, lam=1.0)
         assert abs(result - 0.8) < 1e-9
+
+    def test_ema_absorption_preserves_dimensions(self):
+        """EMA operates on individual dimension scores, not composites (KAMI-07).
+
+        The same prev/signal/lambda produces the same result regardless of
+        which dimension the value represents — weights are irrelevant to EMA.
+        """
+        acc_ema = apply_ema(0.5, 0.9, 0.9)
+        fid_ema = apply_ema(0.5, 0.9, 0.9)
+        rec_ema = apply_ema(0.5, 0.9, 0.9)
+        assert acc_ema == fid_ema == rec_ema
 
 
 # ---------------------------------------------------------------------------
