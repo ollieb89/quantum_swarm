@@ -137,11 +137,11 @@ Plans:
   3. User can view merit weights per cycle showing each agent's KAMI-derived influence on the consensus
   4. User can view drift flags and ARS suspension status when reviewing a cycle
   5. User can compare two cycles side-by-side to see how agent reasoning, merit weights, and consensus shifted between runs
-**Plans**: TBD
+**Plans**: 2 plans
 
 Plans:
-- [ ] 26-01: TBD
-- [ ] 26-02: TBD
+- [ ] 26-01-PLAN.md — Read-only cycle data access layer (cycle_store.py) + unit tests + import boundaries
+- [ ] 26-02-PLAN.md — CLI replay handlers with rich rendering + main.py wiring + CLI tests
 
 ## Progress
 
@@ -175,4 +175,4 @@ Phases execute in numeric order: 23 > 24 > 25 > 26
 | 23. Full Persona Population | 4/4 | Complete    | 2026-03-09 | - |
 | 24. Cycle Persistence | 2/2 | Complete    | 2026-03-09 | - |
 | 25. End-to-End Pipeline Runner | 2/2 | Complete    | 2026-03-09 | - |
-| 26. Replay CLI | v1.4 | 0/? | Not started | - |
+| 26. Replay CLI | v1.4 | 0/2 | Not started | - |
