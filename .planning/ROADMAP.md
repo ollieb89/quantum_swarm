@@ -105,11 +105,11 @@ Plans:
   2. CycleSnapshot Pydantic model validates all cycle artifacts with no Optional fields left as None for completed cycles
   3. PostgreSQL cycle_snapshots table stores cycle metadata queryable by cycle_id, symbol, timestamp, and status
   4. Cycle data lives in dedicated storage (not in SwarmState) so LangGraph checkpoints do not bloat across runs
-**Plans**: TBD
+**Plans**: 2 plans
 
 Plans:
-- [ ] 24-01: TBD
-- [ ] 24-02: TBD
+- [ ] 24-01-PLAN.md — CycleSnapshot Pydantic model + PostgreSQL cycle_snapshots table
+- [ ] 24-02-PLAN.md — CycleRunner async wrapper + import boundary registration
 
 ### Phase 25: End-to-End Pipeline Runner
 **Goal**: User can run the full swarm against real market data and get a persisted, observable cycle
@@ -173,6 +173,6 @@ Phases execute in numeric order: 23 > 24 > 25 > 26
 | 21. Consume Soul-Sync Context in Debate | v1.3 | 1/1 | Complete | 2026-03-08 |
 | 22. Failure Path KAMI + Memory Logging | v1.3 | 2/2 | Complete | 2026-03-08 |
 | 23. Full Persona Population | 4/4 | Complete    | 2026-03-09 | - |
-| 24. Cycle Persistence | v1.4 | 0/? | Not started | - |
+| 24. Cycle Persistence | v1.4 | 0/2 | Not started | - |
 | 25. End-to-End Pipeline Runner | v1.4 | 0/? | Not started | - |
 | 26. Replay CLI | v1.4 | 0/? | Not started | - |
