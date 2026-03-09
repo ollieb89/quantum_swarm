@@ -13,7 +13,7 @@ Requirements for the Beta: Observable Swarm release. Each maps to roadmap phases
 - [ ] **PERS-02**: User can observe CASSANDRA (BearishResearcher) reasoning with distinct tail-risk personality
 - [ ] **PERS-03**: User can observe SIGMA (QuantModeler) reasoning with distinct quantitative personality
 - [ ] **PERS-04**: User can observe GUARDIAN (RiskManager) reasoning with distinct risk-control personality
-- [ ] **PERS-05**: Each persona has HEXACO-6 diversity profile with minimum pairwise distance >3.0
+- [ ] **PERS-05**: Each persona has HEXACO-6 diversity profile with minimum pairwise distance >1.0 on normalized 0.0-1.0 scale
 - [ ] **PERS-06**: Each persona has functional YAML drift_guard block enabling ARS drift detection
 
 ### Cycle Persistence
