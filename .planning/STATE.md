@@ -3,8 +3,8 @@ gsd_state_version: 1.0
 milestone: v1.4
 milestone_name: "Beta: Observable Swarm"
 status: executing
-stopped_at: Completed 24-02-PLAN.md
-last_updated: "2026-03-09T02:38:40.210Z"
+stopped_at: Phase 25 context gathered
+last_updated: "2026-03-09T03:18:23.497Z"
 last_activity: 2026-03-09 — Completed 24-01 CycleSnapshot model + persistence DDL
 progress:
   total_phases: 4
@@ -119,6 +119,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-09T02:36:06.460Z
-Stopped at: Completed 24-02-PLAN.md
-Resume file: None
+Last session: 2026-03-09T03:18:23.496Z
+Stopped at: Phase 25 context gathered
+Resume file: .planning/phases/25-end-to-end-pipeline-runner/25-CONTEXT.md
