@@ -3,13 +3,13 @@ gsd_state_version: 1.0
 milestone: v1.5
 milestone_name: Reliable Infrastructure
 status: Green
-stopped_at: Phase 30 context gathered
-last_updated: "2026-03-09T23:21:04.989Z"
+stopped_at: Completed 30-01-PLAN.md
+last_updated: "2026-03-09T23:41:49.880Z"
 progress:
   total_phases: 5
   completed_phases: 3
-  total_plans: 6
-  completed_plans: 6
+  total_plans: 8
+  completed_plans: 7
   percent: 98
 ---
 
@@ -71,9 +71,10 @@ Status: Green
 - persona_scores excluded from audit hash chain (infrastructure metadata, not MiFID II trade data)
 - Fallback on evaluation failure: spread previous composite across all 5 dims, or 0.5 if no history
 - KAMI fidelity reads continuous PersonaScore composite; falls back to binary soul check when None
+- [Phase 30]: Shift 22% weight from Accuracy to Fidelity to eliminate inert composite contribution
 
 ## Session Continuity
 
-Last session: 2026-03-09T23:21:04.987Z
-Stopped at: Phase 30 context gathered
-Resume file: .planning/phases/30-kami-weight-rebalance-token-tracking/30-CONTEXT.md
+Last session: 2026-03-09T23:41:49.879Z
+Stopped at: Completed 30-01-PLAN.md
+Resume file: None

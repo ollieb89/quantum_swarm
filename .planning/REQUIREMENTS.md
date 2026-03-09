@@ -30,8 +30,8 @@ Requirements for v1.5 Reliable Infrastructure. Each maps to roadmap phases.
 - [x] **SOUL-12**: PersonaScore results persist to PostgreSQL and are available to KAMI fidelity dimension in next cycle
 - [x] **SOUL-13**: PersonaScore uses structured output (Pydantic schema) with 5 float dimensions + rationale string
 - [ ] **KAMI-05**: KAMI fidelity dimension consumes PersonaScore continuous signal (replaces binary 0/1)
-- [ ] **KAMI-06**: KAMI weights rebalanced: Accuracy reduced from 30% to ~8%, fidelity increased to ~32%, with Recovery and Consensus adjusted proportionally
-- [ ] **KAMI-07**: Weight transition uses EMA absorption (no score reset) to preserve merit history continuity
+- [x] **KAMI-06**: KAMI weights rebalanced: Accuracy reduced from 30% to ~8%, fidelity increased to ~32%, with Recovery and Consensus adjusted proportionally
+- [x] **KAMI-07**: Weight transition uses EMA absorption (no score reset) to preserve merit history continuity
 
 ### Observability
 
@@ -94,8 +94,8 @@ Which phases cover which requirements. Updated during roadmap creation.
 | SOUL-12 | Phase 29 | Complete |
 | SOUL-13 | Phase 29 | Complete |
 | KAMI-05 | Phase 29 | Pending |
-| KAMI-06 | Phase 30 | Pending |
-| KAMI-07 | Phase 30 | Pending |
+| KAMI-06 | Phase 30 | Complete |
+| KAMI-07 | Phase 30 | Complete |
 | OBS-02 | Phase 30 | Pending |
 | OBS-04 | Phase 30 | Pending |
 | OBS-05 | Phase 30 | Pending |
