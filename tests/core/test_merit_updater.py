@@ -67,7 +67,8 @@ def test_merit_updater_persists():
     )
 
     async def run():
-        with patch("src.graph.nodes.merit_updater.ensure_pool_open", new_callable=AsyncMock, return_value=pool_mock):
+        with patch("src.graph.nodes.merit_updater.ensure_pool_open", new_callable=AsyncMock, return_value=pool_mock), \
+             patch("src.graph.nodes.merit_updater.get_latest_persona_composite", new_callable=AsyncMock, return_value=None):
             result = await merit_updater_node(state)
         return result
 
@@ -112,7 +113,8 @@ def test_merit_updater_db_fail_no_state_update():
     )
 
     async def run():
-        with patch("src.graph.nodes.merit_updater.ensure_pool_open", new_callable=AsyncMock, return_value=pool_mock):
+        with patch("src.graph.nodes.merit_updater.ensure_pool_open", new_callable=AsyncMock, return_value=pool_mock), \
+             patch("src.graph.nodes.merit_updater.get_latest_persona_composite", new_callable=AsyncMock, return_value=None):
             result = await merit_updater_node(state)
         return result
 
@@ -145,7 +147,8 @@ def test_merit_updater_accuracy_unchanged():
     )
 
     async def run():
-        with patch("src.graph.nodes.merit_updater.ensure_pool_open", new_callable=AsyncMock, return_value=pool_mock):
+        with patch("src.graph.nodes.merit_updater.ensure_pool_open", new_callable=AsyncMock, return_value=pool_mock), \
+             patch("src.graph.nodes.merit_updater.get_latest_persona_composite", new_callable=AsyncMock, return_value=None):
             result = await merit_updater_node(state)
         return result
 
@@ -171,7 +174,8 @@ def test_merit_updater_rounds_to_4dp():
     )
 
     async def run():
-        with patch("src.graph.nodes.merit_updater.ensure_pool_open", new_callable=AsyncMock, return_value=pool_mock):
+        with patch("src.graph.nodes.merit_updater.ensure_pool_open", new_callable=AsyncMock, return_value=pool_mock), \
+             patch("src.graph.nodes.merit_updater.get_latest_persona_composite", new_callable=AsyncMock, return_value=None):
             result = await merit_updater_node(state)
         return result
 
@@ -200,7 +204,7 @@ class TestExtractFidelitySignalRewired:
 
     def test_persona_composite_none_falls_back(self):
         """When persona_composite=None, falls back to legacy binary soul check."""
-        with patch("src.core.kami.load_soul") as mock_soul:
+        with patch("src.core.soul_loader.load_soul") as mock_soul:
             mock_soul.return_value = MagicMock(identity="AXIOM identity content")
             result = _extract_fidelity_signal("macro_analyst", persona_composite=None)
         assert result == 1.0  # non-empty identity -> 1.0
