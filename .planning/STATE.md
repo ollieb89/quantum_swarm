@@ -26,16 +26,16 @@ Previous: v1.4 Beta: Observable Swarm -- SHIPPED 2026-03-09 (4 phases, 10 plans)
 
 ## Current Phase
 
-Phase 29 of 31 (PersonaScore 5D + KAMI Fidelity Wiring) -- IN PROGRESS (1 of 2 plans done)
+Phase 30 of 31 (KAMI Weight Rebalance + Token Tracking) -- Ready to plan
 
-Progress: [=====.....] 50%
+Progress: [████████████████████] 43/44 plans (98%)
 
 ## Project Reference
 
-See: `.planning/PROJECT.md` (updated 2026-03-09)
+See: `.planning/PROJECT.md` (updated 2026-03-10)
 
 **Core value:** Institutional-quality trade signal generation through adversarial AI debate, with self-improving memory rules validated by backtesting, hard compliance guardrails, and immutable per-trade audit trails
-**Current focus:** Phase 29 in progress -- PersonaScore 5D module built (Plan 01); Plan 02 wires into CycleRunner and KAMI
+**Current focus:** Phase 30 -- KAMI Weight Rebalance + Token Tracking
 
 ## Architecture
 
@@ -61,22 +61,19 @@ See: `.planning/PROJECT.md` (updated 2026-03-09)
 ## Health
 
 Status: Green
-- Phase 29 Plan 01 complete: 565 passed, 2 skipped, 1 pre-existing duckdb failure
-- PersonaScore 5D module: 15 new tests, all passing
+- Phase 29 complete: PersonaScore 5D + KAMI fidelity wiring verified
+- All 12 merit_updater tests passing (including 4 fixed pre-existing mocks)
 - KAMI Accuracy frozen at 0.5 (30% of merit inert) -- P0 for Phase 30
 
 ## Decisions
 
-- Single integration point: with_audit_logging wraps all LLM nodes with circuit breaker -- no per-node wiring
-- LLM_NODES frozenset: macro_analyst, quant_modeler, bullish_researcher, bearish_researcher (debate_synthesizer excluded)
-- Degraded cycles skip validate_completed() to avoid false-positive ValueError
-- soft_failed_nodes excluded from audit hash chain (infrastructure metadata)
 - Separate CircuitBreaker instance for judge calls (threshold=3, cooldown=30s) isolates from graph breaker
 - persona_scores excluded from audit hash chain (infrastructure metadata, not MiFID II trade data)
 - Fallback on evaluation failure: spread previous composite across all 5 dims, or 0.5 if no history
+- KAMI fidelity reads continuous PersonaScore composite; falls back to binary soul check when None
 
 ## Session Continuity
 
-Last session: 2026-03-09T21:46:33Z
-Stopped at: Completed 29-01-PLAN.md
-Resume file: .planning/phases/29-personascore-5d-kami-fidelity-wiring/29-02-PLAN.md
+Last session: 2026-03-10
+Stopped at: Phase 29 complete, ready to plan Phase 30
+Resume file: None

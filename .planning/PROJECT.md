@@ -168,14 +168,17 @@ Replay CLI (read-only):
 - ✓ REPL-05: Drift flags and ARS signals displayed — v1.4 Phase 26
 - ✓ REPL-06: Compare two cycles side-by-side — v1.4 Phase 26
 
+### Validated (v1.5)
+
+- ✓ SOUL-09: PersonaScore 5D LLM-as-Judge fidelity evaluation pipeline (Consistency, Tone, Logic, Depth, Bias) — v1.5 Phase 29
+- ✓ KAMI-05: KAMI fidelity dimension wired to continuous PersonaScore composite (replaces binary 0/1) — v1.5 Phase 29
+- ✓ SEC-03: Gemini API circuit breaker with soft-fail pause state — v1.5 Phase 28
+
 ### Active (v1.5)
 
 - [ ] ENV-01: Fix broken ccxt, chromadb, pytest-asyncio dependencies — restore 13 failing tests
-- [ ] KAMI-05: Rebalance KAMI weights — reduce Accuracy from 30% to 5-10%, reallocate to PersonaScore
-- [ ] SOUL-09: PersonaScore 5D LLM-as-Judge fidelity evaluation pipeline (Consistency, Tone, Logic, Depth, Bias)
 - [ ] OBS-02: Token cost tracking per cycle for budget analysis
 - [ ] OBS-03: Cycle archive-to-Obsidian with ChromaDB pruning
-- [ ] SEC-03: Gemini API circuit breaker with soft-fail pause state
 
 ### Active (deferred / future)
 
@@ -226,6 +229,9 @@ Replay CLI (read-only):
 | Disk cache write-always, read with QS_DEV_CACHE=1 | Production always fetches fresh; dev iteration uses cache | ✓ Good |
 | DB-with-filesystem-fallback for cycle listing | Graceful degradation when PostgreSQL unavailable | ✓ Good |
 | Console/stdout injection for CLI testability | Handlers accept optional console/stdout params for testing | ✓ Good |
+| Separate CircuitBreaker for judge calls (threshold=3, cooldown=30s) | Isolates persona evaluation failures from graph circuit breaker | ✓ Good |
+| PersonaScore excluded from audit hash chain | Infrastructure metadata, not MiFID II trade decisions | ✓ Good |
+| Fallback spreads previous composite across 5 dims (or 0.5) | Evaluation failures degrade gracefully without crashing | ✓ Good |
 
 ## Context
 
@@ -237,4 +243,4 @@ Known env issues: broken `ccxt`, missing `chromadb` and `pytest-asyncio` (~13 te
 Tech debt: KAMI Accuracy dimension frozen at 0.5 (30% of merit score inert) — v1.5 will rebalance weights and redirect to PersonaScore. Nyquist VALIDATION.md partial/missing for phases 15-26.
 
 ---
-*Last updated: 2026-03-09 after v1.5 milestone start*
+*Last updated: 2026-03-10 after Phase 29*
