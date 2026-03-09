@@ -58,6 +58,9 @@ class TestCoreLeafImports:
     def test_cycle_runner_imports_cleanly(self):
         _isolated_import("src.core.cycle_runner")
 
+    def test_logging_config_imports_cleanly(self):
+        _isolated_import("src.core.logging_config")
+
 
 class TestNoCoreToAgentImport:
     """Leaf core modules must not import from agents or orchestrator."""
