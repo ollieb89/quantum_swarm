@@ -9,8 +9,8 @@ Requirements for the Beta: Observable Swarm release. Each maps to roadmap phases
 
 ### Persona Population
 
-- [ ] **PERS-01**: User can observe MOMENTUM (BullishResearcher) reasoning with distinct price/flow personality
-- [ ] **PERS-02**: User can observe CASSANDRA (BearishResearcher) reasoning with distinct tail-risk personality
+- [x] **PERS-01**: User can observe MOMENTUM (BullishResearcher) reasoning with distinct price/flow personality
+- [x] **PERS-02**: User can observe CASSANDRA (BearishResearcher) reasoning with distinct tail-risk personality
 - [x] **PERS-03**: User can observe SIGMA (QuantModeler) reasoning with distinct quantitative personality
 - [x] **PERS-04**: User can observe GUARDIAN (RiskManager) reasoning with distinct risk-control personality
 - [x] **PERS-05**: Each persona has HEXACO-6 diversity profile with minimum pairwise distance >1.0 on normalized 0.0-1.0 scale
@@ -70,8 +70,8 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| PERS-01 | Phase 23 | Pending |
-| PERS-02 | Phase 23 | Pending |
+| PERS-01 | Phase 23 | Complete |
+| PERS-02 | Phase 23 | Complete |
 | PERS-03 | Phase 23 | Complete |
 | PERS-04 | Phase 23 | Complete |
 | PERS-05 | Phase 23 | Complete |
