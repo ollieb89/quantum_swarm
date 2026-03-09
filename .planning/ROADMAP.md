@@ -116,7 +116,10 @@ Plans:
   2. After a configurable cooldown period, the circuit automatically probes with a single call and recovers to closed state on success
   3. Circuit breaker state transitions (closed/open/half-open) appear in structlog output
   4. Circuit breaker integrates through a single wrapper point (enhanced `with_audit_logging`) -- no per-node wiring needed
-**Plans**: TBD
+**Plans:** 2 plans
+Plans:
+- [ ] 28-01-PLAN.md -- Core CircuitBreaker class with state machine, error classification, and unit tests
+- [ ] 28-02-PLAN.md -- Wire into with_audit_logging, extend SwarmState/CycleSnapshot, integration tests
 
 ### Phase 29: PersonaScore 5D + KAMI Fidelity Wiring
 **Goal**: Each agent's persona fidelity is quantitatively evaluated every cycle and feeds into KAMI merit
@@ -186,8 +189,8 @@ Phases execute in numeric order: 27 -> 28 -> 29 -> 30 -> 31
 | 24. Cycle Persistence | v1.4 | 2/2 | Complete | 2026-03-09 |
 | 25. End-to-End Pipeline Runner | v1.4 | 2/2 | Complete | 2026-03-09 |
 | 26. Replay CLI | v1.4 | 2/2 | Complete | 2026-03-09 |
-| 27. Environment Stabilization | 2/2 | Complete   | 2026-03-09 | - |
-| 28. Gemini API Circuit Breaker | v1.5 | 0/? | Not started | - |
+| 27. Environment Stabilization | v1.5 | 2/2 | Complete | 2026-03-09 |
+| 28. Gemini API Circuit Breaker | v1.5 | 0/2 | Not started | - |
 | 29. PersonaScore 5D + KAMI Fidelity | v1.5 | 0/? | Not started | - |
 | 30. KAMI Weight Rebalance + Token Tracking | v1.5 | 0/? | Not started | - |
 | 31. ChromaDB Prune-to-Obsidian | v1.5 | 0/? | Not started | - |
