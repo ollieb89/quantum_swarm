@@ -1,10 +1,10 @@
-"""Merit updater node tests — Plan 02 implementation."""
+"""Merit updater node tests — Plan 02 implementation + Phase 29 PersonaScore wiring."""
 import asyncio
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
-from src.core.kami import DEFAULT_MERIT
+from src.core.kami import DEFAULT_MERIT, _extract_fidelity_signal
 
 
 # ---------------------------------------------------------------------------
@@ -67,7 +67,7 @@ def test_merit_updater_persists():
     )
 
     async def run():
-        with patch("src.graph.nodes.merit_updater.get_pool", return_value=pool_mock):
+        with patch("src.graph.nodes.merit_updater.ensure_pool_open", new_callable=AsyncMock, return_value=pool_mock):
             result = await merit_updater_node(state)
         return result
 
@@ -87,7 +87,7 @@ def test_merit_updater_skips_aborted_cycle():
     state = _make_state(execution_result=None, active_persona="AXIOM")
 
     async def run():
-        with patch("src.graph.nodes.merit_updater.get_pool", return_value=pool_mock):
+        with patch("src.graph.nodes.merit_updater.ensure_pool_open", new_callable=AsyncMock, return_value=pool_mock):
             result = await merit_updater_node(state)
         return result
 
@@ -112,7 +112,7 @@ def test_merit_updater_db_fail_no_state_update():
     )
 
     async def run():
-        with patch("src.graph.nodes.merit_updater.get_pool", return_value=pool_mock):
+        with patch("src.graph.nodes.merit_updater.ensure_pool_open", new_callable=AsyncMock, return_value=pool_mock):
             result = await merit_updater_node(state)
         return result
 
@@ -145,7 +145,7 @@ def test_merit_updater_accuracy_unchanged():
     )
 
     async def run():
-        with patch("src.graph.nodes.merit_updater.get_pool", return_value=pool_mock):
+        with patch("src.graph.nodes.merit_updater.ensure_pool_open", new_callable=AsyncMock, return_value=pool_mock):
             result = await merit_updater_node(state)
         return result
 
@@ -171,7 +171,7 @@ def test_merit_updater_rounds_to_4dp():
     )
 
     async def run():
-        with patch("src.graph.nodes.merit_updater.get_pool", return_value=pool_mock):
+        with patch("src.graph.nodes.merit_updater.ensure_pool_open", new_callable=AsyncMock, return_value=pool_mock):
             result = await merit_updater_node(state)
         return result
 
@@ -184,3 +184,140 @@ def test_merit_updater_rounds_to_4dp():
     if "." in composite_str:
         decimals = len(composite_str.split(".")[1])
         assert decimals <= 4, f"Composite has {decimals} decimal places: {composite}"
+
+
+# ---------------------------------------------------------------------------
+# Phase 29: _extract_fidelity_signal rewiring tests
+# ---------------------------------------------------------------------------
+
+class TestExtractFidelitySignalRewired:
+    """Test _extract_fidelity_signal with persona_composite parameter (Phase 29)."""
+
+    def test_persona_composite_provided(self):
+        """When persona_composite=0.72, returns 0.72 directly."""
+        result = _extract_fidelity_signal("macro_analyst", persona_composite=0.72)
+        assert result == 0.72
+
+    def test_persona_composite_none_falls_back(self):
+        """When persona_composite=None, falls back to legacy binary soul check."""
+        with patch("src.core.kami.load_soul") as mock_soul:
+            mock_soul.return_value = MagicMock(identity="AXIOM identity content")
+            result = _extract_fidelity_signal("macro_analyst", persona_composite=None)
+        assert result == 1.0  # non-empty identity -> 1.0
+
+    def test_persona_composite_zero_does_not_fallback(self):
+        """When persona_composite=0.0, returns 0.0 (does NOT fall back)."""
+        result = _extract_fidelity_signal("macro_analyst", persona_composite=0.0)
+        assert result == 0.0
+
+
+# ---------------------------------------------------------------------------
+# Phase 29: merit_updater_node PersonaScore integration tests
+# ---------------------------------------------------------------------------
+
+class TestMeritUpdaterPersonaScoreIntegration:
+    """Test merit_updater_node queries and passes PersonaScore composite."""
+
+    def test_queries_persona_composite(self):
+        """merit_updater_node calls get_latest_persona_composite before fidelity."""
+        from src.graph.nodes.merit_updater import merit_updater_node
+
+        pool_mock, conn_mock = _make_conn_mock()
+        state = _make_state(
+            execution_result={"success": True},
+            active_persona="AXIOM",
+            merit_scores=_default_scores("AXIOM"),
+            weighted_consensus_score=0.8,
+        )
+
+        mock_get_composite = AsyncMock(return_value=0.85)
+
+        async def run():
+            with patch("src.graph.nodes.merit_updater.ensure_pool_open", new_callable=AsyncMock, return_value=pool_mock), \
+                 patch("src.graph.nodes.merit_updater.get_latest_persona_composite", mock_get_composite):
+                result = await merit_updater_node(state)
+            return result
+
+        result = asyncio.run(run())
+
+        mock_get_composite.assert_called_once_with("AXIOM")
+        assert "merit_scores" in result
+        # Fidelity should be EMA'd toward 0.85
+        fidelity = result["merit_scores"]["AXIOM"]["fidelity"]
+        assert fidelity != DEFAULT_MERIT  # Should have changed
+
+    def test_persona_composite_085_used_for_fidelity(self):
+        """When get_latest_persona_composite returns 0.85, fidelity EMA uses 0.85."""
+        from src.graph.nodes.merit_updater import merit_updater_node
+
+        pool_mock, conn_mock = _make_conn_mock()
+        state = _make_state(
+            execution_result={"success": True},
+            active_persona="AXIOM",
+            merit_scores=_default_scores("AXIOM"),
+            weighted_consensus_score=0.8,
+        )
+
+        mock_get_composite = AsyncMock(return_value=0.85)
+
+        async def run():
+            with patch("src.graph.nodes.merit_updater.ensure_pool_open", new_callable=AsyncMock, return_value=pool_mock), \
+                 patch("src.graph.nodes.merit_updater.get_latest_persona_composite", mock_get_composite):
+                result = await merit_updater_node(state)
+            return result
+
+        result = asyncio.run(run())
+
+        fidelity = result["merit_scores"]["AXIOM"]["fidelity"]
+        # EMA: 0.9 * 0.85 + 0.1 * 0.5 = 0.765 + 0.05 = 0.815
+        assert abs(fidelity - 0.815) < 0.001
+
+    def test_persona_composite_none_uses_legacy(self):
+        """When get_latest_persona_composite returns None, falls back to legacy binary."""
+        from src.graph.nodes.merit_updater import merit_updater_node
+
+        pool_mock, conn_mock = _make_conn_mock()
+        state = _make_state(
+            execution_result={"success": True},
+            active_persona="AXIOM",
+            merit_scores=_default_scores("AXIOM"),
+            weighted_consensus_score=0.8,
+        )
+
+        mock_get_composite = AsyncMock(return_value=None)
+
+        async def run():
+            with patch("src.graph.nodes.merit_updater.ensure_pool_open", new_callable=AsyncMock, return_value=pool_mock), \
+                 patch("src.graph.nodes.merit_updater.get_latest_persona_composite", mock_get_composite):
+                result = await merit_updater_node(state)
+            return result
+
+        result = asyncio.run(run())
+
+        # Should still work -- uses legacy binary path
+        assert "merit_scores" in result
+
+    def test_persona_composite_db_error_uses_legacy(self):
+        """When get_latest_persona_composite raises, falls back to legacy (None)."""
+        from src.graph.nodes.merit_updater import merit_updater_node
+
+        pool_mock, conn_mock = _make_conn_mock()
+        state = _make_state(
+            execution_result={"success": True},
+            active_persona="AXIOM",
+            merit_scores=_default_scores("AXIOM"),
+            weighted_consensus_score=0.8,
+        )
+
+        mock_get_composite = AsyncMock(side_effect=RuntimeError("DB down"))
+
+        async def run():
+            with patch("src.graph.nodes.merit_updater.ensure_pool_open", new_callable=AsyncMock, return_value=pool_mock), \
+                 patch("src.graph.nodes.merit_updater.get_latest_persona_composite", mock_get_composite):
+                result = await merit_updater_node(state)
+            return result
+
+        result = asyncio.run(run())
+
+        # Should still produce results -- legacy fallback
+        assert "merit_scores" in result
