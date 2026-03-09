@@ -1,8 +1,13 @@
-import pytest
 import asyncio
+import os
 from datetime import datetime, timezone
+
+import pytest
 from src.core.audit_logger import AuditLogger
 from src.core.db import close_db_pool
+
+PG_AVAILABLE = bool(os.getenv("DB_URL"))
+_pg_skip = pytest.mark.skipif(not PG_AVAILABLE, reason="PostgreSQL not available")
 
 @pytest.fixture
 async def audit_logger():
@@ -18,6 +23,7 @@ async def audit_logger():
     await close_db_pool()
 
 
+@_pg_skip
 async def test_audit_chain_integrity(audit_logger):
     """Tests that the hash chain is correctly linked and verifiable."""
     # Use a dummy task ID
@@ -50,6 +56,7 @@ async def test_audit_chain_integrity(audit_logger):
     assert is_valid is True, "Audit chain should be valid after normal logging"
 
 
+@_pg_skip
 async def test_audit_chain_tamper_detection(audit_logger):
     """Tests that tampering with an entry breaks the chain verification."""
     from src.core.db import get_pool

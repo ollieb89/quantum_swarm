@@ -1,9 +1,15 @@
 import asyncio
+import os
 import uuid
+
+import pytest
 from langgraph.checkpoint.postgres.aio import AsyncPostgresSaver
 from psycopg_pool import AsyncConnectionPool
 from src.graph.orchestrator import create_orchestrator_graph
 from src.core.db import DB_URL, get_pool, close_db_pool
+
+PG_AVAILABLE = bool(os.getenv("DB_URL"))
+pytestmark = pytest.mark.skipif(not PG_AVAILABLE, reason="PostgreSQL not available")
 
 
 async def test_langgraph_persistence_postgres():
