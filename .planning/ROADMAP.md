@@ -86,7 +86,7 @@ See: `.planning/milestones/v1.4-ROADMAP.md` for full archive
 **Milestone Goal:** Stabilize the foundation -- fix broken deps, add Gemini API resilience, introduce 5D persona fidelity evaluation, rebalance KAMI merit, track token costs, and archive ChromaDB to Obsidian.
 
 - [x] **Phase 27: Environment Stabilization** - Restore all broken dependencies and green-light 13 failing tests (completed 2026-03-09)
-- [ ] **Phase 28: Gemini API Circuit Breaker** - Safety net for LLM call failures with 3-state soft-fail pause
+- [x] **Phase 28: Gemini API Circuit Breaker** - Safety net for LLM call failures with 3-state soft-fail pause (completed 2026-03-09)
 - [ ] **Phase 29: PersonaScore 5D + KAMI Fidelity Wiring** - LLM-as-Judge persona evaluation with continuous fidelity signal
 - [ ] **Phase 30: KAMI Weight Rebalance + Token Tracking** - Merit weight redistribution and per-cycle cost observability
 - [ ] **Phase 31: ChromaDB Prune-to-Obsidian** - Archive old vectors to Markdown with rule-aware safety
@@ -116,7 +116,7 @@ Plans:
   2. After a configurable cooldown period, the circuit automatically probes with a single call and recovers to closed state on success
   3. Circuit breaker state transitions (closed/open/half-open) appear in structlog output
   4. Circuit breaker integrates through a single wrapper point (enhanced `with_audit_logging`) -- no per-node wiring needed
-**Plans:** 2 plans
+**Plans:** 2/2 plans complete
 Plans:
 - [ ] 28-01-PLAN.md -- Core CircuitBreaker class with state machine, error classification, and unit tests
 - [ ] 28-02-PLAN.md -- Wire into with_audit_logging, extend SwarmState/CycleSnapshot, integration tests
@@ -190,7 +190,7 @@ Phases execute in numeric order: 27 -> 28 -> 29 -> 30 -> 31
 | 25. End-to-End Pipeline Runner | v1.4 | 2/2 | Complete | 2026-03-09 |
 | 26. Replay CLI | v1.4 | 2/2 | Complete | 2026-03-09 |
 | 27. Environment Stabilization | v1.5 | 2/2 | Complete | 2026-03-09 |
-| 28. Gemini API Circuit Breaker | v1.5 | 1/2 | In progress | - |
+| 28. Gemini API Circuit Breaker | 2/2 | Complete   | 2026-03-09 | - |
 | 29. PersonaScore 5D + KAMI Fidelity | v1.5 | 0/? | Not started | - |
 | 30. KAMI Weight Rebalance + Token Tracking | v1.5 | 0/? | Not started | - |
 | 31. ChromaDB Prune-to-Obsidian | v1.5 | 0/? | Not started | - |
