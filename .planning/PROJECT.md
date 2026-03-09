@@ -8,11 +8,23 @@ A production-grade hierarchical multi-agent financial analysis swarm built on La
 
 Institutional-quality trade signal generation through adversarial AI debate, with self-improving memory rules validated by backtesting, hard compliance guardrails, and immutable per-trade audit trails — from market data ingestion to PostgreSQL-persisted execution records.
 
+## Current Milestone: v1.5 Reliable Infrastructure
+
+**Goal:** Stabilize the foundation — fix broken deps, rebalance KAMI merit, add persona fidelity evaluation, token cost tracking with cycle archiving, and Gemini API circuit breakers.
+
+**Target features:**
+- ENV-FIX: Dependency restoration (ccxt, chromadb, pytest-asyncio) — green-light all 13 broken tests
+- KAMI weight rebalancing — shift Accuracy weight from 30% to 5-10%, reallocate to PersonaScore
+- SOUL-09: PersonaScore 5D LLM-as-Judge fidelity evaluation (Consistency, Tone, Logic, Depth, Bias)
+- OBS-02: Token cost tracking per cycle for budget analysis
+- OBS-03: Cycle archive-to-Obsidian with ChromaDB pruning ("Prune-to-Obsidian" workflow)
+- SEC-03: Gemini API circuit breaker with soft-fail pause (not blind retry)
+
 ## Current State (v1.4 shipped)
 
 - **Runtime:** Python 3.12, LangGraph StateGraph, uv-managed
 - **Infrastructure:** PostgreSQL 17 (AsyncPostgresSaver + Trade Warehouse + cycle_snapshots, port 5433)
-- **LLM:** Google Gemini (`gemini-2.0-flash`) via `langchain-google-genai`
+- **LLM:** Google Gemini (`gemini-2.5-flash`) via `langchain-google-genai`
 - **Tests:** 300+ passing, 0 failures (excluding pre-existing env test files)
 - **LOC:** ~33,949 Python
 - **CLI:** `python -m src.main analyze BTC --mode paper` (end-to-end pipeline)
@@ -156,17 +168,21 @@ Replay CLI (read-only):
 - ✓ REPL-05: Drift flags and ARS signals displayed — v1.4 Phase 26
 - ✓ REPL-06: Compare two cycles side-by-side — v1.4 Phase 26
 
+### Active (v1.5)
+
+- [ ] ENV-01: Fix broken ccxt, chromadb, pytest-asyncio dependencies — restore 13 failing tests
+- [ ] KAMI-05: Rebalance KAMI weights — reduce Accuracy from 30% to 5-10%, reallocate to PersonaScore
+- [ ] SOUL-09: PersonaScore 5D LLM-as-Judge fidelity evaluation pipeline (Consistency, Tone, Logic, Depth, Bias)
+- [ ] OBS-02: Token cost tracking per cycle for budget analysis
+- [ ] OBS-03: Cycle archive-to-Obsidian with ChromaDB pruning
+- [ ] SEC-03: Gemini API circuit breaker with soft-fail pause state
+
 ### Active (deferred / future)
 
-- [ ] SOUL-08: All 4 skeleton agent soul dirs fully populated with HEXACO-6 diverse profiles — DONE (completed as PERS-01 through PERS-06 in v1.4)
-- [ ] SOUL-09: PersonaScore 5D LLM-as-Judge fidelity evaluation pipeline
 - [ ] ANALY-05: RL optimization for order flow — v2.0
-- [ ] SEC-03: System-wide circuit breakers for API degradation or anomalous strategy behavior
 - [ ] MEM-07: Regime-aware vector memory for recognizing long-term historical parallels — v2.0
 - [ ] ORCH-06: Multi-modal input support (chart image analysis) — v2.0
 - [ ] OBS-01: Real-time WebSocket dashboard for live cycle monitoring
-- [ ] OBS-02: Token cost tracking per cycle for budget analysis
-- [ ] OBS-03: Obsidian vault integration for cycle data browsing
 
 ### Out of Scope
 
@@ -190,7 +206,7 @@ Replay CLI (read-only):
 | Weighted consensus score (>0.6 threshold) | Quantifiable risk gate, tunable | ✓ Good |
 | PostgreSQL AsyncPostgresSaver | Distributed checkpointing, crash recovery | ✓ Good |
 | Hash-chained audit logs (SHA-256 + prev_hash) | Tamper-evident MiFID II compliance | ✓ Good |
-| Google Gemini (gemini-2.0-flash) | Cost-effective, strong reasoning; lazy init required | ✓ Good |
+| Google Gemini (gemini-2.5-flash) | Cost-effective, strong reasoning; lazy init required | ✓ Good |
 | psycopg3 async (not psycopg2) | Native asyncio, no greenlets | ✓ Good |
 | BudgetedTool + ToolCache wrapper | Budget ceilings + dedup tool calls | ✓ Good |
 | MemoryRegistry atomic save (os.replace) | Prevents partial-write corruption on crash | ✓ Good |
@@ -214,8 +230,11 @@ Replay CLI (read-only):
 ## Context
 
 Shipped v1.4 on 2026-03-09 (4 phases, 10 plans, 46 commits). Beta release makes the swarm fully observable: all 5 agents have distinct HEXACO-6 personalities with drift guard rules, end-to-end pipeline runs from CLI with structured logging and data resilience, cycles persist to PostgreSQL + filesystem, and replay CLI enables stepping through and comparing past swarm decisions.
+
+v1.5 focus: stabilize environment (broken deps), rebalance KAMI to remove inert Accuracy placeholder, add 5D persona fidelity evaluation, token cost tracking with Obsidian archiving, and Gemini API circuit breakers.
+
 Known env issues: broken `ccxt`, missing `chromadb` and `pytest-asyncio` (~13 tests affected, not regressions).
-Tech debt: KAMI Accuracy dimension frozen at 0.5 (30% of merit score inert) — needs thesis_records or weight reduction. Nyquist VALIDATION.md partial/missing for phases 15-26.
+Tech debt: KAMI Accuracy dimension frozen at 0.5 (30% of merit score inert) — v1.5 will rebalance weights and redirect to PersonaScore. Nyquist VALIDATION.md partial/missing for phases 15-26.
 
 ---
-*Last updated: 2026-03-09 after v1.4 milestone*
+*Last updated: 2026-03-09 after v1.5 milestone start*
