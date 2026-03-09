@@ -24,11 +24,11 @@ Requirements for v1.5 Reliable Infrastructure. Each maps to roadmap phases.
 
 ### Merit System (KAMI + PersonaScore)
 
-- [ ] **SOUL-09**: PersonaScore 5D evaluates persona fidelity across Consistency, Tone, Logic, Depth, and Bias dimensions using LLM-as-Judge
+- [x] **SOUL-09**: PersonaScore 5D evaluates persona fidelity across Consistency, Tone, Logic, Depth, and Bias dimensions using LLM-as-Judge
 - [ ] **SOUL-10**: PersonaScore runs as CycleRunner post-cycle hook (not a graph node) to avoid circular evaluation and audit hash corruption
-- [ ] **SOUL-11**: PersonaScore evaluates 4 LLM agents (AXIOM, MOMENTUM, CASSANDRA, SIGMA) -- excludes RiskManager (rules-only)
-- [ ] **SOUL-12**: PersonaScore results persist to PostgreSQL and are available to KAMI fidelity dimension in next cycle
-- [ ] **SOUL-13**: PersonaScore uses structured output (Pydantic schema) with 5 float dimensions + rationale string
+- [x] **SOUL-11**: PersonaScore evaluates 4 LLM agents (AXIOM, MOMENTUM, CASSANDRA, SIGMA) -- excludes RiskManager (rules-only)
+- [x] **SOUL-12**: PersonaScore results persist to PostgreSQL and are available to KAMI fidelity dimension in next cycle
+- [x] **SOUL-13**: PersonaScore uses structured output (Pydantic schema) with 5 float dimensions + rationale string
 - [ ] **KAMI-05**: KAMI fidelity dimension consumes PersonaScore continuous signal (replaces binary 0/1)
 - [ ] **KAMI-06**: KAMI weights rebalanced: Accuracy reduced from 30% to ~8%, fidelity increased to ~32%, with Recovery and Consensus adjusted proportionally
 - [ ] **KAMI-07**: Weight transition uses EMA absorption (no score reset) to preserve merit history continuity
@@ -88,11 +88,11 @@ Which phases cover which requirements. Updated during roadmap creation.
 | SEC-05 | Phase 28 | Complete |
 | SEC-06 | Phase 28 | Complete |
 | SEC-07 | Phase 28 | Complete |
-| SOUL-09 | Phase 29 | Pending |
+| SOUL-09 | Phase 29 | Complete |
 | SOUL-10 | Phase 29 | Pending |
-| SOUL-11 | Phase 29 | Pending |
-| SOUL-12 | Phase 29 | Pending |
-| SOUL-13 | Phase 29 | Pending |
+| SOUL-11 | Phase 29 | Complete |
+| SOUL-12 | Phase 29 | Complete |
+| SOUL-13 | Phase 29 | Complete |
 | KAMI-05 | Phase 29 | Pending |
 | KAMI-06 | Phase 30 | Pending |
 | KAMI-07 | Phase 30 | Pending |

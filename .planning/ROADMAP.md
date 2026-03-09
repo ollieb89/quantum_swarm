@@ -131,7 +131,7 @@ Plans:
   3. PersonaScore results persist to PostgreSQL and are queryable for historical analysis
   4. KAMI fidelity dimension reads the previous cycle's PersonaScore composite instead of binary 0/1
   5. A cycle that fails PersonaScore evaluation (LLM error) falls back to previous score without crashing
-**Plans:** 2 plans
+**Plans:** 1/2 plans executed
 Plans:
 - [ ] 29-01-PLAN.md -- Core PersonaScore module: Pydantic models, LLM-as-Judge evaluator, DB schema, tests
 - [ ] 29-02-PLAN.md -- Wire into CycleRunner post-cycle hook, rewire KAMI fidelity signal
@@ -194,6 +194,6 @@ Phases execute in numeric order: 27 -> 28 -> 29 -> 30 -> 31
 | 26. Replay CLI | v1.4 | 2/2 | Complete | 2026-03-09 |
 | 27. Environment Stabilization | v1.5 | 2/2 | Complete | 2026-03-09 |
 | 28. Gemini API Circuit Breaker | v1.5 | 2/2 | Complete | 2026-03-09 |
-| 29. PersonaScore 5D + KAMI Fidelity | v1.5 | 0/2 | In progress | - |
+| 29. PersonaScore 5D + KAMI Fidelity | 1/2 | In Progress|  | - |
 | 30. KAMI Weight Rebalance + Token Tracking | v1.5 | 0/? | Not started | - |
 | 31. ChromaDB Prune-to-Obsidian | v1.5 | 0/? | Not started | - |
