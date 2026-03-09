@@ -52,6 +52,12 @@ class TestCoreLeafImports:
     def test_ars_auditor_imports_cleanly(self):
         _isolated_import("src.core.ars_auditor")
 
+    def test_cycle_snapshot_imports_cleanly(self):
+        _isolated_import("src.core.cycle_snapshot")
+
+    def test_cycle_runner_imports_cleanly(self):
+        _isolated_import("src.core.cycle_runner")
+
 
 class TestNoCoreToAgentImport:
     """Leaf core modules must not import from agents or orchestrator."""
@@ -123,4 +129,24 @@ class TestNoCoreToAgentImport:
         for line in import_lines:
             assert "src.graph" not in line, (
                 f"ars_auditor.py must not import from src.graph.*: {line.strip()}"
+            )
+
+    def test_cycle_snapshot_does_not_import_graph(self):
+        import src.core.cycle_snapshot as m
+        with open(m.__file__, encoding="utf-8") as f:
+            lines = f.readlines()
+        import_lines = [l for l in lines if l.startswith("from ") or l.startswith("import ")]
+        for line in import_lines:
+            assert "src.graph" not in line, (
+                f"cycle_snapshot.py must not import from src.graph.*: {line.strip()}"
+            )
+
+    def test_cycle_runner_does_not_import_graph(self):
+        import src.core.cycle_runner as m
+        with open(m.__file__, encoding="utf-8") as f:
+            lines = f.readlines()
+        import_lines = [l for l in lines if l.startswith("from ") or l.startswith("import ")]
+        for line in import_lines:
+            assert "src.graph" not in line, (
+                f"cycle_runner.py must not import from src.graph.*: {line.strip()}"
             )
