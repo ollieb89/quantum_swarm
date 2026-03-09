@@ -20,8 +20,3 @@ class AuditLogEntry(BaseModel):
     # hash = SHA256(timestamp + node_id + input_data + output_data + prev_hash)
     entry_hash: str = Field(..., description="SHA-256 hash of this entry plus previous hash")
     prev_hash: Optional[str] = Field(None, description="Hash of the previous entry in the chain")
-
-    class Config:
-        json_encoders = {
-            datetime: lambda v: v.isoformat()
-        }

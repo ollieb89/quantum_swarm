@@ -16,7 +16,7 @@ dependencies = [
     "langsmith>=0.2.0",
     # Execution
     "nautilus_trader>=1.210.0",
-    "ccxt>=4.0",
+    "ccxt==4.5.42",
     "yfinance>=0.2",
     # Analysis
     "numpy>=1.24",
@@ -28,7 +28,7 @@ dependencies = [
     "flask-socketio>=5.0",
     # Date handling
     "pytz>=2023.3",
-    "chromadb>=1.5.2",
+    "chromadb==1.5.2",
     "duckdb>=1.4.4",
     "sentence-transformers>=5.2.3",
     "psycopg>=3.3.3",
@@ -41,7 +41,7 @@ dependencies = [
 [dependency-groups]
 dev = [
     "pytest>=9.0.2",
-    "pytest-asyncio>=0.24.0",
+    "pytest-asyncio==1.3.0",
 ]
 
 [tool.pytest.ini_options]
