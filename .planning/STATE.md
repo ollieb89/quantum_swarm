@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v1.4
 milestone_name: "Beta: Observable Swarm"
 status: executing
-stopped_at: Phase 24 context gathered
-last_updated: "2026-03-09T02:13:00.656Z"
-last_activity: 2026-03-09 — Completed 23-03 SIGMA + GUARDIAN persona population
+stopped_at: Completed 24-01-PLAN.md
+last_updated: "2026-03-09T02:30:17Z"
+last_activity: 2026-03-09 — Completed 24-01 CycleSnapshot model + persistence DDL
 progress:
   total_phases: 4
   completed_phases: 1
-  total_plans: 4
-  completed_plans: 4
-  percent: 75
+  total_plans: 6
+  completed_plans: 5
+  percent: 83
 ---
 
 # Project State
@@ -27,19 +27,19 @@ Previous: v1.3 MBS Persona System — SHIPPED 2026-03-08 (300+ tests, 8 phases)
 
 ## Current Phase
 
-Phase: 23 of 26 (Full Persona Population)
-Plan: 3 of 4
+Phase: 24 of 26 (Cycle Persistence)
+Plan: 1 of 4
 Status: Executing
-Last activity: 2026-03-09 — Completed 23-03 SIGMA + GUARDIAN persona population
+Last activity: 2026-03-09 — Completed 24-01 CycleSnapshot model + persistence DDL
 
-Progress: [########..] 75%
+Progress: [########..] 83%
 
 ## Project Reference
 
 See: `.planning/PROJECT.md` (updated 2026-03-08)
 
 **Core value:** Institutional-quality trade signal generation through adversarial AI debate, with self-improving memory rules validated by backtesting, hard compliance guardrails, and immutable per-trade audit trails
-**Current focus:** Full Persona Population — populate all 4 skeleton agents with HEXACO-6 diverse personalities and drift_guard YAML
+**Current focus:** Cycle Persistence — CycleSnapshot model, CycleRunner, filesystem writer, query layer
 
 ## Architecture
 
@@ -85,6 +85,7 @@ Status: Green
 | Phase 23 P03 | 3min | 2 tasks | 6 files |
 | Phase 23 P02 | 3min | 2 tasks | 6 files |
 | Phase 23 P04 | 4min | 3 tasks | 6 files |
+| Phase 24 P01 | 2min | 2 tasks | 3 files |
 
 ## Accumulated Context
 
@@ -100,6 +101,8 @@ Recent decisions affecting current work:
 - [Phase 23]: 3 drift rules per agent: SIGMA (overfit_signal, false_precision, untested_signal), GUARDIAN (threshold_erosion, scope_creep, ambiguous_approval)
 - [Phase 23]: 3 drift rules per researcher: MOMENTUM (thesis_recycling, unbounded_optimism, vague_catalyst), CASSANDRA (catastrophism, reflexive_contrarianism, certainty_in_doom)
 - [Phase 23]: HEXACO-6 profiles tuned iteratively: AXIOM con=0.35, GUARDIAN HH=0.20 for max separation; min pairwise distance 1.001
+- [Phase 24]: Inline decision_card as Optional[dict] in CycleSnapshot (no FK, per research recommendation)
+- [Phase 24]: SERIAL PK with 'running' default status for placeholder row pattern in cycle_snapshots
 
 ### Pending Todos
 
@@ -114,6 +117,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-09T02:13:00.655Z
-Stopped at: Phase 24 context gathered
-Resume file: .planning/phases/24-cycle-persistence/24-CONTEXT.md
+Last session: 2026-03-09T02:30:17Z
+Stopped at: Completed 24-01-PLAN.md
+Resume file: .planning/phases/24-cycle-persistence/24-01-SUMMARY.md
