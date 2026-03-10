@@ -1,5 +1,28 @@
 # Milestones
 
+## v1.5 Reliable Infrastructure (Shipped: 2026-03-10)
+
+**Phases completed:** 5 phases (27-31), 10 plans
+**Commits:** ~67
+**LOC:** ~33,098 Python (+10,073 lines net)
+**Timeline:** 2 days (2026-03-09 → 2026-03-10)
+**Git range:** v1.4..v1.5
+
+**Key accomplishments:**
+1. Environment Stabilization — Pinned ccxt/chromadb/pytest-asyncio, fixed Pydantic V2 model, lazy ccxt init; restored 13 failing tests → 680 passed, 0 failures
+2. Gemini API Circuit Breaker — 3-state (CLOSED/OPEN/HALF_OPEN) stdlib-only resilience layer with transient error classification (429/503/timeout), integrated via single `with_audit_logging` wrapper point
+3. PersonaScore 5D Evaluation — LLM-as-Judge evaluates 4 agents across Consistency/Tone/Logic/Depth/Bias with Pydantic structured output, PostgreSQL persistence, and separate CircuitBreaker instance
+4. KAMI Fidelity Rewired — Continuous PersonaScore composite replaces binary 0/1 fidelity signal; weights rebalanced (Accuracy 30%→8%, Fidelity 10%→32%) with EMA absorption preserving merit history
+5. Per-Agent Token Tracking — BudgetManager records prompt+completion tokens per agent per cycle with USD cost estimate; persisted to CycleSnapshot and visible in replay CLI
+6. ChromaDB Prune-to-Obsidian — Rule-aware archival of old vectors to YAML-frontmatter Markdown via `python -m src.main prune` CLI subcommand with dry-run safety
+
+### Tech Debt (from audit)
+- BUG: `merit_updater._get_weights()` fallback defaults (alpha=0.30, delta=0.10) don't match rebalanced DEFAULT_WEIGHTS (alpha=0.08, delta=0.32)
+- MINOR: `LangGraphOrchestrator.run_task_async()` initial_state missing `soft_failed_nodes: []`
+- Nyquist VALIDATION.md partial/missing for phases 27-31
+
+---
+
 ## v1.4 Beta: Observable Swarm (Shipped: 2026-03-09)
 
 **Phases completed:** 4 phases (23-26), 10 plans

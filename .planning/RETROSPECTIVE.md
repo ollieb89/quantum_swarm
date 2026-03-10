@@ -234,6 +234,53 @@
 - Sessions: ~3-4 sessions across 2 days
 - 46 commits covering 4 phases
 
+## Milestone: v1.5 — Reliable Infrastructure
+
+**Shipped:** 2026-03-10
+**Phases:** 5 (27-31) | **Plans:** 10 | **Tests:** 680
+
+### What Was Built
+
+- Environment stabilization: pinned ccxt/chromadb/pytest-asyncio, fixed Pydantic V2 model, lazy ccxt init; 13 broken tests restored → 680 passing
+- Gemini API circuit breaker: 3-state (CLOSED/OPEN/HALF_OPEN) stdlib-only resilience with single `with_audit_logging` integration point
+- PersonaScore 5D: LLM-as-Judge evaluates 4 agents across Consistency/Tone/Logic/Depth/Bias with Pydantic structured output and separate CircuitBreaker instance
+- KAMI fidelity rewired: continuous PersonaScore composite replaces binary 0/1; weights rebalanced (Accuracy 30%→8%, Fidelity 10%→32%) with EMA absorption
+- Per-agent token tracking: BudgetManager records prompt+completion tokens per agent per cycle with USD cost; visible in replay CLI
+- ChromaDB prune-to-Obsidian: rule-aware archival of old vectors to YAML-frontmatter Markdown via CLI subcommand
+
+### What Worked
+
+- **Milestone audit before completion**: Running `/gsd:audit-milestone` caught 2 stale requirement checkboxes (SOUL-10, KAMI-05) and a real bug (`merit_updater._get_weights()` fallback defaults stale). Audit-first is now a validated 4-milestone pattern.
+- **Single integration point pattern**: Circuit breaker integrated through `with_audit_logging` wrapper — all LLM nodes get resilience without per-node wiring. Same pattern used for token tracking through BudgetManager.
+- **Separate CircuitBreaker instances per subsystem**: Graph breaker (threshold=5, cooldown=60s) isolated from PersonaScore judge breaker (threshold=3, cooldown=30s). Evaluation failures don't cascade to graph execution.
+- **Conservative prune pattern (archive-then-delete)**: Rule-aware cutoff prevents pruning vectors backing active memory rules. Dry-run mode enables safe testing.
+- **EMA absorption for weight transition**: Preserving merit history across weight changes avoids the "score reset" problem. Agents keep earned reputation.
+
+### What Was Inefficient
+
+- **Stale fallback defaults discovered at audit**: `merit_updater._get_weights()` has hardcoded fallback weights that weren't updated when DEFAULT_WEIGHTS changed. This is a maintenance trap — fallback values should import from the canonical source.
+- **Nyquist VALIDATION.md still skipped**: 5th consecutive milestone without consistent validation coverage. The pattern of skipping validation for velocity persists.
+- **REQUIREMENTS.md checkbox staleness**: SOUL-10 and KAMI-05 were implemented but checkboxes never ticked. The `phase complete` CLI tool should auto-tick requirement checkboxes.
+
+### Patterns Established
+
+- **Stdlib-only CircuitBreaker**: `threading.Lock` + `time.monotonic` + state enum — no external deps, consistent with Counter cosine and other stdlib-first decisions
+- **Infrastructure fields excluded from audit hash**: `persona_scores`, `token_usage`, `soft_failed_nodes` are operational metadata, not MiFID II trade data — excluded from SHA-256 chain via AUDIT_EXCLUDED_FIELDS
+- **Subcommand registration pattern**: `register_X_parser()` + `handle_X()` in dedicated `src/cli/X.py` module, dispatched before fallback in `main.py` — established by replay CLI, extended by prune
+- **BudgetManager as single authoritative source**: Token counts come from one place (BudgetManager), not from SwarmState reducers that could double-count across nodes
+
+### Key Lessons
+
+1. **Fallback values must import from canonical source**: Hardcoded fallback defaults that duplicate configurable values will drift. Import `DEFAULT_WEIGHTS` rather than hardcoding `alpha=0.30`.
+2. **Audit → fix checkboxes should be automated**: The `phase complete` gsd-tool should cross-reference REQUIREMENTS.md and auto-tick requirement checkboxes when plan summaries confirm completion.
+3. **Infrastructure metadata needs its own exclusion pattern**: As the system grows, more operational fields (persona scores, token usage, circuit breaker state) need audit hash exclusion. The AUDIT_EXCLUDED_FIELDS frozenset pattern scales well.
+
+### Cost Observations
+
+- Model: claude-sonnet-4-6 (balanced profile)
+- Sessions: ~4-5 sessions across 2 days
+- ~67 commits covering 5 phases
+
 ## Cross-Milestone Trends
 
 | Milestone | Phases | Tests | Days | LOC |
@@ -243,3 +290,12 @@
 | v1.2 Risk Governance  | 6 | 260+ | 2 | ~23,500 |
 | v1.3 MBS Persona System | 8 | 300+ | 1 | ~30,600 |
 | v1.4 Beta: Observable Swarm | 4 | 300+ | 2 | ~33,949 |
+| v1.5 Reliable Infrastructure | 5 | 680 | 2 | ~33,098 |
+
+### Top Lessons (Verified Across Milestones)
+
+1. **Audit → gap closure → re-audit is the reliable pattern** (v1.1, v1.2, v1.3, v1.5) — never skip the pre-completion audit
+2. **Lazy init for LLM instances** (v1.0+) — required for test suite without API key
+3. **Sync node functions everywhere** (v1.2+) — asyncio.run() inside nodes is project-breaking
+4. **Single integration points for cross-cutting concerns** (v1.5) — one wrapper point beats per-node wiring
+5. **stdlib-first for background/operational code** (v1.3, v1.5) — Counter cosine, CircuitBreaker, all pass the no-new-deps test

@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v1.5
 milestone_name: Reliable Infrastructure
 status: Green
-stopped_at: Completed 31-02-PLAN.md
-last_updated: "2026-03-10T01:43:39.645Z"
+stopped_at: Milestone v1.5 complete
+last_updated: "2026-03-10"
 progress:
   total_phases: 5
   completed_phases: 5
   total_plans: 10
   completed_plans: 10
-  percent: 98
+  percent: 100
 ---
 
 # Project State
@@ -20,22 +20,22 @@ progress:
 
 ## Milestone
 
-**v1.5 Reliable Infrastructure** -- ACTIVE
+**v1.5 Reliable Infrastructure** -- SHIPPED 2026-03-10
 
 Previous: v1.4 Beta: Observable Swarm -- SHIPPED 2026-03-09 (4 phases, 10 plans)
 
 ## Current Phase
 
-Phase 30 of 31 (KAMI Weight Rebalance + Token Tracking) -- Ready to plan
+All phases complete. Milestone shipped.
 
-Progress: [████████████████████] 43/44 plans (98%)
+Progress: [████████████████████] 10/10 plans (100%)
 
 ## Project Reference
 
 See: `.planning/PROJECT.md` (updated 2026-03-10)
 
 **Core value:** Institutional-quality trade signal generation through adversarial AI debate, with self-improving memory rules validated by backtesting, hard compliance guardrails, and immutable per-trade audit trails
-**Current focus:** Phase 30 -- KAMI Weight Rebalance + Token Tracking
+**Current focus:** Planning next milestone
 
 ## Architecture
 
@@ -61,23 +61,16 @@ See: `.planning/PROJECT.md` (updated 2026-03-10)
 ## Health
 
 Status: Green
-- Phase 29 complete: PersonaScore 5D + KAMI fidelity wiring verified
-- All 12 merit_updater tests passing (including 4 fixed pre-existing mocks)
-- KAMI Accuracy frozen at 0.5 (30% of merit inert) -- P0 for Phase 30
+- v1.5 complete: All 5 phases shipped, 23/23 requirements validated
+- 680 tests passing, 0 failures
+- Known tech debt: merit_updater fallback weights stale, orchestrator missing soft_failed_nodes init
 
 ## Decisions
 
-- Separate CircuitBreaker instance for judge calls (threshold=3, cooldown=30s) isolates from graph breaker
-- persona_scores excluded from audit hash chain (infrastructure metadata, not MiFID II trade data)
-- Fallback on evaluation failure: spread previous composite across all 5 dims, or 0.5 if no history
-- KAMI fidelity reads continuous PersonaScore composite; falls back to binary soul check when None
-- [Phase 30]: Shift 22% weight from Accuracy to Fidelity to eliminate inert composite contribution
-- [Phase 30]: agent_id Optional[str]=None for backward compat; token_usage excluded from audit hash; BudgetManager single authoritative source
-- [Phase 31]: stdlib logging with extra dict instead of structlog kwargs for prune module
-- [Phase 31]: Prune dispatch placed before analyze fallback check, matching replay pattern
+(Cleared for next milestone — full log in PROJECT.md Key Decisions table)
 
 ## Session Continuity
 
-Last session: 2026-03-10T01:40:00.174Z
-Stopped at: Completed 31-02-PLAN.md
+Last session: 2026-03-10
+Stopped at: Milestone v1.5 complete
 Resume file: None
