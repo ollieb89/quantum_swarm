@@ -202,4 +202,4 @@ Phases execute in numeric order: 27 -> 28 -> 29 -> 30 -> 31
 | 28. Gemini API Circuit Breaker | v1.5 | 2/2 | Complete | 2026-03-09 |
 | 29. PersonaScore 5D + KAMI Fidelity | 2/2 | Complete    | 2026-03-09 | - |
 | 30. KAMI Weight Rebalance + Token Tracking | 2/2 | Complete    | 2026-03-09 | - |
-| 31. ChromaDB Prune-to-Obsidian | 2/2 | Complete   | 2026-03-10 | - |
+| 31. ChromaDB Prune-to-Obsidian | 2/2 | Complete    | 2026-03-10 | - |
