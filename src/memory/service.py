@@ -12,6 +12,7 @@ import logging
 import re
 import unicodedata
 import uuid
+from collections import defaultdict
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from enum import Enum
@@ -455,6 +456,49 @@ class MemoryService:
             orphans_removed=result.orphans_removed,
         )
         return result
+
+    def list_documents(self) -> list[StoredDocument]:
+        """Return all logical documents with chunks reassembled."""
+        try:
+            result = self._collection.get(include=["documents", "metadatas"])
+        except Exception as exc:
+            logger.warning("MemoryService.list_documents failed: %s", exc)
+            return []
+
+        ids = result.get("ids") or []
+        docs = result.get("documents") or []
+        metas = result.get("metadatas") or []
+
+        if not ids:
+            return []
+
+        # Group by document_id, sort chunks by chunk_index
+        doc_groups: dict[str, list[tuple]] = defaultdict(list)
+        for chunk_id, doc_text, meta in zip(ids, docs, metas):
+            if meta is None:
+                continue
+            doc_id = meta.get("document_id", chunk_id)
+            doc_groups[doc_id].append((meta.get("chunk_index", 0), doc_text, meta))
+
+        documents: list[StoredDocument] = []
+        for doc_id, entries in doc_groups.items():
+            entries.sort(key=lambda t: t[0])
+            chunks = [text for _, text, _ in entries]
+            first_meta = entries[0][2]
+            source_val = first_meta.get("source", "")
+            try:
+                source_enum = MemorySource(source_val)
+            except ValueError:
+                source_enum = MemorySource.EXTERNAL_DATA
+            documents.append(
+                StoredDocument(
+                    document_id=doc_id,
+                    chunks=chunks,
+                    source=source_enum,
+                    metadata=first_meta,
+                )
+            )
+        return documents
 
     def health_check(self) -> bool:
         """Verify ChromaDB connectivity."""

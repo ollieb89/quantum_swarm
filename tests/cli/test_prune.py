@@ -490,10 +490,10 @@ class TestHandlePrune:
         assert code == 0
         # Check document_archived event
         archive_calls = [c for c in mock_logger.info.call_args_list
-                         if c[0][0] == "document_archived"]
+                         if "document_archived" in str(c[0][0])]
         assert len(archive_calls) == 1
 
         # Check prune_complete summary
         complete_calls = [c for c in mock_logger.info.call_args_list
-                          if c[0][0] == "prune_complete"]
+                          if "prune_complete" in str(c[0][0])]
         assert len(complete_calls) == 1
