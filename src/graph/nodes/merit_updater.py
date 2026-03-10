@@ -6,12 +6,14 @@ from typing import Any, Dict
 
 import yaml
 
-from src.core.db import get_pool
+from src.core.db import ensure_pool_open
+from src.core.persona_scorer import get_latest_persona_composite
 from src.core.kami import (
     KAMIDimensions,
     apply_ema,
     compute_merit,
     DEFAULT_MERIT,
+    DEFAULT_WEIGHTS,
     _extract_recovery_signal,
     _extract_consensus_signal,
     _extract_fidelity_signal,
@@ -40,10 +42,10 @@ def _load_kami_config() -> Dict:
 def _get_weights() -> Dict[str, float]:
     cfg = _load_kami_config()
     return {
-        "alpha": cfg.get("alpha", 0.30),
-        "beta": cfg.get("beta", 0.35),
-        "gamma": cfg.get("gamma", 0.25),
-        "delta": cfg.get("delta", 0.10),
+        "alpha": cfg.get("alpha", DEFAULT_WEIGHTS["alpha"]),
+        "beta": cfg.get("beta", DEFAULT_WEIGHTS["beta"]),
+        "gamma": cfg.get("gamma", DEFAULT_WEIGHTS["gamma"]),
+        "delta": cfg.get("delta", DEFAULT_WEIGHTS["delta"]),
     }
 
 
@@ -54,7 +56,9 @@ def _get_lambda() -> float:
 async def _persist_merit(soul_handle: str, entry: Dict[str, Any]) -> None:
     composite = entry["composite"]
     dimensions = {k: v for k, v in entry.items() if k != "composite"}
-    pool = get_pool()
+    pool = await ensure_pool_open()
+    if pool is None:
+        return
     async with pool.connection() as conn:
         await conn.execute(
             """
@@ -93,7 +97,18 @@ async def merit_updater_node(state: SwarmState) -> dict:
     # Extract in-cycle signals
     recovery_signal = _extract_recovery_signal(state)
     consensus_signal = _extract_consensus_signal(state)
-    fidelity_signal = _extract_fidelity_signal(active_handle)
+
+    # Phase 29: query previous cycle PersonaScore for continuous fidelity signal
+    persona_composite = None
+    try:
+        persona_composite = await get_latest_persona_composite(active_handle)
+    except Exception as e:
+        logger.warning(
+            "merit_updater: persona composite query failed for %s: %s — using legacy fallback",
+            active_handle,
+            e,
+        )
+    fidelity_signal = _extract_fidelity_signal(active_handle, persona_composite=persona_composite)
 
     # Apply EMA to each dimension (Accuracy is preserved unchanged)
     new_rec = apply_ema(agent_entry.get("recovery", DEFAULT_MERIT), recovery_signal, lam)

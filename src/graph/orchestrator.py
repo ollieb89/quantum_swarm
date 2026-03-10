@@ -585,6 +585,8 @@ class LangGraphOrchestrator:
             "merit_scores": None,
             # Phase 18: Theory of Mind Soul-Sync
             "soul_sync_context": None,
+            # Phase 28: Circuit breaker soft-fail tracking
+            "soft_failed_nodes": [],
         }
 
         # Configure the thread (required for checkpointing)
