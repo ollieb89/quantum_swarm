@@ -31,6 +31,7 @@ configure_logging()
 from src.core.cycle_runner import CycleRunner  # noqa: E402
 from src.core.cycle_snapshot import CycleSnapshot  # noqa: E402
 from src.core.persistence import setup_persistence  # noqa: E402
+from src.cli.prune import handle_prune, register_prune_parser  # noqa: E402
 from src.cli.replay import handle_replay, register_replay_parser  # noqa: E402
 from src.core.soul_loader import reload_souls  # noqa: E402
 from src.graph.orchestrator import create_orchestrator_graph  # noqa: E402
@@ -68,6 +69,8 @@ async def _run(symbol: str, mode: str) -> CycleSnapshot:
     """Execute a single pipeline cycle and return the snapshot."""
     pool = _try_get_pool()
     if pool:
+        from src.core.db import ensure_pool_open
+        await ensure_pool_open()
         await setup_persistence(pool)
 
     graph = create_orchestrator_graph({})
@@ -104,11 +107,15 @@ def main() -> None:
     )
 
     register_replay_parser(sub)
+    register_prune_parser(sub)
 
     args = parser.parse_args()
 
     if args.command == "replay":
         sys.exit(handle_replay(args))
+
+    if args.command == "prune":
+        sys.exit(handle_prune(args))
 
     if args.command != "analyze":
         parser.print_help(sys.stderr)
