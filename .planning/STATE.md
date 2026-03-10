@@ -3,13 +3,13 @@ gsd_state_version: 1.0
 milestone: v1.5
 milestone_name: Reliable Infrastructure
 status: Green
-stopped_at: Phase 31 context gathered
-last_updated: "2026-03-09T23:57:35.258Z"
+stopped_at: Completed 31-01-PLAN.md
+last_updated: "2026-03-10T01:34:24.135Z"
 progress:
   total_phases: 5
   completed_phases: 4
-  total_plans: 8
-  completed_plans: 8
+  total_plans: 10
+  completed_plans: 9
   percent: 98
 ---
 
@@ -73,9 +73,10 @@ Status: Green
 - KAMI fidelity reads continuous PersonaScore composite; falls back to binary soul check when None
 - [Phase 30]: Shift 22% weight from Accuracy to Fidelity to eliminate inert composite contribution
 - [Phase 30]: agent_id Optional[str]=None for backward compat; token_usage excluded from audit hash; BudgetManager single authoritative source
+- [Phase 31]: stdlib logging with extra dict instead of structlog kwargs for prune module
 
 ## Session Continuity
 
-Last session: 2026-03-09T23:57:35.257Z
-Stopped at: Phase 31 context gathered
-Resume file: .planning/phases/31-chromadb-prune-to-obsidian/31-CONTEXT.md
+Last session: 2026-03-10T01:34:24.134Z
+Stopped at: Completed 31-01-PLAN.md
+Resume file: None
