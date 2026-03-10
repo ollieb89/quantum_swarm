@@ -89,7 +89,7 @@ See: `.planning/milestones/v1.4-ROADMAP.md` for full archive
 - [x] **Phase 28: Gemini API Circuit Breaker** - Safety net for LLM call failures with 3-state soft-fail pause (completed 2026-03-09)
 - [x] **Phase 29: PersonaScore 5D + KAMI Fidelity Wiring** - LLM-as-Judge persona evaluation with continuous fidelity signal (completed 2026-03-09)
 - [x] **Phase 30: KAMI Weight Rebalance + Token Tracking** - Merit weight redistribution and per-cycle cost observability (completed 2026-03-09)
-- [ ] **Phase 31: ChromaDB Prune-to-Obsidian** - Archive old vectors to Markdown with rule-aware safety
+- [x] **Phase 31: ChromaDB Prune-to-Obsidian** - Archive old vectors to Markdown with rule-aware safety (completed 2026-03-10)
 
 ## Phase Details
 
@@ -160,7 +160,7 @@ Plans:
   2. Running `python -m src.main prune` archives ChromaDB entries older than the configured threshold to Obsidian-compatible Markdown files with YAML frontmatter
   3. Prune operation never deletes vectors backing active MemoryRegistry rules (rule-aware cutoff)
   4. Prune operation logs archived and deleted counts via structlog
-**Plans:** 1/2 plans executed
+**Plans:** 2/2 plans complete
 Plans:
 - [ ] 31-01-PLAN.md -- Core prune module: list_documents(), archive rendering, rule-aware filtering, unit tests
 - [ ] 31-02-PLAN.md -- Wire prune subcommand into main.py CLI, integration tests, human verify
@@ -202,4 +202,4 @@ Phases execute in numeric order: 27 -> 28 -> 29 -> 30 -> 31
 | 28. Gemini API Circuit Breaker | v1.5 | 2/2 | Complete | 2026-03-09 |
 | 29. PersonaScore 5D + KAMI Fidelity | 2/2 | Complete    | 2026-03-09 | - |
 | 30. KAMI Weight Rebalance + Token Tracking | 2/2 | Complete    | 2026-03-09 | - |
-| 31. ChromaDB Prune-to-Obsidian | 1/2 | In Progress|  | - |
+| 31. ChromaDB Prune-to-Obsidian | 2/2 | Complete   | 2026-03-10 | - |
