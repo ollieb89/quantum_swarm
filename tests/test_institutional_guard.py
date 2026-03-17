@@ -87,7 +87,7 @@ def test_get_open_positions_correct_columns():
 
 def test_exit_time_index_exists():
     """RISK-07: setup_persistence() must create idx_trades_exit_time for open-position queries."""
-    source = inspect.getsource(persistence_mod.setup_persistence)
+    source = inspect.getsource(persistence_mod._run_schema_setup)
     assert "idx_trades_exit_time" in source, (
         "idx_trades_exit_time index is missing from setup_persistence(). "
         "Open-position queries filter on exit_time IS NULL and need this index."

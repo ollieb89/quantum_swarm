@@ -57,7 +57,7 @@ def test_merit_loader_cold_start():
     pool_mock = _make_pool_mock(rows=[])  # DB empty → cold-start
 
     async def run():
-        with patch("src.graph.nodes.merit_loader.get_pool", return_value=pool_mock):
+        with patch("src.graph.nodes.merit_loader.ensure_pool_open", new_callable=AsyncMock, return_value=pool_mock):
             state = {"merit_scores": None}
             result = await merit_loader_node(state)
         return result
@@ -85,7 +85,7 @@ def test_merit_scores_field_no_accumulation():
     pool_mock = _make_pool_mock(rows=[])
 
     async def run():
-        with patch("src.graph.nodes.merit_loader.get_pool", return_value=pool_mock):
+        with patch("src.graph.nodes.merit_loader.ensure_pool_open", new_callable=AsyncMock, return_value=pool_mock):
             state = {"merit_scores": None}
             result1 = await merit_loader_node(state)
             # Second call: state still has None (simulating first call not yet applied)
@@ -111,7 +111,7 @@ def test_merit_loader_idempotent():
     pool_mock = _make_pool_mock(rows=[])
 
     async def run():
-        with patch("src.graph.nodes.merit_loader.get_pool", return_value=pool_mock) as mock_get_pool:
+        with patch("src.graph.nodes.merit_loader.ensure_pool_open", new_callable=AsyncMock, return_value=pool_mock) as mock_get_pool:
             pre_populated = {"AXIOM": {"composite": 0.79, "accuracy": 0.7}}
             state = {"merit_scores": pre_populated}
             result = await merit_loader_node(state)
@@ -136,7 +136,7 @@ def test_merit_loader_reads_db_values():
     pool_mock = _make_pool_mock(rows=db_rows)
 
     async def run():
-        with patch("src.graph.nodes.merit_loader.get_pool", return_value=pool_mock):
+        with patch("src.graph.nodes.merit_loader.ensure_pool_open", new_callable=AsyncMock, return_value=pool_mock):
             state = {"merit_scores": None}
             result = await merit_loader_node(state)
         return result

@@ -393,7 +393,7 @@ class TestDecisionCardWriter(unittest.TestCase):
                 return m(path, mode, *args, **kwargs)
             return open(path, mode, *args, **kwargs)
 
-        with patch("src.graph.orchestrator.get_pool", return_value=self._make_pool_mock()), \
+        with patch("src.graph.orchestrator.ensure_pool_open", new_callable=AsyncMock, return_value=self._make_pool_mock()), \
              patch("src.graph.orchestrator.MemoryRegistry", return_value=self._make_registry_mock()), \
              patch("builtins.open", side_effect=patched_open):
 
@@ -427,7 +427,7 @@ class TestDecisionCardWriter(unittest.TestCase):
                 return m(path, mode, *args, **kwargs)
             return open(path, mode, *args, **kwargs)
 
-        with patch("src.graph.orchestrator.get_pool", return_value=self._make_pool_mock()), \
+        with patch("src.graph.orchestrator.ensure_pool_open", new_callable=AsyncMock, return_value=self._make_pool_mock()), \
              patch("src.graph.orchestrator.MemoryRegistry", return_value=self._make_registry_mock()), \
              patch("builtins.open", side_effect=patched_open):
             result = asyncio.run(decision_card_writer_node(state))
@@ -451,7 +451,7 @@ class TestDecisionCardWriter(unittest.TestCase):
                 return m(path, mode, *args, **kwargs)
             return open(path, mode, *args, **kwargs)
 
-        with patch("src.graph.orchestrator.get_pool", return_value=self._make_pool_mock()), \
+        with patch("src.graph.orchestrator.ensure_pool_open", new_callable=AsyncMock, return_value=self._make_pool_mock()), \
              patch("src.graph.orchestrator.MemoryRegistry", return_value=self._make_registry_mock()), \
              patch("builtins.open", side_effect=side_effect_open):
 
@@ -472,7 +472,7 @@ class TestDecisionCardWriter(unittest.TestCase):
                 raise OSError("disk full every time")
             return open(path, mode, *args, **kwargs)
 
-        with patch("src.graph.orchestrator.get_pool", return_value=self._make_pool_mock()), \
+        with patch("src.graph.orchestrator.ensure_pool_open", new_callable=AsyncMock, return_value=self._make_pool_mock()), \
              patch("src.graph.orchestrator.MemoryRegistry", return_value=self._make_registry_mock()), \
              patch("builtins.open", side_effect=always_fail):
 

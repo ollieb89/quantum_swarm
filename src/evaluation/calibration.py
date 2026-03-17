@@ -19,7 +19,7 @@ from dataclasses import dataclass, field
 from datetime import datetime, timedelta, timezone
 from typing import Any, Optional
 
-from src.core.db import get_pool
+from src.core.db import ensure_pool_open
 
 logger = logging.getLogger(__name__)
 
@@ -89,11 +89,9 @@ def _compute_spearman(x: list[float], y: list[float]) -> Optional[float]:
 
 async def _fetch_closed_trades(lookback_days: int) -> list[dict[str, Any]]:
     """Fetch closed trades with strategy_context from PostgreSQL."""
-    pool = get_pool()
-    try:
-        await pool.open()
-    except Exception:
-        pass  # Pool may already be open
+    pool = await ensure_pool_open()
+    if pool is None:
+        return []
     since = datetime.now(timezone.utc) - timedelta(days=lookback_days)
     trades: list[dict[str, Any]] = []
 

@@ -128,7 +128,7 @@ class TestTradeLoggerPersistence(unittest.TestCase):
             "metadata": {},
         }
 
-        with patch.object(tl_mod, "get_pool", return_value=mock_pool):
+        with patch.object(tl_mod, "ensure_pool_open", new_callable=AsyncMock, return_value=mock_pool):
             asyncio.run(tl_mod.trade_logger_node(state))
 
         # Find the INSERT params tuple (the one with trade_id as first element)
@@ -172,7 +172,7 @@ class TestTradeLoggerPersistence(unittest.TestCase):
             "metadata": {},
         }
 
-        with patch.object(tl_mod, "get_pool", return_value=mock_pool):
+        with patch.object(tl_mod, "ensure_pool_open", new_callable=AsyncMock, return_value=mock_pool):
             asyncio.run(tl_mod.trade_logger_node(state))
 
         insert_params = next(

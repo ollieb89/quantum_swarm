@@ -1,0 +1,25 @@
+{
+  "cycle_id": 26,
+  "task_id": "5e3e226b-d168-4bc4-85e3-2db1e3749e7b",
+  "symbol": "SOL/USDT",
+  "timestamp": "2026-03-09T10:45:19.613524Z",
+  "status": "failed",
+  "macro_report": null,
+  "quant_proposal": null,
+  "bullish_thesis": null,
+  "bearish_thesis": null,
+  "debate_history": null,
+  "debate_resolution": null,
+  "weighted_consensus_score": null,
+  "merit_scores": null,
+  "soul_sync_context": null,
+  "risk_approved": null,
+  "risk_notes": null,
+  "execution_result": null,
+  "decision_card": null,
+  "error_context": {
+    "error_type": "ValueError",
+    "message": "Checkpointer requires one or more of the following 'configurable' keys: thread_id, checkpoint_ns, checkpoint_id",
+    "traceback_summary": "sync for chunk in self.astream(\n  File \"/home/ollie/Development/Tools/quantum_swarm/.venv/lib/python3.12/site-packages/langgraph/pregel/main.py\", line 2834, in astream\n    ) = self._defaults(\n        ^^^^^^^^^^^^^^^\n  File \"/home/ollie/Development/Tools/quantum_swarm/.venv/lib/python3.12/site-packages/langgraph/pregel/main.py\", line 2405, in _defaults\n    raise ValueError(\nValueError: Checkpointer requires one or more of the following 'configurable' keys: thread_id, checkpoint_ns, checkpoint_id\n"
+  }
+}

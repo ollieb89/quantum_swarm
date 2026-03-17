@@ -376,9 +376,9 @@ def _compute_role_boundary_violations(
 
 async def _load_breach_counts(handle: str) -> Dict[str, int]:
     """Load breach counts for all metrics for a given agent from ars_state table."""
-    from src.core.db import get_pool
+    from src.core.db import ensure_pool_open
 
-    pool = get_pool()
+    pool = await ensure_pool_open()
     counts: Dict[str, int] = {}
     async with pool.connection() as conn:
         rows = await conn.execute(
@@ -392,9 +392,9 @@ async def _load_breach_counts(handle: str) -> Dict[str, int]:
 
 async def _update_breach_count(handle: str, metric: str, new_count: int) -> None:
     """Upsert breach count for (handle, metric) in ars_state."""
-    from src.core.db import get_pool
+    from src.core.db import ensure_pool_open
 
-    pool = get_pool()
+    pool = await ensure_pool_open()
     async with pool.connection() as conn:
         await conn.execute(
             """
@@ -409,9 +409,9 @@ async def _update_breach_count(handle: str, metric: str, new_count: int) -> None
 
 async def _suspend_agent(handle: str) -> None:
     """Set evolution_suspended=TRUE for agent in agent_merit_scores."""
-    from src.core.db import get_pool
+    from src.core.db import ensure_pool_open
 
-    pool = get_pool()
+    pool = await ensure_pool_open()
     async with pool.connection() as conn:
         await conn.execute(
             "UPDATE agent_merit_scores SET evolution_suspended = TRUE WHERE soul_handle = %s",
@@ -421,9 +421,9 @@ async def _suspend_agent(handle: str) -> None:
 
 async def _unsuspend_agent(handle: str) -> None:
     """Set evolution_suspended=FALSE for agent, reset all breach counts."""
-    from src.core.db import get_pool
+    from src.core.db import ensure_pool_open
 
-    pool = get_pool()
+    pool = await ensure_pool_open()
     async with pool.connection() as conn:
         await conn.execute(
             "UPDATE agent_merit_scores SET evolution_suspended = FALSE WHERE soul_handle = %s",
@@ -448,9 +448,9 @@ async def _unsuspend_agent(handle: str) -> None:
 
 async def _load_merit_dimensions(handle: str) -> Dict[str, float]:
     """Load KAMI dimensions from agent_merit_scores for KAMI variance metric."""
-    from src.core.db import get_pool
+    from src.core.db import ensure_pool_open
 
-    pool = get_pool()
+    pool = await ensure_pool_open()
     async with pool.connection() as conn:
         row = await conn.execute(
             "SELECT dimensions FROM agent_merit_scores WHERE soul_handle = %s",

@@ -2,7 +2,7 @@ import logging
 import json
 from typing import Dict, Any, List, Optional
 from src.graph.state import SwarmState
-from src.core.db import get_pool
+from src.core.db import ensure_pool_open
 
 logger = logging.getLogger(__name__)
 
@@ -31,7 +31,7 @@ class InstitutionalGuard:
 
     async def _get_open_positions(self) -> List[Dict[str, Any]]:
         """Fetch all open positions from PostgreSQL."""
-        pool = get_pool()
+        pool = await ensure_pool_open()
         open_trades = []
         query = "SELECT symbol, position_size, entry_price FROM trades WHERE exit_time IS NULL;"
         try:
@@ -51,7 +51,7 @@ class InstitutionalGuard:
 
     async def _get_daily_pnl(self) -> float:
         """Fetch sum of PnL for closed trades in the last 24 hours."""
-        pool = get_pool()
+        pool = await ensure_pool_open()
         try:
             async with pool.connection() as conn:
                 async with conn.cursor() as cur:

@@ -2,7 +2,7 @@
 import logging
 from typing import Any, Dict
 
-from src.core.db import get_pool
+from src.core.db import ensure_pool_open
 from src.core.kami import ALL_SOUL_HANDLES, DEFAULT_MERIT
 from src.graph.state import SwarmState
 
@@ -20,7 +20,7 @@ async def merit_loader_node(state: SwarmState) -> dict:
 
     scores: Dict[str, Any] = {}
     try:
-        pool = get_pool()
+        pool = await ensure_pool_open()
         async with pool.connection() as conn:
             async with conn.cursor() as cur:
                 await cur.execute(

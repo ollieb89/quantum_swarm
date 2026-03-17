@@ -1,0 +1,13 @@
+{
+  "proposal_id": "macr_20260309T183052003887Z",
+  "agent_id": "AXIOM",
+  "target_section": "## Core Beliefs",
+  "proposed_content": "[PENDING \u2014 Agent Church will draft content based on MEMORY.md context]",
+  "proposal_reasons": [
+    "KAMI_SPIKE"
+  ],
+  "rationale": "Merit changed sharply (KAMI_SPIKE).",
+  "proposed_at": "2026-03-09T18:30:52.003896Z",
+  "status": "pending",
+  "rejection_reason": null
+}

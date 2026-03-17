@@ -1,0 +1,25 @@
+{
+  "cycle_id": 122,
+  "task_id": "cc262890-a4e4-45de-878d-29a7f7db1848",
+  "symbol": "BTC/USDT",
+  "timestamp": "2026-03-09T11:03:43.283751Z",
+  "status": "failed",
+  "macro_report": null,
+  "quant_proposal": null,
+  "bullish_thesis": null,
+  "bearish_thesis": null,
+  "debate_history": null,
+  "debate_resolution": null,
+  "weighted_consensus_score": null,
+  "merit_scores": null,
+  "soul_sync_context": null,
+  "risk_approved": null,
+  "risk_notes": null,
+  "execution_result": null,
+  "decision_card": null,
+  "error_context": {
+    "error_type": "InvalidUpdateError",
+    "message": "At key 'system_prompt': Can receive only one value per step. Use an Annotated key to handle multiple values.\nFor troubleshooting, visit: https://docs.langchain.com/oss/python/langgraph/errors/INVALID_CONCURRENT_GRAPH_UPDATE",
+    "traceback_summary": "nd next_version is not None:\n       ^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/home/ollie/Development/Tools/quantum_swarm/.venv/lib/python3.12/site-packages/langgraph/channels/last_value.py\", line 64, in update\n    raise InvalidUpdateError(msg)\nlanggraph.errors.InvalidUpdateError: At key 'system_prompt': Can receive only one value per step. Use an Annotated key to handle multiple values.\nFor troubleshooting, visit: https://docs.langchain.com/oss/python/langgraph/errors/INVALID_CONCURRENT_GRAPH_UPDATE\n"
+  }
+}

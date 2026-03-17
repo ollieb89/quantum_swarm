@@ -1,0 +1,25 @@
+{
+  "cycle_id": 144,
+  "task_id": "a36a3654-be0b-42a2-8b4f-16d452e945bd",
+  "symbol": "SOL/USDT",
+  "timestamp": "2026-03-09T11:04:03.499425Z",
+  "status": "failed",
+  "macro_report": null,
+  "quant_proposal": null,
+  "bullish_thesis": null,
+  "bearish_thesis": null,
+  "debate_history": null,
+  "debate_resolution": null,
+  "weighted_consensus_score": null,
+  "merit_scores": null,
+  "soul_sync_context": null,
+  "risk_approved": null,
+  "risk_notes": null,
+  "execution_result": null,
+  "decision_card": null,
+  "error_context": {
+    "error_type": "SafetyShutdown",
+    "message": "BudgetManager: session token limit reached (126,296 \u2265 100,000). Swarm halted.",
+    "traceback_summary": "^^^^^^^^^^\n  File \"/home/ollie/Development/Tools/quantum_swarm/src/graph/nodes/l1.py\", line 129, in classify_intent_with_registry\n    budget.check_budget()\n  File \"/home/ollie/Development/Tools/quantum_swarm/src/core/budget_manager.py\", line 135, in check_budget\n    raise SafetyShutdown(\nsrc.tools.verification_wrapper.SafetyShutdown: BudgetManager: session token limit reached (126,296 \u2265 100,000). Swarm halted.\nDuring task with name 'classify_intent' and id '613fcf9c-d6e0-7e63-cc92-5554e9d664c0'\n"
+  }
+}

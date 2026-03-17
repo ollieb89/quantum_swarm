@@ -138,12 +138,12 @@ class TestARSStateDDL:
 
     def test_ars_state_in_setup_persistence(self):
         import src.core.persistence as mod
-        source = inspect.getsource(mod.setup_persistence)
+        source = inspect.getsource(mod._run_schema_setup)
         assert "ars_state" in source, "setup_persistence must include ars_state DDL"
 
     def test_ars_state_columns(self):
         import src.core.persistence as mod
-        source = inspect.getsource(mod.setup_persistence)
+        source = inspect.getsource(mod._run_schema_setup)
         assert "soul_handle" in source
         assert "metric_name" in source
         assert "breach_count" in source
@@ -151,7 +151,7 @@ class TestARSStateDDL:
 
     def test_ars_state_primary_key(self):
         import src.core.persistence as mod
-        source = inspect.getsource(mod.setup_persistence)
+        source = inspect.getsource(mod._run_schema_setup)
         assert "PRIMARY KEY (soul_handle, metric_name)" in source
 
 

@@ -12,7 +12,7 @@ from typing import Any, Dict, List, Optional
 
 from langchain_google_genai import ChatGoogleGenerativeAI
 from langchain_core.messages import HumanMessage
-from src.core.db import get_pool
+from src.core.db import ensure_pool_open
 
 logger = logging.getLogger(__name__)
 
@@ -48,7 +48,7 @@ class PerformanceReviewAgent:
 
     async def get_recent_trade_data(self, days: int = 7) -> List[Dict[str, Any]]:
         """Fetch joined trade and audit data for the last N days."""
-        pool = get_pool()
+        pool = await ensure_pool_open()
         trades = []
         
         query = """

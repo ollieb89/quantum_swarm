@@ -33,7 +33,7 @@ from typing import Any
 from src.graph.state import SwarmState
 from src.core.parsing import parse_quant_proposal
 from src.models.data_models import TradeRecord
-from src.core.db import get_pool
+from src.core.db import ensure_pool_open
 
 logger = logging.getLogger(__name__)
 
@@ -123,7 +123,7 @@ async def trade_logger_node(state: SwarmState) -> dict[str, Any]:
     )
 
     # Persist to Trade Warehouse (PostgreSQL)
-    pool = get_pool()
+    pool = await ensure_pool_open()
     try:
         async with pool.connection() as conn:
             async with conn.cursor() as cur:

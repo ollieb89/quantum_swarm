@@ -40,7 +40,7 @@ import yaml
 
 from src.core.drift_eval import evaluate_drift
 from src.core.kami import ALL_SOUL_HANDLES
-from src.core.db import get_pool
+from src.core.db import ensure_pool_open
 from src.core.soul_loader import load_soul
 from src.core.soul_proposal import (
     PROPOSALS_DIR,
@@ -65,7 +65,7 @@ async def _check_evolution_suspended(handle: str) -> bool:
     memory writes proceed by default — fail-open for evolution, not trade execution.
     """
     try:
-        pool = get_pool()
+        pool = await ensure_pool_open()
         async with pool.connection() as conn:
             result = await conn.execute(
                 "SELECT evolution_suspended FROM agent_merit_scores WHERE soul_handle = %s",
